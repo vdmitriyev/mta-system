@@ -1,0 +1,33 @@
+# files
+README.html
+settings.py
+TODOs.txt
+converter-output.pdf
+tests/test_regex.py
+
+# environment files
+.env
+.env-dev
+.env-prod
+.env-test
+
+# extensions
+*.csv
+static/css/*_*.css
+static/css/*_*.SCSS
+
+
+# folders
+*.ipynb_checkpoints
+__pycache__/*
+**/__pycache__
+.venv/*
+.logs/*
+.vscode/*
+.downloads/*
+data/*
+static/data/*
+app/static/gravatar/*
+temp/*
+data-uol-thesis-topics/*
+
