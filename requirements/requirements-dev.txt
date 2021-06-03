@@ -1,0 +1,7 @@
+#pytest
+#pytest-watch
+#pytest-env
+#tox
+#black
+#pylint
+pypsi

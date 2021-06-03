@@ -1,0 +1,27 @@
+requests
+psycopg2
+#psycopg2-binary
+numpy==1.19.3; platform_system == "Windows"
+numpy==1.19.4; platform_system == "linux"
+pandas
+sqlalchemy
+email_validator
+beautifulsoup4
+Pillow
+
+# flask
+Flask
+flask-cors
+flask-restful
+Flask-HTTPAuth
+flask-login
+Flask-SQLAlchemy
+
+#python-decouple
+python-dotenv
+
+docker
+passlib
+python-crontab
+psutil
+
