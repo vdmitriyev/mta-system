@@ -1,0 +1,2 @@
+# for compatibility with 3.6
+dataclasses 
