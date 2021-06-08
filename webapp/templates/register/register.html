@@ -1,0 +1,84 @@
+{% extends "layout.html" %}
+{% block content %}
+
+		<div class="card text-center">
+		
+		  <div class="card-body">
+			<h5 class="card-title">Registration</h5>
+			<p class="card-text">Register to get your personal access to the offered infrastructure</p>
+		  </div>
+		  
+			<div class="container text-success d-none" id="submissionAck" name="submissionAck">
+				<div class="row row-cols-2">
+					<div class="col-4">					
+						<div class="spinner-border text-warning float-right mt-3" role="status">
+							<span class="sr-only">Loading...</span>
+						</div>					
+					</div>
+					<div class="col-8">
+						<div class="text-left pb-2">
+							Your registration request <b>has been already sent</b> to the server </br> 
+							Just be patient, the registration process may take a while </br> 
+							You will be <i>automatically redirected</i></br>
+						</div>
+					</div>
+				</div>			
+			</div>
+			
+		</div>
+		
+		<br>
+		
+		<form method="POST" id="regForm">
+			<div class="form-group row">
+				<label for="inputEmailField" class="col-sm-2 col-form-label">Email</label>
+				<div class="col-sm-10">
+					<input type="input" class="form-control" id="inputEmailField" name="inputEmailField" aria-describedby="emailHelp" placeholder="Email">
+					<small id="emailHelp" class="form-text text-muted">We will never share your email with anyone else. It will be exclusively used for communication between you and this system.</small>
+				</div>
+			</div>
+			<div class="form-group row">
+				<label for="inputCodeField" class="col-sm-2 col-form-label">Special code (ask instructor)</label>
+				<div class="col-sm-10">
+					<input type="text" class="form-control" id="inputCodeField" name="inputCodeField" placeholder="Special code">
+				</div>
+			</div>
+			<div class="form-group row">
+				<label for="inputCaptchaField" class="col-sm-2 col-form-label">Captcha</label>
+				<div class="col-sm-10">
+					<div class="text-center">
+						<img src="data:image/png;base64,{{captchaImageAsBase64}}" class="rounded float-left" alt="..."> </br>
+					</div>
+					<div class="text-left">
+						<input type="text" class="form-control" id="inputCaptchaField" name="inputCaptchaField" placeholder="...">		
+					</div>
+				</div>
+			</div>
+			<div class="form-group row">
+				<label for="inputCaptchaField" class="col-sm-2 col-form-label">&nbsp;</label>
+				<div class="col-sm-10">
+					<input type="text" hidden value="{{inputCaptchaGUIDField}}" name="inputCaptchaGUIDField">
+					<button type="submit" class="btn btn-primary" name="submitRegistration" id="submitRegistration">Submit</button>
+				</div>
+			</div>
+		</form>
+	
+{% endblock %}
+
+{% block script %}	
+	<script>
+		$( "#regForm" ).submit(function( event ) {
+			if (!$('#submissionAck').is(":visible")){
+			
+				event.preventDefault();				
+				setTimeout(function() { 
+					console.log('Scheduled submit after 2 sec.');
+					$('#regForm').submit();
+				}, 2000);
+			}
+			
+			$('#submissionAck').removeClass('d-none');
+			console.log('Prevent submit for a while.');
+		});
+	</script>
+{% endblock %}

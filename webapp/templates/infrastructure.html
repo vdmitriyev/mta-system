@@ -1,0 +1,334 @@
+{% extends "layout.html" %}
+{% block content %}
+		
+		<div class="card text-center">
+          <div class="card-body">
+            <h5 class="card-title">Personalized <i class="text-success">access credential</i> for the provided infrastructure</h5>
+			<p class="card-text">Please, <span class="badge badge-warning">do not change</span> any passwords of provided to you systems. Because these changes <span class="badge badge-warning">won't be</span> reflected here</p>
+          </div>
+        </div>
+		
+				
+		{% if message is defined %}
+			{% if message is not none %}
+			
+			<div class="card text-center mt-2 mb-2">
+			  <div class="card-body bg-light">
+				<p class="card-text"><span class="badge badge-warning">Message</span>&nbsp;<i><b>{{message}}</b></i></p>
+			  </div>
+			</div>
+			{% endif %}
+		{% endif %}
+		
+		{% if serviceVisibility is defined %}
+			{% if serviceVisibility['pgadmin4'] %}
+			
+			<div class="card text-center mt-3">
+			  <div class="card-body">
+			  
+					<div align="left" class="pt-0 mb-1">
+						&nbsp;&nbsp;&nbsp;<i class="fas fa-server fa-2x" style="color:#76c427;"></i>&nbsp;&nbsp;&nbsp;<b>PGAdmin4</b>
+					</div> 
+					
+					<table class="table table-borderless table-hover">
+					  <tbody>
+						<tr>
+						  <td class="text-left" style="width: 180px;">URL</td>
+						  <td class="text-left"><a class="secondary" href="{{pgadmin4URL}}">{{pgadmin4URL}}</a></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Login</td>
+						  <td class="text-left"><span class="secondary"><b>{{pgadmin4Login}}</span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Password</td>
+						  <td class="text-left"><span class="secondary"><b>{{pgadmin4Password}}</span></td>
+						</tr>
+					  </tbody>
+					</table>
+				</div>
+			</div>
+			{% endif %}
+		{% endif %}
+		
+		{% if serviceVisibility is defined %}
+			{% if serviceVisibility['postgresql'] %}
+				<div class="card text-center mt-3">
+				  <div class="card-body">
+						
+						<div align="left" class="pt-0 mb-1">
+							&nbsp;&nbsp;&nbsp;<i class="fas fa-database fa-2x" style="color:#76c427;"></i>&nbsp;&nbsp;&nbsp;<b>PostgreSQL</b>
+						</div> 
+						
+						<table class="table table-borderless table-hover">
+						  <tbody>
+							<tr>
+							  <td class="text-left" style="width: 180px;">Server</td>
+							  <td class="text-left"><span class="secondary font-italic">{{postgresqlServer}}</span></td>
+							</tr>
+							<tr>
+							  <td class="text-left">Port</td>
+							  <td class="text-left"><span class="secondary font-italic">{{postgresqlServerPort}}</span></td>
+							</tr>
+							<tr>
+							  <td class="text-left">Database</td>
+							  <td class="text-left"><span class="secondary"><b>{{postgresqlDB}}</b></span></td>
+							</tr>
+							<tr>
+							  <td class="text-left">User</td>
+							  <td class="text-left"><span class="secondary"><b>{{postgresqlUser}}</b></span></td>
+							</tr>
+							<tr>
+							  <td class="text-left">Password</td>
+							  <td class="text-left"><span class="secondary"><b>{{postgresqlPassword}}</b></span></td>
+							</tr>
+							<tr>
+							  <td class="text-left pt-0 pb-0"></td>
+							  <td class="text-left"></td>
+							</tr>							
+							{% if serviceVisibility['importers_flights'] %}
+							<tr>
+							  <td class="text-left"><i class="far fa-file-alt"></i> Dataset <h5><span class="badge badge-info">Flights</span></h5></td>
+							  <td class="text-left align-middle"><span class="secondary"><a class="btn btn-secondary" href="/importer?dataset=flights" role="button" id="btnImporterFlight">Import Flights into PostgreSQL</a></span></td>
+							</tr>
+							{% endif %}
+							{% if serviceVisibility['importers_airbnb'] %}
+							<tr>							  
+							  <td class="text-left"><i class="far fa-file-alt"></i>  Dataset <h5><span class="badge badge-info">AirBnB</span></h5></td>
+							  <td class="text-left align-middle"><span class="secondary"><a class="btn btn-secondary" href="/importer?dataset=airbnb" role="button" id="btnImporterFlight">Import AirBnB into PostgreSQL</a></span></td>
+							</tr>
+							{% endif %}
+							{% if serviceVisibility['importers_adventureworks'] %}
+							<tr>							 
+							  <td class="text-left"><i class="far fa-file-alt"></i>  Dataset <h5><span class="badge badge-info">AdventureWorks</span></h5></td>
+							  <td class="text-left align-middle"><span class="secondary"><a class="btn btn-secondary" href="/importer?dataset=adventureworks" role="button" id="btnImporterFlight">Import AdventureWorks in PostgreSQL</a></span></td>
+							</tr>
+							{% endif %}
+						  </tbody>
+						</table>
+					</div>
+				</div>
+			{% endif %}
+		{% endif %}
+		
+		{% if serviceVisibility is defined %}
+			{% if serviceVisibility['metabase'] %}
+			
+			<div class="card text-center mt-3">
+			  <div class="card-body">
+			  
+					<div align="left" class="pt-0 mb-1">
+						&nbsp;&nbsp;&nbsp;<i class="fas fa-chart-line fa-2x" style="color:#509ee3;"></i>&nbsp;&nbsp;&nbsp;<b>Metabase</b>
+					</div> 
+					
+					<table class="table table-borderless table-hover">
+					  <tbody>
+						<tr>
+						  <td class="text-left" style="width: 180px;">URL</td>
+						  <td class="text-left"><a class="secondary" href="{{metabaseURL}}">{{metabaseURL}}</a></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Login</td>
+						  <td class="text-left"><span class="secondary"><b>{{metabaseEmail}}</span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Password</td>
+						  <td class="text-left"><span class="secondary"><b>{{metabasePassword}}</span></td>
+						</tr>
+						{% if serviceVisibility['metabase_self_managment'] %}
+							<tr>
+							  <td class="text-left pt-0 pb-0"></td>
+							  <td class="text-left"></td>
+							</tr>								
+							<tr>
+							  <td class="text-left"><i class="far fa-flag"></i> Service status</td>
+							  <td class="text-left"><h5><span class="secondary"><b>{{metabaseContainerStatus}}</span></h5></td>
+							</tr>
+							<tr>
+							  <td class="text-left"><i class="far fa-play-circle"></i> Start service</td>
+							  <td class="text-left">
+								<a class="btn bg-warning pt-0 pb-0" type="button" name="btnStartMetabase" href="?cmd={{metabaseStartCmd}}">
+									<b>START</b>
+								</a>
+							  </td>
+							</tr>
+						{% endif %}
+					  </tbody>
+					</table>
+				</div>
+			</div>
+			{% endif %}
+		{% endif %}		
+		
+		{% if serviceVisibility is defined %}
+			{% if serviceVisibility['openrefine'] %}
+			
+			<div class="card text-center mt-3">
+			  <div class="card-body">
+			  
+					<div align="left" class="pt-0 mb-1">
+						&nbsp;&nbsp;&nbsp;<i class="fas fa-gem fa-2x" style="color:#00A0FF;"></i>&nbsp;&nbsp;&nbsp;<b>OpenRefine</b>
+					</div> 
+					
+					<table class="table table-borderless table-hover">
+					  <tbody>
+						<tr>
+						  <td class="text-left" style="width: 180px;">URL</td>
+						  <td class="text-left"><a class="secondary" href="{{openrefineURL}}">{{openrefineURL}}</a></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Login</td>
+						  <td class="text-left"><span class="secondary"><b>{{openrefineUser}}</span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Password</td>
+						  <td class="text-left"><span class="secondary"><b>{{openrefinePassword}}</span></td>
+						</tr>
+						{% if serviceVisibility['openrefine_self_managment'] %}
+							<tr>
+							  <td class="text-left pt-0 pb-0"></td>
+							  <td class="text-left"></td>
+							</tr>								
+							<tr>
+							  <td class="text-left"><i class="far fa-flag"></i> Service status</i></td>
+							  <td class="text-left"><h5><span class="secondary"><b>{{openrefineContainerStatus}}</span></h5></td>
+							</tr>
+							<tr>
+							  <td class="text-left"><i class="far fa-play-circle"></i> Start service</td>
+							  <td class="text-left"><a class="btn bg-warning pt-0 pb-0" type="button" name="btnStartOpenRefine" href="?cmd={{openrefineStartCmd}}"><b>START</b></a></td>
+							</tr>
+						{% endif %}
+					  </tbody>
+					</table>
+				</div>
+			</div>
+			{% endif %}
+		{% endif %}
+		
+		{% if serviceVisibility is defined %}
+			{% if serviceVisibility['nifi'] %}
+			
+			<div class="card text-center mt-3">
+			  <div class="card-body">
+			  
+					<div align="left" class="pt-0 mb-1">
+						&nbsp;&nbsp;&nbsp;<i class="fas fa-tint fa-2x" style="color:#aabbc3;"></i>&nbsp;&nbsp;&nbsp;<b>Apache NiFi</b>
+					</div> 
+					
+					<table class="table table-borderless table-hover">
+					  <tbody>
+						<tr>
+						  <td class="text-left" style="width: 180px;">URL</td>
+						  <td class="text-left"><a class="secondary" href="{{nifiURL}}">{{nifiURL}}</a></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Login</td>
+						  <td class="text-left"><span class="secondary"><b>{{nifiUser}}</span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Password</td>
+						  <td class="text-left"><span class="secondary"><b>{{nifiPassword}}</span></td>
+						</tr>
+						<tr>
+							<td class="text-left pt-0 pb-0"></td>
+							<td class="text-left"></td>
+							</tr>
+						<tr>
+						  <td class="text-left">Database Connection URL</td>
+						  <td class="text-left"><span class="secondary"><b>{{nifiDBConnectionURL}}</span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Database Driver Class Name</td>
+						  <td class="text-left"><span class="secondary"><b>org.postgresql.Driver</span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Database Driver Location(s)</td>
+						  <td class="text-left"><span class="secondary"><b>/opt/nifi/nifi-current/lib/postgresql-42.2.18.jar</span></td>
+						</tr>
+						
+						{% if serviceVisibility['nifi_self_managment'] %}
+							<tr>
+							  <td class="text-left pt-0 pb-0"></td>
+							  <td class="text-left"></td>
+							</tr>								
+							<tr>
+							  <td class="text-left"><i class="far fa-flag"></i> Service status</i></td>
+							  <td class="text-left"><h5><span class="secondary"><b>{{nifiContainerStatus}}</span></h5></td>
+							</tr>
+							<tr>
+							  <td class="text-left"><i class="far fa-play-circle"></i> Start service</td>
+							  <td class="text-left"><a class="btn bg-warning pt-0 pb-0" type="button" name="btnStartNiFi" href="?cmd={{nifiStartCmd}}"><b>START</b></a></td>
+							</tr>
+						{% endif %}
+					  </tbody>
+					</table>
+				</div>
+			</div>
+			{% endif %}
+		{% endif %}		
+		
+		{% if serviceVisibility is defined %}
+			{% if serviceVisibility['superset'] %}
+			<div class="card text-center mt-3">
+				<div class="card-body">
+				
+					<div align="left" class="pt-0 mb-1">
+						&nbsp;&nbsp;&nbsp;<i class="fas fa-chart-bar fa-2x" style="color:#696969;"></i>&nbsp;&nbsp;&nbsp;<b>Apache Superset</b>
+					</div> 
+					
+					<table class="table table-borderless table-hover">
+					  <tbody>
+						<tr>
+						  <td class="text-left" style="width: 180px;">URL</td>
+						  <td class="text-left"><a class="secondary" href="{{supersetURL}}">{{supersetURL}}</a></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Login</td>
+						  <td class="text-left"><span class="secondary"><b>{{supersetUser}}</b></span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Password</td>
+						  <td class="text-left"><span class="secondary"><b>{{supersetPassword}}</b></span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">SQLAlchemy URI</td>
+						  <td class="text-left"><span class="secondary"><b>{{supersetSQLAlchemyURI}}</b></span></td>
+						</tr>
+					  </tbody>
+					</table>
+				</div>
+			</div>			
+			{% endif %}
+		{% endif %}
+		
+
+		{% if serviceVisibility is defined %}
+			{% if serviceVisibility['jupyterhub'] %}
+			<div class="card text-center mt-3">
+			  <div class="card-body">
+
+					<div align="left" class="pt-0 mb-1">
+						&nbsp;&nbsp;&nbsp;<i class="fab fa-python fa-2x" style="color:#F37524;"></i>&nbsp;&nbsp;&nbsp;<b>Jupyter Notebook (via JupyterHub)</b>
+					</div> 
+					<table class="table table-borderless table-hover">
+					  <tbody>
+						<tr>
+						  <td class="text-left" style="width: 180px;">URL</td>
+						  <td class="text-left"><a class="secondary" href="{{jupyterhubURL}}">{{jupyterhubURL}}</a></td>
+						</tr>
+						<tr>
+						  <td class="text-left">User</td>
+						  <td class="text-left"><span class="secondary"><b>{{jupyterhubUser}}</b></span></td>
+						</tr>
+						<tr>
+						  <td class="text-left">Password</td>
+						  <td class="text-left"><span class="secondary"><b>{{jupyterhubPassword}}</b></span></td>
+						</tr>
+					  </tbody>
+					</table>
+				</div>
+			</div>			
+			{% endif %}
+		{% endif %}	
+		 
+{% endblock %}
