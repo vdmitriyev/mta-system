@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% block content %}
+		
+		<div class="card text-center">
+          <div class="card-body">
+            <h5 class="card-title">Description of infrastructure</h5>
+            <p class="card-text">
+				<div align="center" class="m-1">
+					The current page provides a description of available resources / infrastructure
+				</div>
+				<div align="center">						
+					<b>Credentials/Access: </b>Ask your instructor for your personal access to the services or use <a href="/register" class="badge badge-info">registration</a> form
+				</div>
+			</p>
+          </div>
+        </div>
+		
+		</br>
+		
+		<div class="card text-center">
+
+		  <div class="card-body">
+				
+				<table class="table table-borderless table-hover">
+				  <tbody>
+					<tr>
+					  <td class="text-left" style="width: 180px;"><b>PGAdmin4</b></td>
+					  <td class="text-left"><img src="static/img/pgadmin4-screen.png?" class="rounded mx-auto d-block" alt="" width="70%"></td>
+					</tr>
+					<tr>
+					  <td class="text-left" style="width: 180px;"><b>PostgreSQL</b></td>
+					  <td class="text-left"><img src="static/img/postgresql-logo.png" class="rounded mx-auto d-block" alt="" width="30%"></td>
+					</tr>
+					<tr>
+					  <td class="text-left" style="width: 150px;"><b>Metabase</b></td>
+					  <td class="text-left"><img src="static/img/metabase-screen.png" class="rounded mx-auto d-block" alt="" width="70%"></td>
+					</tr>
+					<tr>
+					  <td class="text-left" style="width: 150px;"><b>OpenRefine</b></td>
+					  <td class="text-left"><img src="static/img/openrefine-screen.png" class="rounded mx-auto d-block" alt="" width="70%"></td>
+					</tr>
+					<tr>
+					  <td class="text-left" style="width: 150px;"><b>Apache NiFi</b></td>
+					  <td class="text-left"><img src="static/img/nifi-screen.png" class="rounded mx-auto d-block" alt="" width="70%"></td>
+					</tr>
+					<!--
+					<tr>
+					  <td class="text-left" style="width: 150px;"><b>Apache Superset</b></td>
+					  <td class="text-left"><img src="static/img/superset-screen.png" class="rounded mx-auto d-block" alt="" width="70%"></td>
+					</tr>
+					-->
+					<tr>
+					  <td class="text-left" style="width: 150px;"><b>Jupyter Notebook (via JupyterHub)</b></td>
+					  <td class="text-left"><img src="static/img/jupyterhub-screen.png" class="rounded mx-auto d-block" alt="" width="70%"></td>
+					</tr>
+				  </tbody>
+				</table>
+			</p>
+		  </div>
+		 </div>
+{% endblock %}
