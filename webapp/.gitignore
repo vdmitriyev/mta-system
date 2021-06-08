@@ -1,0 +1,14 @@
+#extentions
+*.db
+
+# folders
+.logs/*
+__pycache__
+__pycache__/*
+*.py[cod]
+
+# files
+credentials.py
+vlba-bibackend-sqlite.db
+utils/create_jupyteruser_docker.sh
+TODOs.txt
