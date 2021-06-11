@@ -15,8 +15,6 @@ def page_not_found(e):
 
 @errors.app_errorhandler(401)
 def page_unauthorized(e):
-    print (request.accept_mimetypes.accept_json)
-    print (request.accept_mimetypes.accept_html)
     if request.accept_mimetypes.accept_json and \
             not request.accept_mimetypes.accept_html:
         response = jsonify({'error': 'unauthorized'})
