@@ -17,12 +17,12 @@ class SupersetAPIClient:
         self.new_user = new_user
         self.logger = logger
         self.load_env()
-        self.start_sesson()
+        self.start_session()
 
     def load_env(self):
-        SUPERSET_BASE_URL = os.environ.get('SUPERSET_BASE_URL')
-        SUPERSET_LOGIN = os.environ.get('SUPERSET_LOGIN')
-        SUPERSET_PASSWORD = os.environ.get('SUPERSET_PASSWORD')
+        self.SUPERSET_BASE_URL = os.environ.get('SUPERSET_BASE_URL')
+        self.SUPERSET_LOGIN = os.environ.get('SUPERSET_LOGIN')
+        self.SUPERSET_PASSWORD = os.environ.get('SUPERSET_PASSWORD')
 
     def print_msg(self, msg):
         ''' Prints a message into console and log (if needed)'''

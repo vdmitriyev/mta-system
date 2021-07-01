@@ -1,4 +1,5 @@
 import os
+import traceback
 
 import psycopg2
 from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
@@ -91,6 +92,7 @@ def register():
                 is_registered = register_new_user(inputEmailField)
             except Exception as ex:
                 current_app.logger.info('[x] Exception by registration: {0}'.format(ex))
+                current_app.logger.error(ex, exc_info=True)
 
             if (is_registered):
                 return render_template('register/registerSuccess.html')
@@ -316,9 +318,9 @@ def nifi_user(user_name, password, docker_port):
     nifi_user = UserDataNiFi(userName = user_name, password = password)
 
     if create_user_and_docker_nifi(user_data = nifi_user, docker_port = docker_port):
-        current_app.info(f'[i] NiFi docker and user were created successfully. User: {user_name}')
+        current_app.logger.info(f'[i] NiFi docker and user were created successfully. User: {user_name}')
     else:
-        current_app.info(f'[e] NiFi docker and user were NOT created successfully. User: {user_name}')
+        current_app.logger.info(f'[e] NiFi docker and user were NOT created successfully. User: {user_name}')
 
 def create_postgresql_db(db_name, db_user, db_password, verbose=True):
     ''' Create new database and user in the PostgreSQL database '''

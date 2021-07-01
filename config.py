@@ -69,7 +69,7 @@ class BaseAppConfigs:
     POSTGRESQL_DB_HOST_PORT = os.environ.get('POSTGRESQL_DB_HOST_PORT') or '5432'
     POSTGRESQL_DB_NAME = os.environ.get('POSTGRESQL_DB_NAME') or 'postgres'
     POSTGRESQL_ADMIN_USER = os.environ.get('POSTGRESQL_ADMIN_USER') or 'postgres'
-    POSTGRESQL_ADMIN_PASSWORD = os.environ.get('POSTGRESQL_ADMIN_USER') or 'postgres'
+    POSTGRESQL_ADMIN_PASSWORD = os.environ.get('POSTGRESQL_ADMIN_PASSWORD') or 'postgres'
 
     POSTGRESQL_DEMO_DB = os.environ.get('POSTGRESQL_DEMO_DB') or 'db_demo'
     POSTGRESQL_DEMO_USER = os.environ.get('POSTGRESQL_DEMO_USER') or 'db_user_demo'

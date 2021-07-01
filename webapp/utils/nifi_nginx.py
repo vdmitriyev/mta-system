@@ -6,6 +6,9 @@ def create_nginx_configs(htpasswd_folder = None):
     nifi_port_offset = os.environ.get('NIFI_PORT_OFFSET') or 6000
     max_users = os.environ.get('MAX_USERS_NGINX_GENERATE') or 50
 
+    nifi_port_offset = int(nifi_port_offset)
+    max_users = int(max_users)
+
     if htpasswd_folder is None:
         htpasswd_folder = '/opt/mta-system/nginx_htpasswd/'
 
