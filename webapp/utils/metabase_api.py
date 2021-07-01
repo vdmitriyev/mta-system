@@ -63,9 +63,9 @@ def run_create_user(user_data, port):
     setup_token = None
 
     # tries and wait until docker container really starts
-    for index, _ in enumerate(range(METABASE_TRY_COUNT)):
+    for index, _ in enumerate(range(int(METABASE_TRY_COUNT))):
         print (f'[i] Sleep for {METABASE_TRY_SLEEP_SEC} seconds. Re-try number: {index}')
-        time.sleep(METABASE_TRY_SLEEP_SEC)
+        time.sleep(int(METABASE_TRY_SLEEP_SEC))
         setup_token = get_setup_token(base_url)
         if setup_token is not None:
             break
