@@ -7,6 +7,10 @@ from .. import db
 from .. models import Users
 from .. main.views import get_user_data, container_status_to_html, email_to_name
 
+from subprocess import Popen, TimeoutExpired, PIPE
+
+ADMIN_UI_URL = 'adminView'
+
 @admin.route('/', methods=['GET'])
 @admin.route('/index', methods=['GET'])
 @login_required
@@ -20,8 +24,6 @@ def viewAdmin():
     ''' Handles admin view'''
 
     current_app.logger.info(f'[i] Try to access admin UI. User id: {current_user.get_id()}')
-
-    admin_ui_url = 'adminView'
 
     is_admin = False
     user_data = get_user_data(current_user.get_id())
@@ -56,9 +58,11 @@ def viewAdmin():
                     'logs'   : Markup(format_docker_logs(container.logs(tail=20)))}
                     )
         except ImportError as ex:
-            current_app.logger.info(f'[e] No module installed: docker. Exception {ex}')
+            current_app.logger.error(f'[e] No module installed: docker. Exception {ex}')
         except OSError as ex:
-            current_app.logger.info(f'[e] No access to docker. Exception {ex}')
+            current_app.logger.error(f'[e] No access to docker. Exception {ex}')
+        except Exception as ex:
+            current_app.logger.error(f'[e] Another docker relevant exception. Exception {ex}', exc_info=True)
 
         cmd_mb_generate_bash = 'generateBashMetabase'
         cmd_or_generate_bash = 'generateBashOpenrefine'
@@ -66,17 +70,18 @@ def viewAdmin():
         cmd_jhub_generate_bash = 'generateBashJupyterhub'
 
         cmd = escape(request.values.get('cmd', None))
+        jh_user = escape(request.values.get('jh_user', None))
         current_app.logger.info(f'[i] Command for admin received: {cmd}')
 
         cmd_output = admin_generate_cmds(cmd, cmd_mb_generate_bash, cmd_or_generate_bash,
-                                              cmd_nifi_generate_bash, cmd_jhub_generate_bash)
+                                              cmd_nifi_generate_bash, cmd_jhub_generate_bash, jh_user)
 
         server_summary = admin_server_summary()
 
-        return render_template('admin/admin_ui.html', urlMBGenerateBash = f'{admin_ui_url}?cmd={cmd_mb_generate_bash}',
-                                                      urlORGenerateBash = f'{admin_ui_url}?cmd={cmd_or_generate_bash}',
-                                                      urlNifiGenerateBash = f'{admin_ui_url}?cmd={cmd_nifi_generate_bash}',
-                                                      urlJHubGenerateBash = f'{admin_ui_url}?cmd={cmd_jhub_generate_bash}',
+        return render_template('admin/admin_ui.html', urlMBGenerateBash = f'{ADMIN_UI_URL}?cmd={cmd_mb_generate_bash}',
+                                                      urlORGenerateBash = f'{ADMIN_UI_URL}?cmd={cmd_or_generate_bash}',
+                                                      urlNifiGenerateBash = f'{ADMIN_UI_URL}?cmd={cmd_nifi_generate_bash}',
+                                                      urlJHubGenerateBash = f'{ADMIN_UI_URL}?cmd={cmd_jhub_generate_bash}',
                                                       cmdOutput = Markup(cmd_output),
                                                       containers = containers,
                                                       serverSummary = server_summary,
@@ -85,7 +90,7 @@ def viewAdmin():
     abort(403)
 
 def admin_generate_cmds(cmd, cmd_mb_generate_bash, cmd_or_generate_bash,
-                             cmd_nifi_generate_bash, cmd_jhub_generate_bash):
+                             cmd_nifi_generate_bash, cmd_jhub_generate_bash, jh_user):
     ''' Generates CMDs for admin UI'''
 
     cmd_output = ''
@@ -168,23 +173,49 @@ def admin_generate_cmds(cmd, cmd_mb_generate_bash, cmd_or_generate_bash,
     if cmd == cmd_jhub_generate_bash:
 
         bash_commands = []
-        bash_cmd_tpl = '''# should be executed on VM, where the docker is running under SUDO / or has access to docker </br>
-docker exec jupyterhub-2020 /bin/sh -c 'adduser --disabled-password --gecos "" {user}' </br>
-docker exec jupyterhub-2020 /bin/bash -c "echo '{user}:{password}'|chpasswd" </br>
-docker exec jupyterhub-2020 /bin/bash -c "mkdir -p /home/{user}/notebooks/" </br>
-docker exec jupyterhub-2020 /bin/bash -c "cp -r /srv/jupyterhub/datasets/sentiment-data /home/{user}/notebooks/" </br>
-docker exec jupyterhub-2020 /bin/bash -c "chown  -R {user}:{user} /home/{user}/notebooks/" </br>
-</br>
+        bash_cmd_tpl = '''# should be executed on VM, where the docker is running under SUDO / or has access to docker
+docker exec jupyterhub-2020 /bin/sh -c 'adduser --disabled-password --gecos "" {user}'
+docker exec jupyterhub-2020 /bin/bash -c "echo '{user}:{password}'|chpasswd"
+docker exec jupyterhub-2020 /bin/bash -c "mkdir -p /home/{user}/notebooks/"
+docker exec jupyterhub-2020 /bin/bash -c "cp -r /srv/jupyterhub/datasets/sentiment-data /home/{user}/notebooks/"
+docker exec jupyterhub-2020 /bin/bash -c "chown  -R {user}:{user} /home/{user}/notebooks/"
+
 sleep 2
-</br>
+
 '''
 
         results = db.session.query(Users).filter(Users.jupyterhub_created == False)\
-                                            .order_by(Users.created_at.asc())\
-                                            .all()
+                                         .order_by(Users.created_at.asc())\
+                                         .all()
         for user in results:
+
+            if jh_user is not None:
+                if jh_user == user.jupyterhub_user:
+                    new_cmd = bash_cmd_tpl.format(user = user.jupyterhub_user, password = user.jupyterhub_password)
+                    error = False
+                    for cmd in new_cmd.split('\n'):
+                        try:
+                            if not cmd.startswith('#'):
+                                current_app.logger.info(f'[i] Execute cmd for JHub: {cmd}')
+                                proc = Popen(cmd, shell = True, stdout = PIPE, stderr = PIPE, stdin = PIPE)
+                                outs, errs = proc.communicate(timeout=10)
+                        except TimeoutExpired as ex:
+                            current_app.logger.error(f'[e] Timeout exception: {ex}', exc_info=True)
+                            error = True
+
+                    if not error:
+                        db.session.query(Users)\
+                                  .filter(Users.jupyterhub_user == jh_user)\
+                                  .update({'jupyterhub_created' : True})
+                        db.session.commit()
+
+                    continue
+
             new_cmd = bash_cmd_tpl.format(user = user.jupyterhub_user, password = user.jupyterhub_password)
-            bash_commands.append(new_cmd)
+            bash_commands.append(new_cmd.replace('\n', '</br>\n'))
+            urlJHubСreateUser = f'{ADMIN_UI_URL}?cmd={cmd_jhub_generate_bash}&jh_user={user.jupyterhub_user}'
+            bash_commands.append(f'<a class="btn bg-warning" type="button" name="{cmd_jhub_generate_bash}" href="{urlJHubСreateUser}">Create user: <b>{user.jupyterhub_user}</b></a>')
+            bash_commands.append('<hr width="80%">')
 
         cmd_output = '-- <i>jupyterhub commands</i> </br></br>'
         cmd_output = cmd_output + '</br>'.join(bash_commands)
@@ -214,8 +245,10 @@ def admin_server_summary():
         if 'percent' in memory: summary['usedMemoryPercent'] = memory['percent']
 
     except ImportError as ex:
-        current_app.logger.info(f'[e] No module installed: docker. Exception {ex}')
+        current_app.logger.error(f'[e] No module installed: docker. Exception {ex}')
     except OSError as ex:
-        current_app.logger.info(f'[e] No access to docker. Exception {ex}')
+        current_app.logger.error(f'[e] No access to docker. Exception {ex}')
+    except Exception as ex:
+        current_app.logger.error(f'[e] Another docker relevant exception. Exception {ex}', exc_info=True)
 
     return summary
