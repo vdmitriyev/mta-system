@@ -223,9 +223,10 @@ sleep 2
     return cmd_output
 
 def admin_server_summary():
-    ''' Gets performance summary of the server '''
+    ''' Gets performance metrics summary of the server '''
 
     summary = {}
+
     try:
         import docker
         client = docker.from_env()
@@ -234,7 +235,14 @@ def admin_server_summary():
         lst_containers_run = client.containers.list()
         summary['runningContainers'] = len(lst_containers_run)
         summary['exitedContainers'] = summary['totalContainers'] - summary['runningContainers']
-
+    except ImportError as ex:
+        current_app.logger.error(f'[e] No module installed: docker. Exception {ex}')
+    except OSError as ex:
+        current_app.logger.error(f'[e] No access to docker. Exception {ex}')
+    except Exception as ex:
+        current_app.logger.error(f'[e] Another docker relevant exception. Exception {ex}', exc_info=True)
+    
+    try:
         import psutil
         summary['cpuUsage'] = psutil.cpu_percent()
         # convert that object to a dictionary
@@ -243,12 +251,10 @@ def admin_server_summary():
         if 'used' in memory: summary['usedMemory'] = '{:10.0f}'.format(memory['used'] / (1024*1024))
         if 'available' in memory: summary['availableMemory'] = '{:10.0f}'.format(memory['available'] / (1024*1024))
         if 'percent' in memory: summary['usedMemoryPercent'] = memory['percent']
-
     except ImportError as ex:
-        current_app.logger.error(f'[e] No module installed: docker. Exception {ex}')
-    except OSError as ex:
-        current_app.logger.error(f'[e] No access to docker. Exception {ex}')
+        current_app.logger.error(f'[e] No module installed: psutil. Exception {ex}')
     except Exception as ex:
-        current_app.logger.error(f'[e] Another docker relevant exception. Exception {ex}', exc_info=True)
+        current_app.logger.error(f'[e] Another psutil relevant exception. Exception {ex}', exc_info=True)
+        
 
     return summary
