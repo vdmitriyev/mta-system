@@ -4,27 +4,20 @@
 
 ## Dependencies
 
-* Python 3.7+ + Flask + Docker + Nginx
-* Further details are [requirements](requirements)
+* Python 3.7+ 
+    + Details in ```requirements/requirements.txt``
+* Docker + Docker Compose
 
 ## Architecture
 
 ## Setup
 
-### Create virtual enviroment for Python
+### Create virtual environment for Python
 
-* Create virtualenv on Windows
-```bash
-python -m venv .venv
-call .venv\Scripts\activate.bat
-pip install -r requirements/requirements.txt
-```
-* Create virtualenv on Ubuntu
-```cmd
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements/requirements.txt
-```
+* Create environment on Windows
+    + Run ```scripts/cmdInitiateEnv.bat```
+* Create environment on Ubuntu
+    + Run ```scripts/initEnv.sh```
 
 ### Create configuration file
 
@@ -47,5 +40,5 @@ pip install -r requirements/requirements.txt
 
 ## License
 
-* Code - [LICENSE](LICENSE)
-* Datasets - mentioned directly inside the import module/dataset itself
+* Source Code - MIT
+* Datasets - license is found directly inside the import module/dataset itself
