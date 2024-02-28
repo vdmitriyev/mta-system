@@ -5,7 +5,7 @@
 ## Dependencies
 
 * Python 3.7+ 
-    + Details in ```requirements/requirements.txt``
+    + Details in ```requirements/requirements.txt```
 * Docker + Docker Compose
 
 ## Architecture
