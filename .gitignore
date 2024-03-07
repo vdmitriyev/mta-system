@@ -30,4 +30,8 @@ static/data/*
 app/static/gravatar/*
 temp/*
 data-uol-thesis-topics/*
-
+.tox/*
+.vscode/*
+dist/*
+docs/_build/*
+generated/*

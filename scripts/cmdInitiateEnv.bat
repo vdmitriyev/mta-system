@@ -13,8 +13,9 @@ pip install --upgrade pip
 pip install --upgrade uv
 
 uv pip install -r requirements/requirements.txt
-uv pip install -r requirements/requirements-pgsql.txt
 REM pip install -r requirements/requirements-dev.txt
+uv pip install -r requirements/requirements-docs.txt
+uv pip install -r requirements/requirements-pgsql.txt
 
 :END
 endlocal
