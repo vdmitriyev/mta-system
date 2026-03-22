@@ -1,0 +1,31 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+authors:
+  - family-names: "Dmitriyev"
+    given-names: "Viktor"
+  - family-names: "Janßen"
+    given-names: "Christian"
+  - family-names: "Solsbach"
+    given-names: "Andreas"
+title: "Modular teaching assistance system"
+date-released: 2021-01-01
+url: "https://dl.gi.de/items/aeac2dcb-1442-4c38-ae90-64e9730c6ce9"
+preferred-citation:
+  type: conference-paper
+  authors:
+    - family-names: "Dmitriyev"
+      given-names: "Viktor"
+    - family-names: "Janßen"
+      given-names: "Christian"
+    - family-names: "Solsbach"
+      given-names: "Andreas"
+  title: "Enable students to acquire new hands-on software experience using the modular teaching assistance system"
+  collection-title: "INFORMATIK 2021"
+  publisher:
+    name: "Gesellschaft für Informatik, Bonn"
+  year: 2021
+  start: 91
+  end: 101
+  doi: "10.18420/informatik2021-006"
+  isbn: "978-3-88579-708-1"
+  issn: "1617-5468"
