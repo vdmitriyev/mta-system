@@ -41,6 +41,23 @@ Documentation is available [here](https://vdmitriyev.github.io/mta-system/)
 
 ![](./docs/_static/images/admin-view.png)
 
+### Citing - BibTeX
+
+```bibtex
+@inproceedings{Dmitriyev:2021:HandOn,
+	title        = {Enable students to acquire new hands-on software experience using the modular teaching assistance system},
+	author       = {Dmitriyev, Viktor and Jan{\ss}en, Christian and Solsbach, Andreas},
+	year         = 2021,
+	booktitle    = {INFORMATIK 2021},
+	publisher    = {Gesellschaft für Informatik, Bonn},
+	pages        = {91--101},
+	doi          = {10.18420/informatik2021-006},
+	isbn         = {978-3-88579-708-1},
+	url          = {https://dl.gi.de/items/aeac2dcb-1442-4c38-ae90-64e9730c6ce9},
+	pissn        = {1617-5468}
+}
+```
+
 ## License
 
 * Source Code - MIT
