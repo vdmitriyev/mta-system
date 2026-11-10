@@ -1,37 +1,67 @@
+# custom files
+IMPROVE/
+.env
+CLAUDE.md
+compose-claude.yaml
+
+# folders
+temp/*
+logs/*
+data/*
+/favicon/
+*-data/*
+data-*/*
+*-config/*
+configs/*
+.configs/*
+.jsons/*
+.venv/*
+.dvenv/*
+data/.jsons/*
+.experiments/*
+.projects/*
+/setup/
+.logs/*
+.backups/*
+.profile/*
+certs/*
+redis/*
+nginx_htpasswd/*
+.htpasswd_nginx/*
+latex-data/*
+.latex_data/*
+certbot/*
+envs-systems/*
+envs/
+
+# extentions
+*.csv
+*.txt
+!src/data/*.txt
+!nginx/robots.txt
+*.json
+!tests/conditions.json
+*.log
+utils/*.log
+nginx/*.pem
+__pycache__/
+*.py[cod]
+
 # files
-README.html
-settings.py
 TODOs.txt
-converter-output.pdf
-tests/test_regex.py
+README.html
+README-Materials.md
+uv.lock
+__run_report*.html
 
 # environment files
-.env
 .env-dev
 .env-prod
 .env-test
+.env-*
+*.env
+*.env-*
+*.env.*
 
-# extensions
-*.csv
-static/css/*_*.css
-static/css/*_*.SCSS
-
-
-# folders
-*.ipynb_checkpoints
-__pycache__/*
-**/__pycache__
-.venv/*
-.logs/*
-.vscode/*
-.downloads/*
-data/*
-static/data/*
-app/static/gravatar/*
-temp/*
-data-uol-thesis-topics/*
-.tox/*
-.vscode/*
-dist/*
-docs/_build/*
-generated/*
+# docker / docker compose downloaded by task testenv:tools
+.tools/

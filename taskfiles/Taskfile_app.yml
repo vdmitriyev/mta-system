@@ -1,0 +1,58 @@
+version: '3'
+
+tasks:
+
+  install:
+    desc: installs the dependencies from pyproject.toml (into the active virtual environment, else {{.VENV_DIR}})
+    aliases: [i]
+    cmds:
+      - uv sync --active
+
+  install-dev:
+    desc: installs the dependencies and the development tools from pyproject.toml
+    aliases: [id]
+    cmds:
+      - uv sync --active --group dev
+
+  check-virtualenv:
+    desc: checks that a Python virtual environment is active
+    aliases: [cv]
+    silent: true
+    run: once
+    cmds:
+      - python -c "import sys; sys.exit(0 if sys.prefix != sys.base_prefix else 'No active virtual environment. Run task app:install and activate {{.VENV_DIR}}')"
+      - python -c "import sys; print('Virtual environment->', sys.prefix)"
+      - python --version
+
+  serve:
+    desc: runs the flask server for development
+    aliases: [r]
+    deps: [check-virtualenv]
+    silent: true
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+    vars:
+      HOST: 127.0.0.1
+      PORT: 5353
+    cmds:
+      - echo "Run flask-> {{.HOST}}:{{.PORT}}"
+      - flask run --debug --host={{.HOST}} --port={{.PORT}}
+
+  test:
+    desc: runs the tests (pytest options after --, e.g. 'task app:test -- -v -s' or '-- -m marker')
+    aliases: [t]
+    deps: [check-virtualenv]
+    cmds:
+      - pytest {{.CLI_ARGS}}
+
+  bandit:
+    desc: runs bandit (static code analysis)
+    deps: [check-virtualenv]
+    cmds:
+      - bandit -r app
+
+  build-image:
+    desc: builds the Docker image of the app (mta-system:latest)
+    aliases: [b]
+    cmds:
+      - docker build -t mta-system:latest .

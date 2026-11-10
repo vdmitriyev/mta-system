@@ -1,0 +1,42 @@
+# Only what the image needs goes in. The Dockerfile copies:
+# pyproject.toml, *.py, configs-logging/, migrations/, app/, docker-entrypoint.sh
+
+# environment files hold secrets: pass them at runtime (env_file / --env-file)
+envs/
+.env
+*.env
+.env-*
+
+# virtual environments, caches, version control
+.venv/
+.dvenv/
+.tools/
+.git/
+.github/
+.vscode/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# runtime data, logs and backups (mounted as volumes)
+data/
+*.db
+.logs/
+logs/
+.profile/
+.backups/
+.htpasswd_nginx/
+certbot/
+temp/
+
+# initial data: mounted by the compose files (./setup -> /mta-system/setup)
+setup/
+
+# not used by the app container
+docs/
+tests/
+provision/
+TODOs.txt
+uv.lock

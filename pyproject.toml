@@ -1,0 +1,56 @@
+[project]
+name = "mta-system"
+version = "1.2.0"
+description = "Modular teaching assistance system: gives students hands-on access to software services"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.12"
+dependencies = [
+    # web framework
+    "Flask==3.1.3",
+    "flask-login==0.6.3",
+    "flask-SQLAlchemy==3.1.1",
+    "flask-Migrate==4.1.0",
+    "sqlalchemy==2.1.8",
+    "python-dotenv==1.2.4",
+    "email_validator==2.3.0",
+    "markdown==3.11.3",
+    "libpass==1.9.4",
+    # data importers
+    "requests==2.34.2",
+    "pandas==3.1.1",
+    "beautifulsoup4==4.15.0",
+    # captcha
+    "Pillow==13.0.0",
+    # services for the students (PostgreSQL, MariaDB, Docker containers)
+    "psycopg2-binary==2.9.13",
+    "pymysql==1.2.3",
+    "docker==7.2.0",
+    "psutil==7.2.2",
+    # background jobs
+    "rq==3.0.0",
+    "redis==8.1.0",
+]
+
+[dependency-groups]
+prod = [
+    "gunicorn==26.2.0",
+]
+dev = [
+    "pytest==9.2.0",
+    "isort==9.0.2",
+    "pre-commit==4.7.0",
+    "snakeviz==2.2.2",
+    "black==26.10.1",
+    "bandit==1.9.4",
+]
+
+[tool.uv]
+# an application, not a library: install only the dependencies
+package = false
+
+[tool.black]
+target-version = ["py312"]
+
+[tool.isort]
+profile = "black"

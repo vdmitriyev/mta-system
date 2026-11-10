@@ -1,0 +1,95 @@
+version: '3'
+
+# Test copy of mta-system (app and PostgreSQL database) in docker, next to the real "mta-system" project.
+# Ports: app 127.0.0.1:5354, database 127.0.0.1:35433
+# Helper files: tests/testenv/
+
+vars:
+  PROJECT: mtas-testenv
+  TESTENV_ENV_FILE: envs/webapp-dev-docker.env
+  TESTENV_DIR: tests/testenv
+  TESTENV_APP_PORT: 5354
+  TESTENV_DB_PORT: 35433
+  TOOLS_DIR: '{{.ROOT_DIR}}/.tools/bin'
+  # used only when docker / docker compose are not installed (linux x86_64)
+  DOCKER_VERSION: 29.9.1
+  COMPOSE_VERSION: v5.6.1
+  DOCKER:
+    sh: command -v docker || echo "{{.TOOLS_DIR}}/docker"
+  COMPOSE_BIN:
+    sh: docker compose version >/dev/null 2>&1 && echo "docker compose" || echo "{{.TOOLS_DIR}}/docker-compose"
+  MTAS_HOST_DIR:
+    sh: python {{.TESTENV_DIR}}/host_dir.py
+  TESTENV_COMPOSE: >-
+    ENV_FILE_NAME={{.TESTENV_ENV_FILE}} MTAS_HOST_DIR={{.MTAS_HOST_DIR}}
+    MTAS_APP_PORT={{.TESTENV_APP_PORT}} MTAS_DB_PORT={{.TESTENV_DB_PORT}}
+    {{.COMPOSE_BIN}} -p {{.PROJECT}} --project-directory . -f {{.TESTENV_DIR}}/compose.yaml
+
+tasks:
+
+  tools:
+    desc: downloads docker and docker compose into .tools (only if missing)
+    silent: true
+    status:
+      - command -v docker >/dev/null || test -x {{.TOOLS_DIR}}/docker
+      - docker compose version >/dev/null 2>&1 || test -x {{.TOOLS_DIR}}/docker-compose
+    cmds:
+      - mkdir -p {{.TOOLS_DIR}}
+      - curl -fsSL https://download.docker.com/linux/static/stable/x86_64/docker-{{.DOCKER_VERSION}}.tgz | tar -xzO docker/docker > {{.TOOLS_DIR}}/docker
+      - curl -fsSL -o {{.TOOLS_DIR}}/docker-compose https://github.com/docker/compose/releases/download/{{.COMPOSE_VERSION}}/docker-compose-linux-x86_64
+      - cd {{.TOOLS_DIR}} && echo "$(curl -fsSL https://github.com/docker/compose/releases/download/{{.COMPOSE_VERSION}}/docker-compose-linux-x86_64.sha256 | cut -d' ' -f1)  docker-compose" | sha256sum -c -
+      - chmod +x {{.TOOLS_DIR}}/docker {{.TOOLS_DIR}}/docker-compose
+
+  deploy:
+    desc: builds, starts, initialises and checks the test copy
+    aliases: [d]
+    cmds:
+      - task: up
+      - task: init
+      - task: check
+
+  up:
+    desc: builds and starts app and database of the test copy
+    aliases: [u]
+    deps: [tools]
+    cmds:
+      - echo "Project folder for docker -> {{.MTAS_HOST_DIR}}"
+      - mkdir -p .logs/testenv
+      - '{{.TESTENV_COMPOSE}} up -d --build --wait app database'
+
+  init:
+    desc: applies the migrations, imports the exercises and creates the demo database
+    aliases: [i]
+    deps: [tools]
+    cmds:
+      - '{{.TESTENV_COMPOSE}} exec -T app flask db upgrade'
+      - '{{.TESTENV_COMPOSE}} exec -T app flask import-data-exercises'
+      - '{{.TESTENV_COMPOSE}} exec -T app flask create-demo-db'
+
+  check:
+    desc: checks the main pages and the demo database of the test copy
+    aliases: [c]
+    deps: [tools]
+    cmds:
+      - '{{.TESTENV_COMPOSE}} exec -T app python - < {{.TESTENV_DIR}}/smoke.py'
+      - |
+        DEMO_DB=$(tr -d '\r' < {{.TESTENV_ENV_FILE}} | sed -nE "s/^POSTGRESQL_DEMO_DB *= *'?([^' ]+)'?.*/\1/p")
+        {{.TESTENV_COMPOSE}} exec -T database psql -U postgres -Atc "SELECT datname FROM pg_database" | grep -qx "$DEMO_DB"
+        echo "[i] demo database exists: $DEMO_DB"
+
+  logs:
+    desc: shows containers and latest logs of the test copy
+    aliases: [l]
+    deps: [tools]
+    cmds:
+      - '{{.TESTENV_COMPOSE}} ps -a'
+      - '{{.TESTENV_COMPOSE}} logs --tail 30'
+      - tail -n 30 .logs/testenv/gunicorn-error.log
+      - tail -n 30 .logs/testenv/app-server.log
+
+  down:
+    desc: removes the test copy (containers, volumes, app image)
+    aliases: [rm]
+    deps: [tools]
+    cmds:
+      - '{{.TESTENV_COMPOSE}} down -v --rmi local'

@@ -1,0 +1,59 @@
+# Test copy of mta-system (app and PostgreSQL database), next to the real "mta-system" project.
+# Used by taskfiles/Taskfile_testenv.yaml with --project-directory set to the project folder,
+# which also sets the ports (MTAS_APP_PORT, MTAS_DB_PORT).
+# MTAS_HOST_DIR: project folder as the Docker daemon sees it (see host_dir.py)
+services:
+
+  app:
+    build: .
+    env_file:
+      - ${ENV_FILE_NAME:-envs/webapp-dev-docker.env}
+    environment:
+      TARGET_SERVER: production
+      TZ: Europe/Berlin
+      POSTGRESQL_DB_HOST: database
+      POSTGRESQL_DB_HOST_PORT: "5432"
+      POSTGRESQL_ADMIN_USER: postgres
+      POSTGRESQL_ADMIN_PASSWORD: testenv-postgres # sandbox only, same as in "database"
+    volumes:
+      - app-data:/mta-system/data # own SQLite database
+      - ${MTAS_HOST_DIR:-.}/.logs/testenv:/mta-system/.logs
+      - ${MTAS_HOST_DIR:-.}/setup:/mta-system/setup:ro
+    ports:
+      - "127.0.0.1:${MTAS_APP_PORT:-5354}:5151"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5151/about', timeout=5)"]
+      interval: 10s
+      timeout: 10s
+      start_period: 20s
+      retries: 6
+    depends_on:
+      - database
+    networks:
+      - mtas-network
+
+  database:
+    image: postgres:15.8
+    env_file:
+      - envs/postgresql-service.env
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: testenv-postgres
+    ports:
+      - "127.0.0.1:${MTAS_DB_PORT:-35433}:5432"
+    volumes:
+      - pg15volume-database:/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mtas-network
+
+networks:
+  mtas-network:
+
+volumes:
+  app-data:
+  pg15volume-database:

@@ -1,0 +1,6 @@
+{% import "services/_macros.html" as ui %}
+{% call ui.card("PGAdmin4", "fas fa-server", "#76c427") %}
+	{{ ui.url_row("URL", service['url']) }}
+	{{ ui.copy_row("Login", service['login'], "pgadmin4Login") }}
+	{{ ui.copy_row("Password", service['password'], "pgadmin4Password") }}
+{% endcall %}

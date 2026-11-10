@@ -1,0 +1,83 @@
+{% extends "layout.html" %}
+{% block content %}
+
+		<div class="card text-center pt-4 mt-4">
+          <div class="card-body">
+            <h5 class="card-title">Admin UI: UI Visibility Settings</h5>
+            <p class="card-text">
+				<div align="center" class="m-1">
+					View and change UI settings.</br>
+				</div>
+			</p>
+          </div>
+        </div>
+
+		{% if message is defined %}
+			{% if message is not none %}
+
+			<div class="card text-center mt-2 mb-2">
+			  <div class="card-body bg-info">
+				<p class="card-text"><span class="badge badge-warning">Message</span>&nbsp;<i><b>{{message}}</b></i></p>
+			  </div>
+			</div>
+
+			{% endif %}
+		{% endif %}
+
+
+		<table class="table table-striped mt-2">
+			<thead>
+				<tr>
+				  <th scope="col">#</th>
+				  <th scope="col">UI Setting Key</th>
+				  <th scope="col">Visibility</th>
+				  <th scope="col">On/Off</th>
+				</tr>
+			</thead>
+			<tbody>
+				{% for ui_key in uiVisibility %}
+
+					{% if uiVisibility[ui_key] == true %}
+						{% set target = "off" %}
+						{% set htmlTextColor = "text-success" %}
+						{% set htmlBtnColor = "btn-danger" %}
+					{% else %}
+						{% set target = "on" %}
+						{% set htmlTextColor = "text-danger" %}
+						{% set htmlBtnColor = "btn-success" %}
+					{% endif %}
+
+					<tr>
+						<td scope="row" class="p-1 m-0">{{loop.index}}</td>
+						<td class="p-1 m-0 ">{{ui_key}}</td>
+						<td class="p-1 m-0 {{htmlTextColor}} font-weight-bold">
+							{{uiVisibility[ui_key]}}
+						</td>
+						<td class="p-1 m-0 {{htmlTextColor}} font-weight-bold">
+							<div class="btn-group">
+								<a href="{{ url_for('admin.adminViewChangeUIVisibilitySettings') }}?uiKey={{ui_key}}&target={{target}}" class="btn {{htmlBtnColor}}">
+									 {{target}}
+								</a>
+							</div>
+						</td>
+					</tr>
+
+				{% endfor %}
+			</tbody>
+		</table>
+
+<style>
+	* {
+		outline: 0px solid red;
+	}
+
+	.vertical{
+		 transform: rotate(360deg);
+		 writing-mode: vertical-rl;
+		 margin-right:10px;
+	}
+
+</style>
+
+
+{% endblock %}

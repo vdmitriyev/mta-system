@@ -1,0 +1,9 @@
+{% import "services/_macros.html" as ui %}
+{% call ui.card("OpenRefine", "fas fa-gem", "#00A0FF") %}
+	{{ ui.url_row("URL", service['url']) }}
+	{{ ui.copy_row("Login", service['user'], "openrefineLogin") }}
+	{{ ui.copy_row("Password", service['password'], "openrefinePassword") }}
+	{% if serviceVisibility['openrefine_self_managment'] %}
+		{{ ui.status_rows(service, "btnStartOpenRefine") }}
+	{% endif %}
+{% endcall %}

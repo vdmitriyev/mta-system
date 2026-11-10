@@ -1,0 +1,33 @@
+{% extends "layout.html" %}
+{% block content %}
+
+		<div class="card text-center">
+          <div class="card-body">
+            <h5 class="card-title">Personalized <i class="text-success">access credential</i> for the provided services</h5>
+			<p class="card-text">Please, <span class="badge badge-warning">do not change</span> any passwords of provided to you systems. Because these changes <span class="badge badge-warning">won't be</span> reflected here</p>
+          </div>
+        </div>
+
+
+		{% if message is defined %}
+			{% if message is not none %}
+
+			<div class="card text-center mt-2 mb-2">
+			  <div class="card-body bg-light">
+				<p class="card-text"><span class="badge badge-warning">Message</span>&nbsp;<i><b>{{message}}</b></i></p>
+			  </div>
+			</div>
+			{% endif %}
+		{% endif %}
+
+		{# Each service has its own template in services/; SERVICES_UI (config.py) sets which ones are shown and the order #}
+		{% if serviceVisibility is defined and data is defined %}
+			{% for service_name in config['SERVICES_UI'] %}
+				{% set service = data.get(service_name ~ '_service') %}
+				{% if serviceVisibility.get(service_name) and service %}
+					{% include "services/" ~ service_name ~ ".html" ignore missing %}
+				{% endif %}
+			{% endfor %}
+		{% endif %}
+
+{% endblock %}

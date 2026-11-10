@@ -1,0 +1,7 @@
+settings.py
+.ipynb_checkpoints/*
+__pycache__/*
+*.html
+data/*
+archives/*
+tutorial_flights/*

@@ -1,0 +1,43 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+-   repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+    -   id: trailing-whitespace
+    -   id: end-of-file-fixer
+    -   id: check-yaml
+    -   id: check-added-large-files
+    -   id: debug-statements
+
+-   repo: https://github.com/psf/black
+    rev: 25.9.0
+    hooks:
+    - id: black
+
+-   repo: https://github.com/pycqa/isort
+    rev: 7.0.0
+    hooks:
+      - id: isort
+        args: ["--profile", "black", "--filter-files"]
+
+-   repo: https://github.com/gitleaks/gitleaks
+    rev: v8.29.0
+    hooks:
+      - id: gitleaks
+
+# variant - direct
+#-   repo: https://github.com/PyCQA/bandit
+#    rev: '1.8.0'
+#    hooks:
+#    - id: bandit
+
+# variant - using installed bandit package
+#-   repo: local
+#    hooks:
+#    -   id: bandit
+#        name: python-bandit-vulnerability-check
+#        entry: bandit
+#        args: [ '-r', '.', '-x', './.venv' ]
+#        language: system
+#        pass_filenames: false

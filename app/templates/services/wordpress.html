@@ -1,0 +1,10 @@
+{% import "services/_macros.html" as ui %}
+{% call ui.card("Wordpress", "fa-brands fa-wordpress", "#509ee3") %}
+	{{ ui.url_row("URL", service['url']) }}
+	{{ ui.url_row("URL (Admin)", service['urlAdmin']) }}
+	{{ ui.copy_row("Login", service['login'], "wordpressLogin") }}
+	{{ ui.copy_row("Password", service['password'], "wordpressPassword") }}
+	{% if serviceVisibility['wordpress_self_managment'] %}
+		{{ ui.status_rows(service, "btnStartWordpress") }}
+	{% endif %}
+{% endcall %}

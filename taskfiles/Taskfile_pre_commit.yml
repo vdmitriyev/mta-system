@@ -1,0 +1,28 @@
+version: '3'
+
+tasks:
+
+  install:
+    desc: installs git hooks
+    aliases: [pci]
+    deps: [":app:check-virtualenv"]
+    silent: true
+    cmds:
+      - pre-commit install
+
+  run:
+    desc: runs installed git hooks
+    aliases: [pcr]
+    deps: [":app:check-virtualenv"]
+    silent: true
+    cmds:
+      - pre-commit run --all-files
+
+  update:
+    desc: updates git hooks
+    aliases: [pcu]
+    deps: [":app:check-virtualenv"]
+    silent: true
+    cmds:
+      - pre-commit autoupdate
+      - pre-commit run --all-files

@@ -1,0 +1,9 @@
+{% import "services/_macros.html" as ui %}
+{% call ui.card("Metabase", "fas fa-chart-line", "#509ee3") %}
+	{{ ui.url_row("URL", service['url']) }}
+	{{ ui.copy_row("Login", service['email'], "metabaseLogin") }}
+	{{ ui.copy_row("Password", service['password'], "metabasePassword") }}
+	{% if serviceVisibility['metabase_self_managment'] %}
+		{{ ui.status_rows(service, "btnStartMetabase") }}
+	{% endif %}
+{% endcall %}

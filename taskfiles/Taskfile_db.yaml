@@ -1,0 +1,46 @@
+version: '3'
+
+# The mta-system data is stored in SQLite (MTAS_DB_PATH, default: data/mta-system.db)
+
+tasks:
+
+  init:
+    desc: creates or updates the SQLite database and imports the initial data
+    aliases: [i]
+    deps: [":app:check-virtualenv"]
+    cmds:
+      - flask db upgrade
+      # the app adds the default UI visibility settings on start
+      - flask import-data-exercises
+
+  upgrade:
+    desc: applies the database migrations (migrations/versions)
+    aliases: [u]
+    deps: [":app:check-virtualenv"]
+    cmds:
+      - flask db upgrade
+
+  migrate:
+    desc: creates a new migration from the models and applies it
+    aliases: [m]
+    deps: [":app:check-virtualenv"]
+    cmds:
+      # first the existing migrations: "stamp head" would skip them
+      - flask db upgrade
+      - flask db migrate
+      - flask db upgrade
+
+  create-demo:
+    desc: creates the demo database and its read-only user in the PostgreSQL service
+    aliases: [cd]
+    deps: [":app:check-virtualenv"]
+    cmds:
+      - flask create-demo-db
+
+  create-custom:
+    desc: creates a custom database and user in the PostgreSQL service
+    aliases: [cc]
+    deps: [":app:check-virtualenv"]
+    interactive: true
+    cmds:
+      - flask create-custom-db

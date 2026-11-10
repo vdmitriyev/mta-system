@@ -1,0 +1,28 @@
+version: '3'
+
+vars:
+  ENV_FILE_NAME: '{{.ENV_FILE_NAME | default "envs/webapp-dev-local.env"}}'
+  VENV_DIR: '.venv'
+
+env:
+  FLASK_APP: 'run.py'
+  ENV_FILE_NAME: '{{.ENV_FILE_NAME}}'
+
+includes:
+
+  app: ./taskfiles/Taskfile_app.yml
+  db: ./taskfiles/Taskfile_db.yaml
+  pre-commit: ./taskfiles/Taskfile_pre_commit.yml
+  prod: ./taskfiles/Taskfile_prod.yml
+  sandbox: ./taskfiles/Taskfile_sandbox.yml
+  testenv: ./taskfiles/Taskfile_testenv.yaml
+
+tasks:
+
+  default:
+    desc: lists all tasks
+    silent: true
+    cmds:
+      - task --list-all
+      - echo ""
+      - echo "Example usage-> 'task app:serve'"

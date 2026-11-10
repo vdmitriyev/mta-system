@@ -1,0 +1,83 @@
+# Production: mta-system behind nginx (HTTPS), with the services for the students.
+#   task prod:up
+#   (docker compose -f compose.prod.yaml -f compose.services.yml up -d --build)
+#
+# Only nginx publishes ports to all interfaces. The app is reachable from nginx only.
+name: mta-system-prod
+
+services:
+
+  webapp:
+    build: .
+    image: mta-system:latest
+    container_name: mta-system-app
+    restart: unless-stopped
+    env_file:
+      - ${ENV_FILE_NAME:-envs/.env}
+    environment:
+      TARGET_SERVER: production
+      TZ: Europe/Berlin
+      # network of this project: the app starts the service containers of the students in it
+      DOCKER_NETWORK_NAME: mta-system-prod_mtas-network
+    volumes:
+      - ./data:/mta-system/data # SQLite database (MTAS_DB_PATH)
+      - ./.logs:/mta-system/.logs
+      - ./setup:/mta-system/setup:ro # initial data (initial_exercises.csv)
+      - ./.htpasswd_nginx:/mta-system/.htpasswd_nginx
+      - /var/run/docker.sock:/var/run/docker.sock # starts and stops the service containers
+    expose:
+      - "5151"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5151/about', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 30s
+      retries: 3
+    networks:
+      - mtas-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  nginx:
+    build: ./provision/nginx
+    image: mta-system-nginx:latest
+    container_name: mta-system-nginx
+    restart: unless-stopped
+    depends_on:
+      webapp:
+        condition: service_healthy
+      pgadmin4-service:
+        condition: service_started
+    environment:
+      HTTPS_PORT: "${HTTPS_PORT:-443}"
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - ./provision/nginx/nginx_part_openrefine.config:/etc/nginx/conf.d/nginx_part_openrefine.config:ro
+      - ./.htpasswd_nginx:/.htpasswd_nginx:ro
+      - ./.logs/nginx:/var/log/nginx
+      - ./certbot/www:/var/www/certbot:ro
+      - ./certbot/conf:/etc/nginx/ssl:ro
+    networks:
+      - mtas-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Gets and renews Let's Encrypt certificates. Runs only on demand:
+  #   task prod:cert -- mtas.example.org
+  certbot:
+    image: certbot/certbot:v5.1.0
+    profiles: [certbot]
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/conf:/etc/letsencrypt
+
+networks:
+  mtas-network:

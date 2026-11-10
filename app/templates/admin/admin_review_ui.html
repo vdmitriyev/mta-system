@@ -1,0 +1,140 @@
+{% extends "layout.html" %}
+{% block content %}
+
+		<div class="card text-center pt-1 mt-1">
+          <div class="card-body">
+            <h5 class="card-title">Reviews</h5>
+          </div>
+        </div>
+
+
+	<table class="table table-striped mt-2">
+		<thead>
+			<tr>
+			  <th scope="col" style="width: 1.00%">#</th>
+			  <th scope="col" style="width: 5.00%">Name</th>
+			  <th scope="col" style="width: 3.00%">Course Code</th>
+			  <th scope="col" style="width: 2.00%">User ID</th>
+			  <th scope="col" style="width: 2.00%">Access URL</th>
+			  {% for key, value in exercises.items() %}
+				<th scope="col" style="width: 5.00%;text-align:center;" colspan="5">{{value.code}}</th>
+			  {% endfor %}
+			</tr>
+		</thead>
+		<tbody>
+			{% for item in usersReview %}
+				<tr>
+					<th scope="row">{{loop.index}}</th>
+					<td>{{item.name}}</td>
+					<td>{{item.course_code}}</td>
+					<td>{{item.itid}}</td>
+					<td>
+						<a class="fas fa-clone fa-lg" href="#" onclick="copyToClipboard({{item.itid}});return false;" style="text-decoration: none;color:#f5b041;"></a>
+						 <input type="hidden" id="userAccessWithAuthURL{{item.itid}}" name="userAccessWithAuthURL{{item.itid}}" value="{{item.accessWithAuthURL}}">
+					</td>
+
+
+					{% for ex_item in item['exercises'] %}
+						<td scope="col" style="text-align:left;" class="pl-1 pr-0">
+							<a class="fas fa-edit fa-lg" style="text-decoration: none"  href="{{url_for('admin.editReviewUser')}}?user={{item.itid}}&exerciseCode={{ex_item.code}}"></a>
+						</td>
+						<td class="pl-1 pr-0">
+							{% if ex_item['review_available'] %}
+								<i class="fas fa-align-justify p-0" style="color:#31dd31"></i>
+							{% else %}
+								<i class="fas fa-align-justify p-0" style="color:#6c757d"></i>
+							{% endif %}
+						</td>
+						<td class="pl-1 pr-0">
+							{% if ex_item['submitted'] %}
+								<i class="fas fa-check-square p-0" style="color:#31dd31"></i>
+							{% else %}
+								<i class="fas fa-check-square p-0" style="color:#6c757d"></i>
+							{% endif %}
+						</td>
+						<td class="pl-1 pr-0">
+							{% if ex_item['reviewed'] %}
+								<i class="fas fa-search p-0" style="color:#31dd31"></i>
+							{% else %}
+								<i class="fas fa-search p-0" style="color:#6c757d"></i>
+							{% endif %}
+						</td>
+						<td class="pl-1 pr-2">
+							{% if ex_item['review_visible'] %}
+								<i class="fas fa-eye p-0" style="color:#31dd31"></i>
+							{% else %}
+								<i class="fas fa-eye p-0" style="color:#6c757d"></i>
+							{% endif %}
+						</td>
+					{% endfor %}
+				</tr>
+			{% endfor %}
+
+			<tr class="bg-light">
+			  <td scope="col" colspan="5"></td>
+			  {% for key, value in exercises.items() %}
+				<td scope="col" style="padding-left:0.2em;">
+					<div class="vertical font-weight-bold">
+						Edit
+					</div>
+				</td>
+				<td scope="col" style="padding-left:0.2em;">
+					<div class="vertical">
+						Content
+					</div>
+				</td>
+				<td scope="col" style="padding-left:0.2em;">
+					<div class="vertical">
+						Submitted
+					</div>
+				</td>
+				<td scope="col" style="padding-left:0.2em;">
+					<div class="vertical">
+						Reviewed
+					</div>
+				</td>
+				<td scope="col" style="padding-left:0.2em;">
+					<div class="vertical">
+						Visible
+					</div>
+				</td>
+			  {% endfor %}
+			</tr>
+
+			<tr class="bg-light">
+			  <td scope="col" colspan="4"></td>
+			  {% for key, value in exercises.items() %}
+				<td scope="col" colspan="5" class="font-italic">
+					{{value.name}}
+				</td>
+			  {% endfor %}
+			</tr>
+
+
+
+		</tbody>
+	</table>
+
+<style>
+* {
+    outline: 0px solid red;
+}
+
+.vertical{
+	 transform: rotate(360deg);
+	 writing-mode: vertical-rl;
+	 margin-right:10px;
+}
+
+</style>
+
+<script>
+
+ function copyToClipboard(userID){
+	var elementToCopyFrom = 'userAccessWithAuthURL' + userID;
+	var copyText = document.getElementById(elementToCopyFrom);
+	navigator.clipboard.writeText(copyText.value);
+ }
+</script>
+
+{% endblock %}

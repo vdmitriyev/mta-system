@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  wp-db:
+    image: mariadb
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=<PASS-ROOT>
+      - MYSQL_DATABASE=wordpress
+      - MYSQL_USER=wordpress
+      - MYSQL_PASSWORD=<PASS-DB-USER>
+    volumes:
+      - wp_db_data:/var/lib/mysqlx
+    ports:
+      - "127.0.0.1:3306:3306"
+
+  wp-wordpress:
+    image: wordpress
+    restart: always
+    depends_on:
+      - wp-db
+    environment:
+      - WORDPRESS_DB_HOST=wp-db:3306
+      - WORDPRESS_DB_NAME=wordpress
+      - WORDPRESS_DB_USER=wordpress
+      - WORDPRESS_DB_PASSWORD=<PASS-DB-USER>
+      - WORDPRESS_CONFIG_EXTRA=
+
+          /* force our home url */
+          define('WP_HOME', '<HTTP-WEBSITE-URL>/wordpress/7001/');
+          define('WP_SITEURL', WP_HOME);
+          $$_SERVER['REQUEST_URI'] = str_replace("/wp-admin/", "/wordpress/7001/wp-admin/",  $$_SERVER['REQUEST_URI']);
+
+    volumes:
+      - wp_wordpress_data:/opt/wordpress/html/1
+    ports:
+      - "127.0.0.1:7001:80"
+
+volumes:
+  wp_db_data:
+  wp_wordpress_data:

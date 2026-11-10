@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+{% block content %}
+
+	<div class="card text-center pt-1 mt-1">
+	  <div class="card-body">
+		<h5 class="card-title">Services UI: <b>Metabase</b></h5>
+	  </div>
+	</div>
+
+	{% if message is defined %}
+		{% if message is not none %}
+
+		<div class="card text-center mt-2 mb-2">
+		  <div class="card-body bg-info">
+			<p class="card-text"><span class="badge badge-warning">Message</span>&nbsp;<i><b>{{message}}</b></i></p>
+		  </div>
+		</div>
+
+		{% endif %}
+	{% endif %}
+
+
+	<table id="openrefineServicesTable" class="table table-striped mt-2">
+		<thead>
+			<tr>
+			  <th scope="col" style="width: 1.00%">#</th>
+			  <th scope="col" style="width: 5.00%">Name</th>
+			  <th scope="col" style="width: 3.00%">Course Code</th>
+			  <th scope="col" style="width: 2.00%">User ID</th>
+			  <th scope="col" style="width: 2.00%">Access URL</th>
+			  <th scope="col" style="width: 2.00%">isCreated?</th>
+			  <th scope="col" style="width: 2.00%">Container Name</th>
+			  <th scope="col" style="width: 2.00%">Container Status</th>
+			  <th scope="col" style="width: 2.00%">Start</th>
+			  <th scope="col" style="width: 2.00%">Stop</th>
+			  <th scope="col" style="width: 2.00%">Create</th>
+			</tr>
+		</thead>
+		<tbody>
+			{% for item in usersData %}
+				<tr>
+					<th scope="row">{{loop.index}}</th>
+					<td>{{item.name}}</td>
+					<td>{{item.course_code}}</td>
+					<td>{{item.itid}}</td>
+					<td>
+						<a class="fas fa-clone fa-lg" href="#" onclick="copyToClipboard({{item.itid}});return false;" style="text-decoration: none;color:#f5b041;"></a>
+						 <input type="hidden" id="userAccessWithAuthURL{{item.itid}}" name="userAccessWithAuthURL{{item.itid}}" value="{{item.accessWithAuthURL}}">
+					</td>
+					<td>{{item.service_created_status}}</td>
+					<td>{{item.service_container_name}}</td>
+					<td>{{item.service_container_status}}</td>
+					<td>
+						<a class="btn bg-info text-white" type="button" name="btnStartService" href="{{ url_for('admin.startService') }}?user_id={{item.itid}}&service_name=metabase">START</a>
+					</td>
+					<td>
+						<a class="btn bg-warning text-white" type="button" name="btnStopService" href="{{ url_for('admin.stopService') }}?user_id={{item.itid}}&service_name=metabase">STOP</a>
+					</td>
+					<td>
+						<a class="btn bg-danger text-white" type="button" name="btnCreateServiceMB" href="{{ url_for('admin.createServicesMetabase') }}?user_id={{item.itid}}">CREATE</a>
+					</td>
+				</tr>
+			{% endfor %}
+		</tbody>
+	</table>
+
+<style>
+	* {
+		outline: 0px solid red;
+	}
+
+	.vertical{
+		 transform: rotate(360deg);
+		 writing-mode: vertical-rl;
+		 margin-right:10px;
+	}
+</style>
+
+<script>
+
+	function copyToClipboard(userID){
+		var elementToCopyFrom = 'userAccessWithAuthURL' + userID;
+		var copyText = document.getElementById(elementToCopyFrom);
+		navigator.clipboard.writeText(copyText.value);
+	}
+
+	$(document).ready(function() {
+	  $('#openrefineServicesTable').DataTable({
+		"lengthMenu": [[-1], ["All"]],
+		"lengthChange": false,
+	    "paging": false,
+		columnDefs: [
+		  { orderable: false, targets: [2, 4, 8, 9, 10] } // Disable sorting for the selected columns
+		]
+	  });
+	});
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,58 @@
+services:
+
+  metabase-service:
+   image: metabase/metabase:v0.57.3
+   ports:
+       - "127.0.0.1:3000:3000"
+   networks:
+       - mtas-network
+
+  openrefine-service:
+   build: ./provision/openrefine
+   image: openrefine:3.9.5
+   networks:
+       - mtas-network
+
+  postgresql-service:
+    image: "postgres:15.8"
+    env_file:
+      - envs/postgresql-service.env # configure postgres service
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pg15volume-service:/pgdata
+    networks:
+      - mtas-network
+
+  pgadmin4-service:
+    image: "dpage/pgadmin4:8.12"
+    env_file:
+      - envs/pgadmin4-service.env # configures pgadmin4 service
+    ports:
+      - "127.0.0.1:5050:80"
+    volumes:
+      - pga4volume-service:/var/lib/pgadmin
+      - type: bind
+        source: ./provision/pgadmin4/config_local.py
+        target: /pgadmin4/config_local.py
+    networks:
+      - mtas-network
+
+  #mariadb-service:
+  #  image: mariadb
+  #  env_file:
+  #    - envs/mariadb-service.env # configures mariadb service
+  #  volumes:
+  #    - mariadbvolume-service:/var/lib/mysqlmdb
+  #  ports:
+  #    - "127.0.0.1:3306:3306"
+  #    #- 3306:3306
+  #  networks:
+  #    - mtas-network
+
+networks:
+    mtas-network:
+
+volumes:
+  pg15volume-service:
+  pga4volume-service:

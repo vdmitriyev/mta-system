@@ -1,0 +1,8 @@
+{% import "services/_macros.html" as ui %}
+{% call ui.card("MariaDB", "fas fa-database", "#76c427") %}
+	{{ ui.copy_row("Server", service['server'], "mariadbServer", bold=false) }}
+	{{ ui.text_row("Port", service['port'], bold=false) }}
+	{{ ui.copy_row("Database", service['db'], "mariadbDatabase") }}
+	{{ ui.copy_row("User", service['user'], "mariadbUser") }}
+	{{ ui.copy_row("Password", service['password'], "mariadbPassword") }}
+{% endcall %}

@@ -1,0 +1,65 @@
+version: '3'
+
+vars:
+  PROD_COMPOSE: docker compose -f compose.prod.yaml -f compose.services.yml
+
+tasks:
+
+  build:
+    desc: Build the production images (mta-system and nginx)
+    cmds:
+      - "{{.PROD_COMPOSE}} build"
+
+  up:
+    desc: Start mta-system behind nginx (HTTPS)
+    aliases: [u]
+    cmds:
+      - mkdir -p data .logs/nginx .htpasswd_nginx certbot/www certbot/conf
+      - "{{.PROD_COMPOSE}} up -d --build"
+
+  down:
+    desc: Stop the production containers
+    aliases: [d]
+    cmds:
+      - "{{.PROD_COMPOSE}} down"
+
+  restart:
+    desc: Restart the production containers
+    cmds:
+      - "{{.PROD_COMPOSE}} restart"
+
+  ps:
+    desc: Show the state of the production containers
+    cmds:
+      - "{{.PROD_COMPOSE}} ps"
+
+  logs:
+    desc: Show the logs of the production containers as they come in
+    aliases: [l]
+    cmds:
+      - "{{.PROD_COMPOSE}} logs -f {{.CLI_ARGS}}"
+
+  reload:
+    desc: Check the nginx configuration and reload it (for example after a new certificate)
+    cmds:
+      - "{{.PROD_COMPOSE}} exec nginx nginx -t"
+      - "{{.PROD_COMPOSE}} exec nginx nginx -s reload"
+
+  migrate:
+    desc: Migrate the production database to the newest revision
+    cmds:
+      - "{{.PROD_COMPOSE}} exec webapp flask db upgrade"
+
+  cert:
+    desc: "Get a Let's Encrypt certificate (task prod:cert -- mtas.example.org)"
+    preconditions:
+      - sh: test -n "{{.CLI_ARGS}}"
+        msg: "Give the host name: task prod:cert -- mtas.example.org"
+    cmds:
+      - "{{.PROD_COMPOSE}} run --rm certbot certonly --webroot -w /var/www/certbot -d {{.CLI_ARGS}}"
+
+  cert-renew:
+    desc: Renew the Let's Encrypt certificates and reload nginx
+    cmds:
+      - "{{.PROD_COMPOSE}} run --rm certbot renew --webroot -w /var/www/certbot"
+      - task: reload

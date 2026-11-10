@@ -1,0 +1,70 @@
+{% extends "layout.html" %}
+{% block content %}
+
+		<div class="card text-center pt-4 mt-4">
+          <div class="card-body">
+            <h5 class="card-title">Admin UI: Configurations</h5>
+            <p class="card-text">
+				<div align="center" class="m-1">
+					View configurations used to start the service.</br>
+					NOTE: <b>Credentials and sensitive information should not be shown</b>
+				</div>
+			</p>
+          </div>
+        </div>
+
+		{% if message is defined %}
+			{% if message is not none %}
+
+			<div class="card text-center mt-2 mb-2">
+			  <div class="card-body bg-info">
+				<p class="card-text"><span class="badge badge-warning">Message</span>&nbsp;<i><b>{{message}}</b></i></p>
+			  </div>
+			</div>
+
+			{% endif %}
+		{% endif %}
+
+		<!--
+		<table class="table table-striped mt-2">
+				<thead>
+					<tr>
+					  <th scope="col" style="width: 3.00%">#</th>
+					  <th scope="col" style="width: 45%">Key</th>
+					  <th scope="col">Value</th>
+					</tr>
+				</thead>
+		</table>
+		-->
+
+		{% for category_key in envConfigs %}
+			{% set outer_loop = loop %}
+			<h3>{{category_key}}</h3>
+			<table class="table table-secondary table-striped mt-2">
+				<tbody>
+					{% for item in envConfigs[category_key] %}
+						<tr>
+							<th scope="row" style="width: 3.00%">{{outer_loop.index}}.{{loop.index}}</th>
+							<td style="width: 45%">{{item.key}}</td>
+							<td>{{item.value}}</td>
+						</tr>
+					{% endfor %}
+				</tbody>
+			</table>
+		{% endfor %}
+
+<style>
+	* {
+		outline: 0px solid red;
+	}
+
+	.vertical{
+		 transform: rotate(360deg);
+		 writing-mode: vertical-rl;
+		 margin-right:10px;
+	}
+
+</style>
+
+
+{% endblock %}

@@ -1,0 +1,18 @@
+{% import "services/_macros.html" as ui %}
+{% call ui.card("PostgreSQL", "fas fa-database", "#76c427") %}
+	{{ ui.copy_row("Server", service['server'], "postgresServer", bold=false) }}
+	{{ ui.text_row("Port", service['port'], bold=false) }}
+	{{ ui.copy_row("Database", service['db'], "postgresDatabase") }}
+	{{ ui.copy_row("User", service['user'], "postgresUser") }}
+	{{ ui.copy_row("Password", service['password'], "postgresPassword") }}
+	{{ ui.spacer_row() }}
+	{% if serviceVisibility['importers_flights'] %}
+		{{ ui.importer_row("flights", "Flights") }}
+	{% endif %}
+	{% if serviceVisibility['importers_airbnb'] %}
+		{{ ui.importer_row("airbnb", "AirBnB") }}
+	{% endif %}
+	{% if serviceVisibility['importers_adventureworks'] %}
+		{{ ui.importer_row("adventureworks", "AdventureWorks") }}
+	{% endif %}
+{% endcall %}
