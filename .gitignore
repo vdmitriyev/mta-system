@@ -70,3 +70,6 @@ __run_report*.html
 
 # sample files (templates for envs/ and setup/)
 !/samples/*
+
+# datasets of the importers (not in git)
+app/importers/**/*.zip
