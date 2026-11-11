@@ -289,3 +289,9 @@ def test_missing_versions_file_is_named(tmp_path, clean_env, caplog):
     ):
         load_settings()
     assert "Versions file does not exist" in caplog.text
+
+
+@pytest.mark.parametrize("value", ["Upper-", "-dash", "with space-", "a/b-"])
+def test_wrong_container_prefix(value):
+    with pytest.raises(ConfigError, match="CONTAINER_NAME_PREFIX"):
+        Settings.from_env({**BASE_ENV, "CONTAINER_NAME_PREFIX": value})

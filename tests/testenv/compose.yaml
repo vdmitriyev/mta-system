@@ -1,4 +1,12 @@
-# Test copy of mta-system (app and PostgreSQL database), next to the real "mta-system" project.
+# Test copy of mta-system next to the real "mta-system" project: the app, PostgreSQL,
+# pgAdmin 4, MariaDB, and the containers of each user (Metabase, OpenRefine, WordPress)
+# that the app starts through the Docker socket. The deprecated services (JupyterHub,
+# NiFi, Superset) are not part of it.
+#
+# Network variant "names" (this file): the app reaches the containers of the users by
+# their names in the network of the project, as nginx does in production. Their names
+# start with "mtas-testenv-" and they publish no ports, so they cannot clash with other
+# containers. Variant "host ports": compose.hostports.yaml on top of this file.
 # Used by taskfiles/Taskfile_testenv.yaml with --project-directory set to the project folder,
 # which also sets the ports (MTAS_APP_PORT, MTAS_DB_PORT).
 # MTAS_HOST_DIR: project folder as the Docker daemon sees it (see host_dir.py)
@@ -16,8 +24,22 @@ services:
       POSTGRESQL_DB_HOST_PORT: "5432"
       POSTGRESQL_ADMIN_USER: postgres
       POSTGRESQL_ADMIN_PASSWORD: testenv-postgres # sandbox only, same as in "database"
+      MARIADB_DB_HOST: mariadb
+      MARIADB_DB_HOST_PORT: "3306"
+      MARIADB_ADMIN_USER: root
+      MARIADB_ADMIN_PASSWORD: testenv-mariadb # sandbox only, same as in "mariadb"
+      # containers of the users
+      DOCKER_NETWORK_NAME: mtas-testenv_mtas-network
+      CONTAINER_NAME_PREFIX: mtas-testenv-
+      CONTAINER_PUBLISH_PORTS: "false"
+      METABASE_BASE_URL: http://mtas-testenv-metabase-
+      METABASE_TRY_COUNT: "20"
+      METABASE_TRY_SLEEP_SEC: "15"
+      # for tests/testenv/services_check.py
+      MTAS_PGADMIN4_URL: http://pgadmin4
     volumes:
       - app-data:/mta-system/data # own SQLite database
+      - /var/run/docker.sock:/var/run/docker.sock # starts the containers of the users
       - ${MTAS_HOST_DIR:-.}/.logs/testenv:/mta-system/.logs
       - ${MTAS_HOST_DIR:-.}/setup:/mta-system/setup:ro
     ports:
@@ -29,7 +51,36 @@ services:
       start_period: 20s
       retries: 6
     depends_on:
-      - database
+      database:
+        condition: service_healthy
+      mariadb:
+        condition: service_healthy
+    networks:
+      - mtas-network
+
+  pgadmin4:
+    image: dpage/pgadmin4:${PGADMIN4_VERSION:?set it in versions.env and use task}
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mtas-testenv.org
+      PGADMIN_DEFAULT_PASSWORD: testenv-pgadmin # sandbox only
+      PGADMIN_CONFIG_CHECK_EMAIL_DELIVERABILITY: "False"
+    volumes:
+      # nginx logs the users in (basic auth) and passes the name on: X-Forwarded-User
+      - ${MTAS_HOST_DIR:-.}/provision/pgadmin4/config_local.py:/pgadmin4/config_local.py:ro
+    networks:
+      - mtas-network
+
+  mariadb:
+    image: mariadb:${MARIADB_VERSION:?set it in versions.env and use task}
+    environment:
+      MARIADB_ROOT_PASSWORD: testenv-mariadb # sandbox only
+    volumes:
+      - mariadb-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
     networks:
       - mtas-network
 
@@ -59,3 +110,4 @@ networks:
 volumes:
   app-data:
   pg15volume-database:
+  mariadb-data:

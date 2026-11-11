@@ -246,6 +246,7 @@ pre {
   font: inherit;
   font-weight: 500;
   text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -280,7 +281,8 @@ pre {
 .container {
   width: 100%;
   margin: 0 auto;
-  padding: 0 clamp(1rem, 2.5vw, 2.5rem);
+  /* only left and right: main sets its own space at the top and bottom */
+  padding-inline: clamp(1rem, 2.5vw, 2.5rem);
 }
 
 main {
@@ -322,6 +324,29 @@ main {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 
+/* Settings: the values */
+.setting-value {
+  color: var(--primary);
+}
+
+/* cards of the same width, centred, also a single card in the last row (index page) */
+.card-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.25rem;
+}
+
+.card-row > .card {
+  flex: 1 1 300px;
+  max-width: 360px;
+}
+
+/* start page: the welcome text centred above the cards */
+.welcome .page-head {
+  text-align: center;
+}
+
 .grid.two {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
 }
@@ -341,6 +366,54 @@ main {
   flex-direction: column;
   gap: 1.25rem;
   margin-bottom: 1.25rem;
+}
+
+/* Visibility: the same column widths in every block, so the columns line up */
+.visibility-table {
+  table-layout: fixed;
+  width: 100%;
+}
+
+.visibility-table .col-key {
+  width: 30%;
+}
+
+.visibility-table .col-status {
+  width: 8rem;
+}
+
+.visibility-table .col-action {
+  width: 7rem;
+}
+
+.visibility-table td {
+  overflow-wrap: anywhere;
+}
+
+.visibility-table thead th {
+  position: static;
+}
+
+/* the first header row is the name of the group */
+.visibility-table thead tr:first-child th {
+  color: var(--text);
+  font-size: 1rem;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+@media (max-width: 760px) {
+  .visibility-table .col-key {
+    width: 35%;
+  }
+
+  .visibility-table .col-status {
+    width: 6rem;
+  }
+
+  .visibility-table .col-action {
+    width: 5rem;
+  }
 }
 
 .grid.stats {
@@ -1083,7 +1156,27 @@ progress {
 }
 
 .theme-toggle {
-  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem;
+  line-height: 1;
+}
+
+.theme-toggle .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+/* the icon shows the theme that a click switches to */
+.theme-icon-moon,
+:root[data-theme="dark"] .theme-icon-sun {
+  display: block;
+}
+
+.theme-icon-sun,
+:root[data-theme="dark"] .theme-icon-moon {
+  display: none;
 }
 
 .shot {
@@ -1097,9 +1190,29 @@ progress {
   object-fit: contain;
 }
 
+/* About: logos (SVG) get some space to the frame */
+img.shot[src$=".svg"] {
+  padding: 0.75rem;
+}
+
+/* About: a service without an image */
+.shot.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  color: var(--muted);
+}
+
+.shot.placeholder .icon {
+  width: 3rem;
+  height: 3rem;
+}
+
 /* ---------- small screens ---------- */
 
-@media (max-width: 760px) {
+/* the menu goes behind the button "Menu" before its entries no longer fit in one line */
+@media (max-width: 960px) {
   .nav-toggle {
     display: block;
   }
@@ -1128,7 +1241,16 @@ progress {
     width: 100%;
     text-align: left;
   }
+}
 
+/* middle widths: the full menu without the e-mail address (it is in the title of "Log out") */
+@media (min-width: 961px) and (max-width: 1200px) {
+  .nav .user-email {
+    display: none;
+  }
+}
+
+@media (max-width: 760px) {
   .kv > div {
     grid-template-columns: 1fr;
     gap: 0.15rem;

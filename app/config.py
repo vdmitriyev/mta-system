@@ -145,6 +145,8 @@ class Settings(BaseSettings):
     mariadb_db_host_port: Port = 3306
     mariadb_admin_user: str = "mariadb"
     mariadb_admin_password: SecretStr = SecretStr("mariadb")
+    # MariaDB as the WordPress containers reach it (empty: MARIADB_DB_HOST)
+    wordpress_db_host: str | None = None
 
     # ---- nginx basic auth (NGINX_BASIC_AUTH_DIR_ABSOLUTE wins over NGINX_BASIC_AUTH_DIR) ----
     nginx_basic_auth_dir: str = Field(
@@ -158,6 +160,12 @@ class Settings(BaseSettings):
 
     # ---- containers of the users ----
     docker_network_name: str = "mtas-network"
+    # in front of the names of the containers and volumes, e.g. "mtas-testenv-"
+    container_name_prefix: Annotated[
+        str, Field(pattern=r"^([a-z0-9][a-z0-9_.-]*)?$")
+    ] = ""
+    # false: no ports on the host, the containers are reached by their names only
+    container_publish_ports: bool = True
     # versions of the images that the app starts for each user
     # no defaults here: they are in versions.env
     metabase_version: ImageVersion

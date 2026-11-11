@@ -32,8 +32,8 @@ def create_docker_container(port: int) -> bool:
         container = docker_ctl.get_client().containers.run(
             image=IMAGE,
             detach=True,
-            name=f"nifi-{port}",
-            ports={"8080/tcp": ("127.0.0.1", port)},
+            name=docker_ctl.container_name("nifi", port),
+            ports=docker_ctl.published_ports("8080/tcp", port),
             environment={
                 "NIFI_WEB_HTTP_HOST": "0.0.0.0",  # nosec B104: inside the container
                 "NIFI_WEB_HTTP_PORT": "8080",

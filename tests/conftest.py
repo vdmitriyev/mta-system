@@ -103,6 +103,19 @@ def switch_on(db, *services):
         set_creates_accounts(db, service, True)
 
 
+def force_on(db, *services):
+    """Writes "on" into the database, also for deprecated services (as before 2.3.0)"""
+
+    from app.models import ServiceSettings
+    from app.service_settings import add_default_service_settings
+
+    add_default_service_settings(db)
+    db.query(ServiceSettings).filter(ServiceSettings.service.in_(services)).update(
+        {"create_accounts": True}
+    )
+    db.commit()
+
+
 def add_user(db, email=STUDENT_EMAIL, pin="1234", number=1, assigned=True) -> Users:
     user = Users(
         email=email,

@@ -5,9 +5,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}{% endblock %}{% if self.title() %} · {% endif %}{{ course_name or "mta-system" }}</title>
-  <link rel="stylesheet" href="/static/css/app.css?v={{ app_version }}">
-  <script src="/static/js/theme.js?v={{ app_version }}"></script>
-  <script src="/static/js/app.js?v={{ app_version }}" defer></script>
+  <link rel="stylesheet" href="{{ static_url("css/app.css") }}">
+  <script src="{{ static_url("js/theme.js") }}"></script>
+  <script src="{{ static_url("js/app.js") }}" defer></script>
 </head>
 <body>
   {% macro nav_link(href, label) -%}
@@ -29,13 +29,16 @@
         {% endif %}
         {{ nav_link("/about", "About") }}
         <span class="spacer"></span>
-        <button type="button" class="theme-toggle" data-theme-toggle hidden>Theme</button>
+        <button type="button" class="theme-toggle" data-theme-toggle hidden aria-label="Switch the theme">
+          <svg class="icon theme-icon-sun" aria-hidden="true"><use href="/static/img/icons.svg#sun"></use></svg>
+          <svg class="icon theme-icon-moon" aria-hidden="true"><use href="/static/img/icons.svg#moon"></use></svg>
+        </button>
         {% if user %}
           {% if is_admin %}{{ nav_link("/mtas-admin/", "Admin") }}{% endif %}
-          <span class="muted small nowrap">{{ user.email }}</span>
+          <span class="muted small nowrap user-email">{{ user.email }}</span>
           <form method="post" action="/logout">
             {{ ui.csrf(csrf_token) }}
-            <button type="submit">Log out</button>
+            <button type="submit" title="Log out {{ user.email }}">Log out</button>
           </form>
         {% else %}
           {{ nav_link("/register", "Register") }}

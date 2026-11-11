@@ -1,0 +1,33 @@
+# Network variant "host ports" of the test copy, on top of compose.yaml:
+#   TESTENV_VARIANT=hostports task testenv:deploy
+#
+# The app runs in the network of the host. It reaches the containers of the users on
+# 127.0.0.1:<port> (they publish their ports there) and PostgreSQL, MariaDB and
+# pgAdmin 4 on their ports on 127.0.0.1. All ports are bound to 127.0.0.1 only.
+services:
+
+  app:
+    network_mode: host
+    networks: !reset null
+    ports: !reset []
+    command: uvicorn run:app --host 127.0.0.1 --port ${MTAS_APP_PORT:-5354} --proxy-headers --forwarded-allow-ips "*"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:${MTAS_APP_PORT:-5354}/api/health', timeout=5)\""]
+    environment:
+      POSTGRESQL_DB_HOST: 127.0.0.1
+      POSTGRESQL_DB_HOST_PORT: ${MTAS_DB_PORT:-35433}
+      MARIADB_DB_HOST: 127.0.0.1
+      MARIADB_DB_HOST_PORT: "33306"
+      # the WordPress containers are in the network of the project: MariaDB by name
+      WORDPRESS_DB_HOST: mariadb
+      CONTAINER_PUBLISH_PORTS: "true"
+      METABASE_BASE_URL: http://localhost
+      MTAS_PGADMIN4_URL: http://127.0.0.1:35050
+
+  pgadmin4:
+    ports:
+      - "127.0.0.1:35050:80"
+
+  mariadb:
+    ports:
+      - "127.0.0.1:33306:3306"

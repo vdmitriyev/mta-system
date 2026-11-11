@@ -6,6 +6,7 @@ Runs inside the app container: task testenv:check
 import base64
 import http.cookiejar
 import json
+import os
 import re
 import sys
 import time
@@ -20,7 +21,7 @@ from app.database import init_engine, session_scope
 from app.security import make_hash
 from app.users import find_user_by_email, get_user_services
 
-BASE_URL = "http://127.0.0.1:5151"
+BASE_URL = os.environ.get("SMOKE_BASE_URL", "http://127.0.0.1:5151").rstrip("/")
 EMAIL = f"e2e.check{uuid.uuid4().hex[:6]}@example.org"
 
 settings = get_settings()
@@ -61,7 +62,7 @@ def captcha_text() -> str:
     raise SystemExit("[e] captcha was not found")
 
 
-def wait_for_task(task_id: str, seconds: int = 180) -> dict:
+def wait_for_task(task_id: str, seconds: int = 900) -> dict:
     for _ in range(seconds):
         task = json.loads(get(f"/api/tasks/{task_id}"))
         if task["finished"]:

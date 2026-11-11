@@ -8,8 +8,10 @@ from app.models import (
     WordpressService,
 )
 from app.provisioning import email_to_tokens
-from app.service_settings import SERVICE_KEYS
-from tests.conftest import add_user, switch_on
+from app.service_settings import DEPRECATED_SERVICES, SERVICE_KEYS
+from tests.conftest import add_user, force_on, switch_on
+
+ACTIVE = [key for key in SERVICE_KEYS if key not in DEPRECATED_SERVICES]
 
 
 def test_email_to_tokens():
@@ -35,7 +37,7 @@ def test_services_that_are_switched_off_create_nothing(db, settings, docker):
 
 
 def test_metabase_account(db, use_settings, monkeypatch):
-    switch_on(db, *SERVICE_KEYS)
+    switch_on(db, *ACTIVE)
     user = add_user(db)
     seen = []
     monkeypatch.setattr(
@@ -57,7 +59,7 @@ def test_metabase_account(db, use_settings, monkeypatch):
 
 
 def test_failed_creation_is_stored_as_not_created(db, use_settings, monkeypatch):
-    switch_on(db, *SERVICE_KEYS)
+    switch_on(db, *ACTIVE)
     user = add_user(db)
     monkeypatch.setattr(
         "app.provisioning.metabase_api.create_user_and_docker_mb", lambda *_a: False
@@ -87,7 +89,7 @@ def test_force_create_ignores_the_switch(db, settings, docker, monkeypatch, serv
 
 def test_mariadb_and_wordpress(db, use_settings, monkeypatch):
     use_settings(MARIADB_DB_HOST="mariadb")
-    switch_on(db, *SERVICE_KEYS)
+    switch_on(db, *ACTIVE)
     user = add_user(db)
     seen = []
     monkeypatch.setattr("app.provisioning.mariadb.create_mariadb_db", lambda *a: True)
@@ -120,7 +122,7 @@ def test_mariadb_and_wordpress(db, use_settings, monkeypatch):
 
 
 def test_wordpress_needs_the_mariadb_database_of_the_user(db, use_settings):
-    switch_on(db, *SERVICE_KEYS)
+    switch_on(db, *ACTIVE)
     user = add_user(db)
     assert (
         provisioning.wordpress_user(db, user.itid, "u", "e@x.org", "pw", 7001) is False
@@ -128,17 +130,38 @@ def test_wordpress_needs_the_mariadb_database_of_the_user(db, use_settings):
     assert db.query(WordpressService).count() == 0
 
 
-def test_superset_account(db, use_settings, monkeypatch):
-    switch_on(db, *SERVICE_KEYS)
+@pytest.mark.parametrize("service", sorted(DEPRECATED_SERVICES))
+def test_deprecated_services_create_nothing(db, docker, monkeypatch, service):
+    # switched on before the deprecation: still no account
+    force_on(db, service)
     user = add_user(db)
+    monkeypatch.setattr(
+        "app.provisioning.superset_api.SupersetAPIClient", pytest.fail, raising=True
+    )
+    create = {
+        "superset": lambda: provisioning.superset_user(
+            db, user.itid, "login", "pw", "e@x.org"
+        ),
+        "nifi": lambda: provisioning.nifi_user(db, user.itid, "u", "pw", 6001),
+        "jupyterhub": lambda: provisioning.jupyterhub_user(db, user.itid, "u", "pw"),
+    }[service]
+    assert create() is False
+    assert db.query(SupersetService).count() == 0
+    assert docker.containers.runs == []
 
-    class FakeClient:
-        def __init__(self, new_user):
-            self.new_user = new_user
 
-        def create_new_user(self):
-            return True
-
-    monkeypatch.setattr("app.provisioning.superset_api.SupersetAPIClient", FakeClient)
-    assert provisioning.superset_user(db, user.itid, "login", "pw", "e@x.org") is True
-    assert db.query(SupersetService).one().superset_user == "login"
+def test_wordpress_reaches_mariadb_by_its_own_address(db, use_settings, monkeypatch):
+    use_settings(MARIADB_DB_HOST="127.0.0.1", WORDPRESS_DB_HOST="mariadb")
+    switch_on(db, *ACTIVE)
+    user = add_user(db)
+    seen = []
+    monkeypatch.setattr("app.provisioning.mariadb.create_mariadb_db", lambda *a: True)
+    monkeypatch.setattr(
+        "app.provisioning.wordpress_api.create_user_and_docker_wordpress",
+        lambda data, port: seen.append(data) or True,
+    )
+    provisioning.mariadb_user(db, user.itid, "wp_db", "wp_user", "dbpw")
+    provisioning.wordpress_user(
+        db, user.itid, "wordpress_user_01", "e@x.org", "pw", 7001
+    )
+    assert seen[0].databaseHost == "mariadb"

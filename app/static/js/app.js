@@ -26,8 +26,10 @@
     const root = document.documentElement;
     function show() {
       const dark = root.dataset.theme === "dark";
-      button.textContent = dark ? "Light theme" : "Dark theme";
-      button.title = dark ? "Switch to the light theme" : "Switch to the dark theme";
+      // the icon itself follows data-theme (CSS): sun in the dark theme, moon in the light one
+      const label = dark ? "Switch to the light theme" : "Switch to the dark theme";
+      button.title = label;
+      button.setAttribute("aria-label", label);
     }
     button.addEventListener("click", function () {
       const next = root.dataset.theme === "dark" ? "light" : "dark";

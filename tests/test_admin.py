@@ -1,3 +1,5 @@
+import os
+
 import pytest
 import requests
 
@@ -654,7 +656,7 @@ def test_visibility_is_grouped_by_category_and_service(admin_client, db):
     assert services < menu
 
     def block(group):
-        start = text.index(f'<th colspan="3">{group}</th>')
+        start = text.index(f'<th colspan="4">{group}</th>')
         return text[start : text.index("</table>", start)]
 
     postgresql = block("PostgreSQL")
@@ -664,7 +666,7 @@ def test_visibility_is_grouped_by_category_and_service(admin_client, db):
         "importers_airbnb",
         "importers_adventureworks",
     ):
-        assert f'<code class="muted small">{key}</code>' in postgresql
+        assert f"<code>{key}</code>" in postgresql
     assert "Dataset importer: Flights" in postgresql
 
     metabase = block("Metabase")
@@ -673,7 +675,7 @@ def test_visibility_is_grouped_by_category_and_service(admin_client, db):
     assert "metabase_self_managment" in metabase
 
     entries = block("Menu entries")
-    assert text.index('<th colspan="3">Menu entries</th>') > menu
+    assert text.index('<th colspan="4">Menu entries</th>') > menu
     assert "Reviews of the exercises" in entries and "Bonus points" in entries
 
 
@@ -691,3 +693,45 @@ def test_unknown_visibility_keys_are_in_other(db):
     assert list(groups) == ["Services", "Menu", "Other"]
     assert [label for _row, label in groups["Other"]["Other"]] == ["Old part"]
     assert list(groups["Services"])[:3] == ["PostgreSQL", "pgAdmin 4", "Metabase"]
+
+
+def test_visibility_columns_line_up(admin_client):
+    text = admin_client.get("/mtas-admin/visibility").text
+    # every block has the same fixed columns: key, description, status, action
+    columns = (
+        '<colgroup><col class="col-key"><col><col class="col-status">'
+        '<col class="col-action"></colgroup>'
+    )
+    assert text.count('<table class="table visibility-table">') == text.count(columns)
+    assert "<th>Key</th>" not in text
+    row = text[text.rindex("<tr>", 0, text.index("<code>bonus</code>")) :]
+    row = row[: row.index("</tr>")]
+    assert (
+        row.index('class="col-key"')
+        < row.index("Bonus points")
+        < row.index('class="col-status"')
+        < row.index('class="col-action"')
+    )
+
+
+def test_static_files_change_their_address_with_the_file(client, tmp_path, monkeypatch):
+    from app import web
+
+    (tmp_path / "css").mkdir()
+    css = tmp_path / "css" / "app.css"
+    css.write_text("a {}")
+    monkeypatch.setattr(web, "STATIC_DIR", tmp_path)
+    os.utime(css, (1000, 1000))
+    assert web.static_url("css/app.css") == "/static/css/app.css?v=1000"
+    os.utime(css, (2000, 2000))
+    assert web.static_url("css/app.css") == "/static/css/app.css?v=2000"
+
+
+def test_settings_values_are_marked(admin_client):
+    text = admin_client.get("/mtas-admin/settings").text
+    assert '<td class="setting-value">mtas.example.org</td>' in text
+    # an empty value shows a dash
+    assert (
+        '<code>CONTAINER_NAME_PREFIX</code></td>\n            <td class="setting-value">–</td>'
+        in text
+    )

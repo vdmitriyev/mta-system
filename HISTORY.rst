@@ -2,6 +2,21 @@
 History
 =======
 
+2.3.0 (2026-11-11)
+-------------------
+
+* Deprecated JupyterHub, NiFi and Superset: the app creates no new accounts in them, also if they were switched on before. "Auto creation" and "Visibility" mark them, the command `auto-creation --on` refuses them.
+* New settings `CONTAINER_NAME_PREFIX` (in front of the names of the containers and volumes of the users), `CONTAINER_PUBLISH_PORTS` (false: the containers are reached by their names only) and `WORDPRESS_DB_HOST` (MariaDB as the WordPress containers reach it).
+* The test copy also runs pgAdmin 4, MariaDB and the containers of a user (Metabase, OpenRefine, WordPress), in two network variants, and checks each service.
+* `task testenv:deploy` removes the test copy after the checks, also when a check fails (then it shows the logs first). `TESTENV_KEEP=true` keeps it running.
+* Visibility: the columns key, description, status and action line up over all blocks.
+* The addresses of the CSS and JavaScript files change with the files, so browsers load a changed file at once (before: only with a new version).
+* About: the versions of the services come from `versions.env` (before: fixed in the page, partly old). Deprecated services show no version. New cards for MariaDB and WordPress, with their logos. "Jupyter Notebook (JupyterHub)" is now "JupyterHub".
+* The theme button shows a sun or a moon icon instead of the text "Light theme" or "Dark theme".
+* Fixed the space above and below the content of all pages (it was 0, so the About page touched the footer). The welcome text and the cards on the start page are centred.
+* Header menu: the entries stay in one line. Below 960px the menu is behind the button "Menu" (before: 760px), up to 1200px the e-mail address is in the title of "Log out".
+* Settings: the values are blue, empty values show "–".
+
 2.2.0 (2026-11-11)
 -------------------
 

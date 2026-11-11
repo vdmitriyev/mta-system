@@ -52,8 +52,8 @@ def create_docker_container(port: int) -> bool:
         container = docker_ctl.get_client().containers.run(
             image=image(),
             detach=True,
-            name=f"metabase-{port}",
-            ports={"80/tcp": ("127.0.0.1", port)},
+            name=docker_ctl.container_name("metabase", port),
+            ports=docker_ctl.published_ports("80/tcp", port),
             network=get_settings().docker_network_name,
             restart_policy={"Name": "unless-stopped", "MaximumRetryCount": 0},
             environment={"MB_JETTY_PORT": 80},

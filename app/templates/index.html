@@ -1,24 +1,26 @@
 {% extends "base.html" %}
 {% block content %}
 {% if user %}
-  {{ ui.page_head("Welcome back", "Your services, reviews and bonus points for this course.") }}
-  <div class="grid">
-    <a class="card" href="/services">
-      <h3>Services</h3>
-      <p class="muted">Addresses, logins and passwords of your services. Start a service or import a dataset.</p>
-    </a>
-    {% if visibility.get("reviews") %}
-    <a class="card" href="/reviews">
-      <h3>Reviews</h3>
-      <p class="muted">Feedback on the solutions that you submitted.</p>
-    </a>
-    {% endif %}
-    {% if visibility.get("bonus") %}
-    <a class="card" href="/bonus">
-      <h3>Bonus points</h3>
-      <p class="muted">Your bonus points for each exercise and the total.</p>
-    </a>
-    {% endif %}
+  <div class="welcome">
+    {{ ui.page_head("Welcome back", "Your services, reviews and bonus points for this course.") }}
+    <div class="card-row">
+      <a class="card" href="/services">
+        <h3>Services</h3>
+        <p class="muted">Addresses, logins and passwords of your services. Start a service or import a dataset.</p>
+      </a>
+      {% if visibility.get("reviews") %}
+      <a class="card" href="/reviews">
+        <h3>Reviews</h3>
+        <p class="muted">Feedback on the solutions that you submitted.</p>
+      </a>
+      {% endif %}
+      {% if visibility.get("bonus") %}
+      <a class="card" href="/bonus">
+        <h3>Bonus points</h3>
+        <p class="muted">Your bonus points for each exercise and the total.</p>
+      </a>
+      {% endif %}
+    </div>
   </div>
 {% else %}
   <div class="stack">

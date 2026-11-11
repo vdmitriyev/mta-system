@@ -216,7 +216,7 @@ def wordpress_user(
             wpLogin=user_name,
             wpPassword=password,
             wpEmail=user_email,
-            databaseHost=settings.mariadb_db_host,
+            databaseHost=settings.wordpress_db_host or settings.mariadb_db_host,
             databaseName=mariadb_entry.mariadb_db,
             databaseUser=mariadb_entry.mariadb_user,
             databasePassword=mariadb_entry.mariadb_password,

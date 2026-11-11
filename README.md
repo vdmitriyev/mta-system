@@ -138,6 +138,8 @@ task app:cli -- auto-creation                                   # shows the swit
 task app:cli -- auto-creation --on postgresql --on pgadmin4
 ```
 
+JupyterHub, NiFi and Superset are deprecated: the app creates no new accounts in them.
+
 All services are switched off at the start. The app then runs on its own, without Docker and without PostgreSQL. WordPress needs MariaDB: switch on MariaDB first. A change affects only new users.
 
 Before version 2.0.0, the env file had the settings `CREATE_<NAME>_SERVICE`. `task db:upgrade` copies their values into the database once. After that, the app ignores them and you can delete them from the env file.
@@ -221,10 +223,11 @@ task app:coverage             # shows the lines of app/ that no test runs
 
 The tests use a temporary SQLite database. They do not need Docker, PostgreSQL or a mail server: these are replaced by test doubles.
 
-To try the app with Docker and a real PostgreSQL database, use the test copy. It runs next to a real deployment (app on `127.0.0.1:5354`, database on `127.0.0.1:35433`, own volumes):
+To try the app with Docker and the services, use the test copy. It runs the app, PostgreSQL, pgAdmin 4, MariaDB and the containers of a user (Metabase, OpenRefine, WordPress) next to a real deployment (app on `127.0.0.1:5354`, database on `127.0.0.1:35433`, own volumes, containers named `mtas-testenv-...`). `TESTENV_VARIANT=hostports` selects the second network variant.
 
 ```bash
-task testenv:deploy   # builds, starts and checks: pages, registration, login, dataset import
+task testenv:deploy   # builds, starts and checks (pages, registration, login, dataset import, services), then removes it
+TESTENV_KEEP=true task testenv:deploy   # same, but leaves it running
 task testenv:logs
 task testenv:down     # removes containers, volumes and the app image
 ```

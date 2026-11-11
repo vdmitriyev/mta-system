@@ -8,6 +8,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Form, Request
 from app.captcha import generate_captcha
 from app.config import get_settings
 from app.security import AttemptLimiter, csrf_protect, make_hash, verify_hash
+from app.service_settings import DEPRECATED_SERVICES
 from app.tasks import enqueue, get_task
 from app.users import (
     email_hash,
@@ -32,9 +33,82 @@ def index(page: Page = Depends()):
     return page.render("index.html")
 
 
+# services on the About page: key, name, image, text
+ABOUT_SERVICES = [
+    (
+        "pgadmin4",
+        "pgAdmin 4",
+        "pgadmin4-screen.png",
+        "Web interface to manage PostgreSQL databases.",
+    ),
+    (
+        "postgresql",
+        "PostgreSQL",
+        "postgresql-logo.png",
+        "Relational database. Each user gets an own database.",
+    ),
+    (
+        "metabase",
+        "Metabase",
+        "metabase-screen.png",
+        "Dashboards and questions on your data.",
+    ),
+    (
+        "openrefine",
+        "OpenRefine",
+        "openrefine-screen.png",
+        "Tool to clean and transform data.",
+    ),
+    (
+        "mariadb",
+        "MariaDB",
+        "mariadb-logo.svg",
+        "Relational database for WordPress. Each user gets an own database.",
+    ),
+    (
+        "wordpress",
+        "WordPress",
+        "wordpress-logo.svg",
+        "Your own website with WordPress.",
+    ),
+    ("nifi", "Apache NiFi", "nifi-screen.png", "Data flows between systems."),
+    (
+        "jupyterhub",
+        "JupyterHub",
+        "jupyterhub-screen.png",
+        "Jupyter Notebooks for Python in a browser.",
+    ),
+]
+
+ABOUT_ICONS = {"mariadb": "database", "wordpress": "edit"}
+
+
+def about_services() -> list[dict]:
+    """The services with the versions of versions.env (none for deprecated services)"""
+
+    settings = get_settings()
+    services = []
+    for key, name, image, text in ABOUT_SERVICES:
+        deprecated = key in DEPRECATED_SERVICES
+        services.append(
+            {
+                "name": name,
+                "image": image,
+                # without an image: an icon on the card
+                "icon": ABOUT_ICONS.get(key, "box"),
+                "text": text,
+                "status": "deprecated" if deprecated else "supported",
+                "version": (
+                    None if deprecated else getattr(settings, f"{key}_version", None)
+                ),
+            }
+        )
+    return services
+
+
 @router.get("/about")
 def about(page: Page = Depends()):
-    return page.render("about.html")
+    return page.render("about.html", services=about_services())
 
 
 def _registration_form(page: Page, email: str = "", error: str = None):

@@ -29,7 +29,7 @@ from app.models import SERVICE_MODELS, Users
 from app.provisioning import email_to_tokens
 from app.security import generate_pin, make_hash, random_string
 from app.service_settings import creates_accounts
-from app.services import postgresql
+from app.services import docker_ctl, postgresql
 from app.tasks import TaskError
 
 logger = logging.getLogger(__name__)
@@ -142,10 +142,10 @@ def get_user_services(db: Session, user_id: int) -> dict:
 
 
 def container_name(service: str, entry) -> str | None:
-    """Name of the Docker container of a user: <service>-<port>"""
+    """Name of the Docker container of a user: <prefix><service>-<port>"""
 
     port = getattr(entry, f"{service}_docker_port", None)
-    return f"{service}-{port}" if port is not None else None
+    return docker_ctl.container_name(service, port) if port is not None else None
 
 
 def postgresql_uri(entry) -> str:

@@ -175,7 +175,7 @@ def service_cards(page: Page, user: Users) -> list:
         },
         "jupyterhub": lambda entry: {
             "name": "jupyterhub",
-            "title": "Jupyter Notebook (JupyterHub)",
+            "title": "JupyterHub",
             "fields": [
                 _field("URL", settings.jupyterhub_url, copy=False, link=True),
                 _field("User", entry.jupyterhub_user),

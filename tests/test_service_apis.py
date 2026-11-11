@@ -321,3 +321,31 @@ def test_image_versions_come_from_the_settings(use_settings, docker, monkeypatch
     user = openrefine_api.UserDataOpenRefine("common_user_01", "pw")
     openrefine_api.create_user_and_docker_or(user, 4001)
     assert docker.containers.runs[0]["image"] == "openrefine:3.9.5"
+
+
+def test_containers_with_prefix_and_without_host_ports(
+    use_settings, docker, monkeypatch
+):
+    use_settings(CONTAINER_NAME_PREFIX="mtas-testenv-", CONTAINER_PUBLISH_PORTS="false")
+    user = openrefine_api.UserDataOpenRefine("common_user_01", "pw")
+    assert openrefine_api.create_user_and_docker_or(user, 4001) is True
+    monkeypatch.setattr(metabase_api, "run_create_user", lambda *_args: True)
+    assert metabase_api.create_user_and_docker_mb(MB_USER, 3001) is True
+
+    openrefine, metabase = docker.containers.runs
+    assert openrefine["name"] == "mtas-testenv-openrefine-4001"
+    assert metabase["name"] == "mtas-testenv-metabase-3001"
+    assert openrefine["ports"] is None and metabase["ports"] is None
+
+
+def test_wordpress_names_with_prefix(use_settings, docker, monkeypatch):
+    use_settings(CONTAINER_NAME_PREFIX="mtas-testenv-")
+    monkeypatch.setattr(wordpress_api.time, "sleep", lambda _seconds: None)
+    assert wordpress_api.create_user_and_docker_wordpress(WP_USER, 7001) is True
+    site, cli = docker.containers.runs
+    assert (site["name"], cli["name"]) == (
+        "mtas-testenv-wordpress-7001",
+        "mtas-testenv-wordpress-cli-7001",
+    )
+    assert site["volumes"] == ["mtas-testenv-wordpress-7001:/var/www/html"]
+    assert site["ports"] == {"80/tcp": ("127.0.0.1", 7001)}

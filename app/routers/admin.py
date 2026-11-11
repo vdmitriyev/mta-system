@@ -30,6 +30,7 @@ from app.models import (
 )
 from app.security import csrf_protect, random_string
 from app.service_settings import (
+    DEPRECATED_SERVICES,
     SERVICE_INFO,
     ServiceSettingError,
     service_setting_rows,
@@ -332,7 +333,7 @@ def create_service_task(db: Session, service: str, user_id: int) -> str:
     if not image.ok:
         raise TaskError(f"{MANAGED_SERVICES[service]} was not created: {image.text}")
 
-    name = f"{service}-{port}"
+    name = docker_ctl.container_name(service, port)
     docker_ctl.retire_container(name, f"{name}-{uuid.uuid4().hex[:8]}")
     model = SERVICE_MODELS[service]
     db.query(model).filter(model.user_id == user.itid).update(
@@ -471,7 +472,9 @@ def old_settings_address():
 @router.get("/visibility")
 def visibility_page(page: Page = Depends()):
     return page.render(
-        "admin/visibility.html", categories=grouped_visibility_rows(page.db)
+        "admin/visibility.html",
+        categories=grouped_visibility_rows(page.db),
+        deprecated={SERVICE_INFO[key].name for key in DEPRECATED_SERVICES},
     )
 
 

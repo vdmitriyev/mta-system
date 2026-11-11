@@ -75,15 +75,15 @@ def create_user_and_docker_wordpress(
         "WORDPRESS_DB_PASSWORD": user_data.databasePassword,
     }
     network = get_settings().docker_network_name
-    volumes = [f"wordpress-{docker_port}:/var/www/html"]
+    volumes = [f"{docker_ctl.container_name('wordpress', docker_port)}:/var/www/html"]
 
     try:
         client = docker_ctl.get_client()
         container = client.containers.run(
             image=image(),
             detach=True,
-            name=f"wordpress-{docker_port}",
-            ports={"80/tcp": ("127.0.0.1", docker_port)},
+            name=docker_ctl.container_name("wordpress", docker_port),
+            ports=docker_ctl.published_ports("80/tcp", docker_port),
             restart_policy={"Name": "unless-stopped", "MaximumRetryCount": 0},
             volumes=volumes,
             network=network,
@@ -112,7 +112,7 @@ def create_user_and_docker_wordpress(
         cli_container = client.containers.run(
             image=cli_image(),
             detach=True,
-            name=f"wordpress-cli-{docker_port}",
+            name=docker_ctl.container_name("wordpress", docker_port, "cli"),
             restart_policy={"Name": "on-failure", "MaximumRetryCount": 5},
             volumes=volumes,
             network=network,

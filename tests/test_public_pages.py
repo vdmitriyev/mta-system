@@ -1,3 +1,5 @@
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -107,8 +109,15 @@ def test_theme_is_set_before_the_page_is_drawn(client):
     head = text[: text.index("</head>")]
     # theme.js without "defer": it runs before the page is drawn
     assert '<script src="/static/js/theme.js' in head
-    assert f'theme.js?v={__version__}"></script>' in head
+    assert re.search(r'theme\.js\?v=\d+"></script>', head)
     assert "data-theme-toggle" in text
+    toggle = text[
+        text.index("data-theme-toggle") : text.index(
+            "</button>", text.index("data-theme-toggle")
+        )
+    ]
+    assert "icons.svg#sun" in toggle and "icons.svg#moon" in toggle
+    assert "Theme" not in toggle
     assert client.get("/static/js/theme.js").status_code == 200
 
 
@@ -119,3 +128,74 @@ def test_theme_has_no_auto_mode():
     assert '"light"' in script and '"dark"' in script
     assert "auto" not in script
     assert "auto" not in (BASE_DIR / "app/static/js/app.js").read_text()
+
+
+def test_about_page_shows_the_versions_of_versions_env(client, use_settings):
+    from app.config import read_versions
+
+    versions = read_versions()
+    text = client.get("/about").text
+    for key in ("PGADMIN4", "POSTGRESQL", "METABASE", "OPENREFINE", "MARIADB"):
+        assert f'<span class="badge info">{versions[key + "_VERSION"]}</span>' in text
+    assert "15.14" not in text and "9.9<" not in text
+
+    use_settings(OPENREFINE_VERSION="3.11.0")
+    assert '<span class="badge info">3.11.0</span>' in client.get("/about").text
+
+
+def test_about_page_marks_deprecated_services(client):
+    text = client.get("/about").text
+    start = text.index("<h3>Apache NiFi</h3>")
+    card = text[start : text.index("</article>", start)]
+    assert "deprecated" in card and "badge info" not in card
+
+
+def test_about_page_shows_mariadb_and_wordpress(client):
+    from app.config import read_versions
+
+    text = client.get("/about").text
+    for name, version in (
+        ("MariaDB", read_versions()["MARIADB_VERSION"]),
+        ("WordPress", read_versions()["WORDPRESS_VERSION"]),
+    ):
+        start = text.index(f"<h3>{name}</h3>")
+        card = text[text.rindex("<article", 0, start) : text.index("</article>", start)]
+        assert f'src="/static/img/{name.lower()}-logo.svg"' in card
+        assert f'<span class="badge info">{version}</span>' in card
+        assert "supported" in card
+
+
+def test_about_page_names_jupyterhub(client):
+    text = client.get("/about").text
+    assert "<h3>JupyterHub</h3>" in text
+    assert "Jupyter Notebooks for Python in a browser." in text
+    assert "Jupyter Notebook (JupyterHub)" not in text
+
+
+def test_main_keeps_its_space_above_and_below():
+    from app.config import BASE_DIR
+
+    css = (BASE_DIR / "app/static/css/app.css").read_text()
+    container = css[
+        css.index(".container {") : css.index("}", css.index(".container {"))
+    ]
+    # "padding: 0 ..." would remove the space of <main> above and below the content
+    assert "padding-inline:" in container and "padding:" not in container
+
+
+def test_index_cards_are_centred(student_client):
+    text = student_client.get("/").text
+    assert '<div class="card-row">' in text
+    # the welcome text is centred together with the cards
+    assert text.index('<div class="welcome">') < text.index("Welcome back")
+
+
+def test_header_hides_the_email_at_middle_widths(student_client):
+    from app.config import BASE_DIR
+
+    text = student_client.get("/").text
+    assert 'class="muted small nowrap user-email"' in text
+    assert 'title="Log out sam.student@uni.example"' in text
+    css = (BASE_DIR / "app/static/css/app.css").read_text()
+    assert "@media (max-width: 960px)" in css
+    assert "@media (min-width: 961px) and (max-width: 1200px)" in css

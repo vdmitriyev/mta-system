@@ -1,30 +1,26 @@
 {% extends "base.html" %}
 {% block title %}About{% endblock %}
-{% set services = [
-  ("pgAdmin 4", "pgadmin4-screen.png", "supported", "9.9", "Web interface to manage PostgreSQL databases."),
-  ("PostgreSQL", "postgresql-logo.png", "supported", "15.14", "Relational database. Each user gets an own database."),
-  ("Metabase", "metabase-screen.png", "supported", "v0.57.3", "Dashboards and questions on your data."),
-  ("OpenRefine", "openrefine-screen.png", "supported", "3.9.5", "Tool to clean and transform data."),
-  ("Apache NiFi", "nifi-screen.png", "deprecated", none, "Data flows between systems."),
-  ("Jupyter Notebook (JupyterHub)", "jupyterhub-screen.png", "deprecated", none, "Notebooks for Python in the browser."),
-] %}
 {% block content %}
 {{ ui.page_head("About", "The services that this portal can give you access to. Which ones you get depends on your course.") }}
 {% if not user %}
   {{ ui.alert("To get your personal access, ask your instructor for the course code and register.") }}
 {% endif %}
 <div class="grid">
-  {% for name, image, status, version, text in services %}
+  {% for service in services %}
   <article class="card">
-    <img class="shot" src="/static/img/{{ image }}" alt="" loading="lazy">
+    {% if service.image %}
+    <img class="shot" src="/static/img/{{ service.image }}" alt="" loading="lazy">
+    {% else %}
+    <div class="shot placeholder">{{ ui.icon(service.icon) }}</div>
+    {% endif %}
     <div class="card-head">
-      <h3>{{ name }}</h3>
+      <h3>{{ service.name }}</h3>
       <span class="row">
-        {% if version %}<span class="badge info">{{ version }}</span>{% endif %}
-        <span class="badge {{ 'success' if status == 'supported' else 'warning' }}">{{ status }}</span>
+        {% if service.version %}<span class="badge info">{{ service.version }}</span>{% endif %}
+        <span class="badge {{ 'success' if service.status == 'supported' else 'warning' }}">{{ service.status }}</span>
       </span>
     </div>
-    <p class="muted">{{ text }}</p>
+    <p class="muted">{{ service.text }}</p>
   </article>
   {% endfor %}
 </div>

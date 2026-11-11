@@ -20,6 +20,20 @@ SESSION_FLASH_KEY = "flashes"
 FLASH_LEVELS = ("info", "success", "warning", "danger")
 
 templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
+STATIC_DIR = BASE_DIR / "app" / "static"
+
+
+def static_url(path: str) -> str:
+    """Address of a static file. It changes with the file, so browsers do not use an old copy."""
+
+    try:
+        stamp = int((STATIC_DIR / path).stat().st_mtime)
+    except OSError:
+        stamp = __version__
+    return f"/static/{path}?v={stamp}"
+
+
+templates.env.globals["static_url"] = static_url
 
 
 class NotAuthenticated(Exception):

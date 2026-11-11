@@ -3,8 +3,8 @@ import pytest
 from app import users
 from app.config import set_settings
 from app.models import (
-    JupyterHubService,
     MetabaseService,
+    PGAdmin4Service,
     PostgreSQLService,
     Users,
 )
@@ -32,6 +32,7 @@ from tests.conftest import (
     ADMIN_EMAIL,
     add_postgresql,
     add_user,
+    force_on,
     make_settings,
     switch_on,
 )
@@ -166,7 +167,9 @@ def test_register_new_user_without_services(db, settings):
 
 
 def test_register_new_user_creates_the_services(db, tmp_path, monkeypatch, docker):
-    switch_on(db, "postgresql", "pgadmin4", "jupyterhub", "openrefine", "nifi")
+    switch_on(db, "postgresql", "pgadmin4", "openrefine")
+    # deprecated: no accounts, even if they were switched on before
+    force_on(db, "jupyterhub", "nifi")
     created = []
     monkeypatch.setattr("app.users.postgresql.next_database_number", lambda: 12)
     monkeypatch.setattr(
@@ -177,30 +180,18 @@ def test_register_new_user_creates_the_services(db, tmp_path, monkeypatch, docke
     user = register_new_user(db, "new.user@uni.example")
     services = get_user_services(db, user.itid)
 
-    assert set(services) == {
-        "postgresql",
-        "pgadmin4",
-        "jupyterhub",
-        "openrefine",
-        "nifi",
-    }
+    assert set(services) == {"postgresql", "pgadmin4", "openrefine"}
     password = services["postgresql"].postgresql_password
     assert created == [("bicourse_db_12", "bicourse_user_12", password)]
     assert services["pgadmin4"].pgadmin4_user == "common_user_12"
-    assert services["jupyterhub"].jupyterhub_user == "jh_user_12"
     assert services["openrefine"].openrefine_docker_port == 4012
-    assert services["nifi"].nifi_docker_port == 6012
-    assert services["nifi"].nifi_password == password
-    assert {run["name"] for run in docker.containers.runs} == {
-        "openrefine-4012",
-        "nifi-6012",
-    }
+    assert {run["name"] for run in docker.containers.runs} == {"openrefine-4012"}
     assert (tmp_path / "htpasswd" / "4012.htpasswd").exists()
     assert (tmp_path / "htpasswd" / "common-basic-auth.db").exists()
 
 
 def test_a_broken_service_does_not_stop_the_registration(db, tmp_path, monkeypatch):
-    switch_on(db, "postgresql", "jupyterhub")
+    switch_on(db, "postgresql", "pgadmin4")
 
     def broken(*_args):
         raise RuntimeError("PostgreSQL is down")
@@ -210,7 +201,7 @@ def test_a_broken_service_does_not_stop_the_registration(db, tmp_path, monkeypat
 
     user = register_new_user(db, "new.user@uni.example")
     assert db.query(PostgreSQLService).count() == 0
-    assert db.query(JupyterHubService).filter_by(user_id=user.itid).count() == 1
+    assert db.query(PGAdmin4Service).filter_by(user_id=user.itid).count() == 1
 
 
 def test_assign_available_account(db):

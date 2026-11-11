@@ -18,6 +18,8 @@ class ServiceInfo:
     name: str
     runs: str
     note: str = ""
+    # no longer supported: the app creates no new accounts in it
+    deprecated: bool = False
 
 
 # All are off until an admin switches them on (admin page "Auto creation")
@@ -28,16 +30,12 @@ SERVICES = [
     ServiceInfo("openrefine", "OpenRefine", OWN_CONTAINER),
     ServiceInfo("mariadb", "MariaDB", SHARED_SERVER),
     ServiceInfo("wordpress", "WordPress", OWN_CONTAINER, "Needs MariaDB"),
-    ServiceInfo("nifi", "NiFi", OWN_CONTAINER),
-    ServiceInfo("superset", "Superset", SHARED_SERVICE),
-    ServiceInfo(
-        "jupyterhub",
-        "JupyterHub",
-        SHARED_SERVICE,
-        "The app stores the login. An admin creates the account in JupyterHub.",
-    ),
+    ServiceInfo("nifi", "NiFi", OWN_CONTAINER, deprecated=True),
+    ServiceInfo("superset", "Superset", SHARED_SERVICE, deprecated=True),
+    ServiceInfo("jupyterhub", "JupyterHub", SHARED_SERVICE, deprecated=True),
 ]
 SERVICE_KEYS = [service.key for service in SERVICES]
+DEPRECATED_SERVICES = {service.key for service in SERVICES if service.deprecated}
 SERVICE_INFO = {service.key: service for service in SERVICES}
 
 
@@ -68,6 +66,8 @@ def service_setting_rows(db: Session) -> list:
 def creates_accounts(db: Session, service: str) -> bool:
     """True if the app creates an account in this service for each new user"""
 
+    if service in DEPRECATED_SERVICES:
+        return False
     row = db.query(ServiceSettings).filter(ServiceSettings.service == service).first()
     return bool(row and row.create_accounts)
 
@@ -77,6 +77,11 @@ def set_creates_accounts(db: Session, service: str, on: bool) -> None:
 
     if service not in SERVICE_KEYS:
         raise ServiceSettingError(f"There is no service “{service}”.")
+    if on and service in DEPRECATED_SERVICES:
+        raise ServiceSettingError(
+            f"{SERVICE_INFO[service].name} is deprecated: "
+            "the app no longer creates accounts in it."
+        )
     if service == "wordpress" and on and not creates_accounts(db, "mariadb"):
         raise ServiceSettingError(
             "Switch on MariaDB first: WordPress stores its data in MariaDB."

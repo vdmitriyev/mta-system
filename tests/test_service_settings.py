@@ -12,7 +12,7 @@ from app.service_settings import (
     service_setting_rows,
     set_creates_accounts,
 )
-from tests.conftest import post, switch_on
+from tests.conftest import force_on, post, switch_on
 
 
 def test_all_services_are_off_by_default(db):
@@ -31,10 +31,41 @@ def test_defaults_keep_the_changed_switches(db):
 
 
 def test_switch_on_and_off(db):
-    set_creates_accounts(db, "nifi", True)
-    assert creates_accounts(db, "nifi") is True
-    set_creates_accounts(db, "nifi", False)
-    assert creates_accounts(db, "nifi") is False
+    set_creates_accounts(db, "metabase", True)
+    assert creates_accounts(db, "metabase") is True
+    set_creates_accounts(db, "metabase", False)
+    assert creates_accounts(db, "metabase") is False
+
+
+@pytest.mark.parametrize("service", ["nifi", "superset", "jupyterhub"])
+def test_deprecated_services_cannot_be_switched_on(db, service):
+    with pytest.raises(ServiceSettingError, match="is deprecated"):
+        set_creates_accounts(db, service, True)
+    # an old "on" in the database has no effect, switching off works
+    force_on(db, service)
+    assert creates_accounts(db, service) is False
+    set_creates_accounts(db, service, False)
+
+
+def test_auto_creation_page_shows_deprecated_services(admin_client, db):
+    text = admin_client.get("/mtas-admin/auto-creation").text
+    for name, key in (
+        ("NiFi", "nifi"),
+        ("Superset", "superset"),
+        ("JupyterHub", "jupyterhub"),
+    ):
+        start = text.index(f"<strong>{name}</strong>")
+        row = text[start : text.index("</tr>", start)]
+        assert '<span class="badge warning">deprecated</span>' in row
+        assert f'value="{key}"' not in row  # no button
+    start = text.index("<strong>Metabase</strong>")
+    assert "deprecated" not in text[start : text.index("</tr>", start)]
+
+
+def test_visibility_marks_deprecated_services(admin_client):
+    text = admin_client.get("/mtas-admin/visibility").text
+    assert 'NiFi <span class="badge warning">deprecated</span>' in text
+    assert 'Metabase <span class="badge warning">' not in text
 
 
 def test_unknown_service(db):

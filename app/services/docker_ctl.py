@@ -8,6 +8,26 @@ logger = logging.getLogger(__name__)
 UNKNOWN = "unknown"
 
 
+def container_name(service: str, port: int, kind: str = "") -> str:
+    """Name of a container (or volume) of a user: <prefix><service>[-<kind>]-<port>"""
+
+    from app.config import get_settings
+
+    prefix = get_settings().container_name_prefix
+    middle = f"{service}-{kind}" if kind else service
+    return f"{prefix}{middle}-{port}"
+
+
+def published_ports(container_port: str, host_port: int) -> dict | None:
+    """Ports of a container on the host (127.0.0.1), or None if they are switched off"""
+
+    from app.config import get_settings
+
+    if not get_settings().container_publish_ports:
+        return None
+    return {container_port: ("127.0.0.1", host_port)}
+
+
 @dataclass
 class ImageCheck:
     """Result of check_image: "<state>: <image>", then the hint and the command to fix it"""

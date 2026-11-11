@@ -12,7 +12,7 @@
           {% for key, value in items %}
           <tr>
             <td><code>{{ key }}</code></td>
-            <td>{% if value is sequence and value is not string %}{{ value | join(", ") or "–" }}{% elif value is none %}–{% else %}{{ value }}{% endif %}</td>
+            <td class="setting-value">{% if value is sequence and value is not string %}{{ value | join(", ") or "–" }}{% elif value is none or value == "" %}–{% else %}{{ value }}{% endif %}</td>
           </tr>
           {% endfor %}
         </tbody>

@@ -10,6 +10,15 @@ vars:
   TESTENV_DIR: tests/testenv
   TESTENV_APP_PORT: 5354
   TESTENV_DB_PORT: 35433
+  # network variant: "names" (containers reached by name) or "hostports" (by 127.0.0.1:<port>)
+  TESTENV_VARIANT: '{{.TESTENV_VARIANT | default "names"}}'
+  # "true": deploy leaves the test copy running after the checks (to look into it)
+  TESTENV_KEEP: '{{.TESTENV_KEEP | default "false"}}'
+  TESTENV_COMPOSE_FILES: '-f {{.TESTENV_DIR}}/compose.yaml{{if eq .TESTENV_VARIANT "hostports"}} -f {{.TESTENV_DIR}}/compose.hostports.yaml{{end}}'
+  # the app listens here inside the variant (host network: not 5151 on the host)
+  TESTENV_APP_URL: '{{if eq .TESTENV_VARIANT "hostports"}}http://127.0.0.1:{{.TESTENV_APP_PORT}}{{else}}http://127.0.0.1:5151{{end}}'
+  # containers that the app starts for the users of the test copy
+  TESTENV_CONTAINER_PREFIX: mtas-testenv-
   TOOLS_DIR: '{{.ROOT_DIR}}/.tools/bin'
   # used only when docker / docker compose are not installed (linux x86_64)
   DOCKER_VERSION: 29.9.1
@@ -23,7 +32,7 @@ vars:
   TESTENV_COMPOSE: >-
     ENV_FILE_NAME={{.TESTENV_ENV_FILE}} MTAS_HOST_DIR={{.MTAS_HOST_DIR}}
     MTAS_APP_PORT={{.TESTENV_APP_PORT}} MTAS_DB_PORT={{.TESTENV_DB_PORT}}
-    {{.COMPOSE_BIN}} -p {{.PROJECT}} --project-directory . -f {{.TESTENV_DIR}}/compose.yaml
+    {{.COMPOSE_BIN}} -p {{.PROJECT}} --project-directory . {{.TESTENV_COMPOSE_FILES}}
 
 tasks:
 
@@ -41,9 +50,12 @@ tasks:
       - chmod +x {{.TOOLS_DIR}}/docker {{.TOOLS_DIR}}/docker-compose
 
   deploy:
-    desc: builds, starts, initialises and checks the test copy
+    desc: builds, starts, initialises and checks the test copy, then removes it (TESTENV_KEEP=true keeps it)
     aliases: [d]
     cmds:
+      # runs at the end, also when a step fails (in reverse order: logs first, then removal)
+      - defer: {task: finish}
+      - defer: '{{if .EXIT_CODE}}echo "[e] the test copy failed (exit code {{.EXIT_CODE}}), latest logs:"; {{.TESTENV_COMPOSE}} logs --tail 50 || true{{end}}'
       - task: up
       - task: init
       - task: check
@@ -53,18 +65,18 @@ tasks:
     aliases: [u]
     deps: [tools]
     cmds:
-      - echo "Project folder for docker -> {{.MTAS_HOST_DIR}}"
+      - echo "Project folder for docker -> {{.MTAS_HOST_DIR}}, network variant -> {{.TESTENV_VARIANT}}"
       - mkdir -p .logs/testenv
-      - '{{.TESTENV_COMPOSE}} up -d --build --wait app database'
+      - '{{.TESTENV_COMPOSE}} up -d --build --wait app database pgadmin4 mariadb'
 
   init:
-    desc: applies the migrations, imports the exercises, switches on PostgreSQL accounts and creates the demo database
+    desc: applies the migrations, imports the exercises, switches on the services and creates the demo database
     aliases: [i]
     deps: [tools]
     cmds:
       - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli db-upgrade'
       - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli import-data-exercises'
-      - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli auto-creation --on postgresql'
+      - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli auto-creation --on postgresql --on pgadmin4 --on metabase --on openrefine --on mariadb --on wordpress'
       - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli create-demo-db'
 
   check:
@@ -72,12 +84,21 @@ tasks:
     aliases: [c]
     deps: [tools]
     cmds:
-      - '{{.TESTENV_COMPOSE}} exec -T app python - < {{.TESTENV_DIR}}/smoke.py'
-      - '{{.TESTENV_COMPOSE}} exec -T app python - < {{.TESTENV_DIR}}/e2e.py'
+      - '{{.TESTENV_COMPOSE}} exec -T -e SMOKE_BASE_URL={{.TESTENV_APP_URL}} app python - < {{.TESTENV_DIR}}/smoke.py'
+      - '{{.TESTENV_COMPOSE}} exec -T -e SMOKE_BASE_URL={{.TESTENV_APP_URL}} app python - < {{.TESTENV_DIR}}/e2e.py'
+      - '{{.TESTENV_COMPOSE}} exec -T app python - < {{.TESTENV_DIR}}/services_check.py'
       - |
         DEMO_DB=$(tr -d '\r' < {{.TESTENV_ENV_FILE}} | sed -nE "s/^POSTGRESQL_DEMO_DB *= *'?([^' ]+)'?.*/\1/p")
         {{.TESTENV_COMPOSE}} exec -T database psql -U postgres -Atc "SELECT datname FROM pg_database" | grep -qx "$DEMO_DB"
         echo "[i] demo database exists: $DEMO_DB"
+
+  finish:
+    internal: true
+    cmds:
+      - cmd: 'echo "[i] the test copy keeps running (TESTENV_KEEP=true), remove it with: task testenv:down"'
+        if: '[ "{{.TESTENV_KEEP}}" = "true" ]'
+      - task: down
+        if: '[ "{{.TESTENV_KEEP}}" != "true" ]'
 
   logs:
     desc: shows containers and latest logs of the test copy
@@ -89,8 +110,11 @@ tasks:
       - tail -n 30 .logs/testenv/app-server.log
 
   down:
-    desc: removes the test copy (containers, volumes, app image)
+    desc: removes the test copy (containers, volumes, app image, containers of the users)
     aliases: [rm]
     deps: [tools]
     cmds:
+      # first the containers that the app started for the users: they use the network of the project
+      - '{{.DOCKER}} ps -aq --filter "name=^{{.TESTENV_CONTAINER_PREFIX}}" | xargs -r {{.DOCKER}} rm -f'
       - '{{.TESTENV_COMPOSE}} down -v --rmi local'
+      - '{{.DOCKER}} volume ls -q --filter "name=^{{.TESTENV_CONTAINER_PREFIX}}" | xargs -r {{.DOCKER}} volume rm'

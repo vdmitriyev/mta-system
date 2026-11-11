@@ -12,7 +12,7 @@
         {% for row in rows %}
         {% set service = info.get(row.service) %}
         <tr>
-          <td><strong>{{ service.name if service else row.service }}</strong></td>
+          <td><strong>{{ service.name if service else row.service }}</strong>{% if service and service.deprecated %} <span class="badge warning">deprecated</span>{% endif %}</td>
           <td>{{ service.runs if service else "–" }}</td>
           <td>
             {% if images.get(row.service) %}
@@ -21,6 +21,10 @@
           </td>
           <td class="muted small">{{ service.note if service and service.note else "–" }}</td>
           <td><code>{{ row.service }}</code></td>
+          {% if service and service.deprecated %}
+          <td><span class="badge">off</span></td>
+          <td class="muted small">No new accounts</td>
+          {% else %}
           <td>{{ ui.yes_no(row.create_accounts, "on", "off") }}</td>
           <td>
             <form method="post" action="/mtas-admin/auto-creation" class="inline-form">
@@ -30,6 +34,7 @@
               <button type="submit" class="btn sm">{{ "Switch off" if row.create_accounts else "Switch on" }}</button>
             </form>
           </td>
+          {% endif %}
         </tr>
         {% endfor %}
       </tbody>
