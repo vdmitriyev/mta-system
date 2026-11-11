@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
-{% block title %}Configuration{% endblock %}
+{% block title %}Settings{% endblock %}
 {% block admin %}
-{{ ui.page_head("Configuration", "Settings that the app started with. Passwords and keys are not shown.") }}
+{{ ui.page_head("Settings", "Settings that the app started with. Passwords and keys are not shown.") }}
 <div class="grid two">
   {% for group, items in groups.items() %}
   <section class="card flush">

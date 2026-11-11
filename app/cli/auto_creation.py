@@ -1,4 +1,4 @@
-"""Command that shows or changes the services in which new users get an account"""
+"""Command "auto-creation": in which services new users get an account"""
 
 import click
 
@@ -12,10 +12,10 @@ from app.service_settings import (
 )
 
 
-@click.command("service-accounts")
+@click.command("auto-creation")
 @click.option("--on", "switch_on", multiple=True, type=click.Choice(SERVICE_KEYS))
 @click.option("--off", "switch_off", multiple=True, type=click.Choice(SERVICE_KEYS))
-def service_accounts(switch_on, switch_off):
+def auto_creation(switch_on, switch_off):
     """Shows or changes in which services new users get an account"""
 
     with session_scope() as db:

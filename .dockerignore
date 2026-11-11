@@ -1,11 +1,13 @@
 # Only what the image needs goes in. The Dockerfile copies:
-# pyproject.toml, run.py, configs-logging/, migrations/, app/, docker-entrypoint.sh
+# pyproject.toml, run.py, versions.env, configs-logging/, migrations/, app/, docker-entrypoint.sh
 
 # environment files hold secrets: pass them at runtime (env_file / --env-file)
 envs/
 .env
 *.env
 .env-*
+# versions of the service images: no secrets, read by the app
+!versions.env
 
 # virtual environments, caches, version control
 .venv/

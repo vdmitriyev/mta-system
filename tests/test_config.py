@@ -232,3 +232,60 @@ def test_load_settings_names_the_missing_secret(tmp_path, clean_env):
     clean_env.setenv("ENV_FILE_NAME", str(tmp_path / "missing.env"))
     with pytest.raises(ConfigError, match="Set the environment variable SECRET_KEY"):
         load_settings()
+
+
+def test_image_versions(tmp_path):
+    settings = Settings.from_env(BASE_ENV)
+    assert (
+        settings.metabase_version,
+        settings.openrefine_version,
+        settings.wordpress_version,
+    ) == ("v0.57.3", "3.10.1", "latest")
+
+
+@pytest.mark.parametrize("value", ["3.10 .1", "latest;rm -rf /", ":3.10", "-x"])
+def test_wrong_image_version_names_the_variable(value):
+    with pytest.raises(ConfigError, match="OPENREFINE_VERSION"):
+        Settings.from_env({**BASE_ENV, "OPENREFINE_VERSION": value})
+
+
+def test_versions_come_from_the_central_file():
+    versions = config.read_versions()
+    assert set(versions) == {
+        "METABASE_VERSION",
+        "OPENREFINE_VERSION",
+        "WORDPRESS_VERSION",
+        "POSTGRESQL_VERSION",
+        "PGADMIN4_VERSION",
+        "MARIADB_VERSION",
+        "WORDPRESS_CLI_VERSION",
+    }
+    settings = Settings.from_env(BASE_ENV)
+    assert settings.openrefine_version == versions["OPENREFINE_VERSION"]
+    assert settings.metabase_version == versions["METABASE_VERSION"]
+    assert settings.postgresql_version == versions["POSTGRESQL_VERSION"]
+    assert settings.pgadmin4_version == versions["PGADMIN4_VERSION"]
+    assert settings.mariadb_version == versions["MARIADB_VERSION"]
+    assert settings.wordpress_cli_version == versions["WORDPRESS_CLI_VERSION"]
+
+
+def test_env_file_and_environment_win_over_the_versions_file(tmp_path, clean_env):
+    env_file = write_env_file(tmp_path / "app.env", OPENREFINE_VERSION="3.9.5")
+    clean_env.setenv("ENV_FILE_NAME", str(env_file))
+    settings = load_settings()
+    assert settings.openrefine_version == "3.9.5"
+    assert settings.metabase_version == config.read_versions()["METABASE_VERSION"]
+
+    clean_env.setenv("METABASE_VERSION", "v0.56.0")
+    assert load_settings().metabase_version == "v0.56.0"
+
+
+def test_missing_versions_file_is_named(tmp_path, clean_env, caplog):
+    env_file = write_env_file(tmp_path / "app.env")
+    clean_env.setenv("ENV_FILE_NAME", str(env_file))
+    clean_env.setattr(config, "VERSIONS_FILE", tmp_path / "missing-versions.env")
+    with pytest.raises(
+        ConfigError, match="Set the environment variable METABASE_VERSION"
+    ):
+        load_settings()
+    assert "Versions file does not exist" in caplog.text

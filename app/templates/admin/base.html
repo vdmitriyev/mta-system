@@ -12,11 +12,11 @@
     ("/mtas-admin/services/metabase", "Metabase"),
     ("/mtas-admin/services/openrefine", "OpenRefine"),
     none,
-    ("/mtas-admin/service-accounts", "Service accounts"),
+    ("/mtas-admin/auto-creation", "Auto creation"),
   ]),
   ("/mtas-admin/monitoring", "Monitoring"),
   ("/mtas-admin/visibility", "Visibility"),
-  ("/mtas-admin/configs", "Configuration"),
+  ("/mtas-admin/settings", "Settings"),
 ] %}
 {% macro is_current(href) -%}
 {{ path == href or (href != "/mtas-admin/" and path.startswith(href)) }}

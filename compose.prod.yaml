@@ -1,6 +1,6 @@
 # Production: mta-system behind nginx (HTTPS), with the services for the students.
 #   task prod:up
-#   (docker compose -f compose.prod.yaml -f compose.services.yml up -d --build)
+#   (docker compose --env-file versions.env -f compose.prod.yaml -f compose.services.yml up -d --build)
 #
 # Only nginx publishes ports to all interfaces. The app is reachable from nginx only.
 name: mta-system-prod

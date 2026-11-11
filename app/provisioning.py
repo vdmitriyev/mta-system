@@ -1,7 +1,7 @@
 """Creates the accounts of a user in the services and stores them in the database.
 
 Each function returns True if the account was created. A service that is
-switched off on the admin page "Service accounts" is skipped.
+switched off on the admin page "Auto creation" is skipped.
 """
 
 import logging

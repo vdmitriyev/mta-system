@@ -64,7 +64,7 @@ tasks:
     cmds:
       - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli db-upgrade'
       - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli import-data-exercises'
-      - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli service-accounts --on postgresql'
+      - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli auto-creation --on postgresql'
       - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli create-demo-db'
 
   check:

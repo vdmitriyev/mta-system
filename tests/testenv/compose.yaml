@@ -34,7 +34,8 @@ services:
       - mtas-network
 
   database:
-    image: postgres:15.8
+    # same version as the real deployment: POSTGRESQL_VERSION in versions.env
+    image: postgres:${POSTGRESQL_VERSION:?set it in versions.env and use task}
     env_file:
       - envs/postgresql-service.env
     environment:

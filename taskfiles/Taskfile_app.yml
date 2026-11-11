@@ -69,7 +69,7 @@ tasks:
       - python -m app.cli {{.CLI_ARGS}}
 
   config:
-    desc: checks the settings and shows them without passwords and keys (other file, e.g. 'ENV_FILE_NAME=envs/x.env task app:config')
+    desc: checks the settings and shows them without secrets
     aliases: [c]
     deps: [check-virtualenv]
     silent: true

@@ -1,6 +1,6 @@
 [project]
 name = "mta-system"
-version = "2.1.0"
+version = "2.2.0"
 description = "Modular teaching assistance system: gives students hands-on access to software services"
 readme = "README.md"
 license = "MIT"

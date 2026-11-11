@@ -302,3 +302,22 @@ def test_mariadb_errors(settings, monkeypatch):
         mariadb.pymysql, "connect", lambda **_k: FakeMariaConnection([], fail=True)
     )
     assert mariadb.create_mariadb_db("db", "user", "pw") is False
+
+
+@pytest.mark.parametrize(
+    "running,expected,matches",
+    [
+        ("17.11 (Debian 17.11-1.pgdg120+1)", "17.11", True),
+        ("17.11", "17", True),
+        ("17.2", "17.11", False),
+        ("15.8 (Debian 15.8-1.pgdg120+1)", "17.11", False),
+        ("171.0", "17", False),
+    ],
+)
+def test_server_version_is_compared_with_versions_env(
+    use_settings, running, expected, matches
+):
+    use_settings(POSTGRESQL_VERSION=expected)
+    status = postgresql.ServerStatus(True, "db:5432", f"PostgreSQL {running}", running)
+    assert status.version_matches is matches
+    assert postgresql.image() == f"postgres:{expected}"

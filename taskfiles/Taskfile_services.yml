@@ -1,0 +1,79 @@
+version: '3'
+
+# Images of the services that the app starts for each user.
+# The versions come from versions.env (loaded by Taskfile.yaml).
+
+tasks:
+
+  versions:
+    desc: shows the versions of the service images (from versions.env)
+    aliases: [v]
+    silent: true
+    cmds:
+      - echo "METABASE_VERSION=$METABASE_VERSION"
+      - echo "OPENREFINE_VERSION=$OPENREFINE_VERSION"
+      - echo "WORDPRESS_VERSION=$WORDPRESS_VERSION"
+      - echo "WORDPRESS_CLI_VERSION=$WORDPRESS_CLI_VERSION"
+      - echo "POSTGRESQL_VERSION=$POSTGRESQL_VERSION"
+      - echo "PGADMIN4_VERSION=$PGADMIN4_VERSION"
+      - echo "MARIADB_VERSION=$MARIADB_VERSION"
+
+  update-all:
+    desc: gets all service images in the versions of versions.env (pulls, builds OpenRefine)
+    aliases: [u]
+    cmds:
+      - task: pull-metabase
+      - task: pull-wordpress
+      - task: build-openrefine
+      - task: pull-postgresql
+      - task: pull-pgadmin4
+      - task: pull-mariadb
+
+  build-openrefine:
+    desc: builds the OpenRefine image (openrefine:<OPENREFINE_VERSION>) from provision/openrefine
+    preconditions:
+      - sh: test -n "$OPENREFINE_VERSION"
+        msg: "OPENREFINE_VERSION is not set: check versions.env"
+    cmds:
+      - docker build --build-arg OPENREFINE_VERSION=$OPENREFINE_VERSION -t openrefine:$OPENREFINE_VERSION provision/openrefine
+
+  pull-metabase:
+    desc: downloads the Metabase image (metabase/metabase:<METABASE_VERSION>)
+    preconditions:
+      - sh: test -n "$METABASE_VERSION"
+        msg: "METABASE_VERSION is not set: check versions.env"
+    cmds:
+      - docker pull metabase/metabase:$METABASE_VERSION
+
+  pull-wordpress:
+    desc: downloads the WordPress images (wordpress:<WORDPRESS_VERSION>, and the installer wordpress:<WORDPRESS_CLI_VERSION>)
+    preconditions:
+      - sh: test -n "$WORDPRESS_VERSION" && test -n "$WORDPRESS_CLI_VERSION"
+        msg: "WORDPRESS_VERSION or WORDPRESS_CLI_VERSION is not set: check versions.env"
+    cmds:
+      - docker pull wordpress:$WORDPRESS_VERSION
+      - docker pull wordpress:$WORDPRESS_CLI_VERSION
+
+  pull-postgresql:
+    desc: downloads the PostgreSQL image (postgres:<POSTGRESQL_VERSION>)
+    preconditions:
+      - sh: test -n "$POSTGRESQL_VERSION"
+        msg: "POSTGRESQL_VERSION is not set: check versions.env"
+    cmds:
+      - docker pull postgres:$POSTGRESQL_VERSION
+
+  pull-pgadmin4:
+    desc: downloads the pgAdmin 4 image (dpage/pgadmin4:<PGADMIN4_VERSION>)
+    preconditions:
+      - sh: test -n "$PGADMIN4_VERSION"
+        msg: "PGADMIN4_VERSION is not set: check versions.env"
+    cmds:
+      - docker pull dpage/pgadmin4:$PGADMIN4_VERSION
+
+  pull-mariadb:
+    desc: downloads the MariaDB image (mariadb:<MARIADB_VERSION>)
+    preconditions:
+      - sh: test -n "$MARIADB_VERSION"
+        msg: "MARIADB_VERSION is not set: check versions.env"
+    cmds:
+      - docker pull mariadb:$MARIADB_VERSION

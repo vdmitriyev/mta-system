@@ -326,8 +326,17 @@ main {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
 }
 
-/* services page of a user: one card per row */
-.service-list {
+/* admin: a block of settings with a heading (e.g. Visibility) */
+.settings-category {
+  margin-bottom: 2rem;
+}
+
+.settings-category > h2 {
+  margin-bottom: 0.75rem;
+}
+
+/* blocks stacked over the full width (services page, Visibility) */
+.block-list {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
@@ -1061,6 +1070,12 @@ progress {
   margin: 0.3rem 0;
   border: 0;
   border-top: 1px solid var(--border);
+}
+
+/* a note under the content: same style as the text under the page title */
+.page-note {
+  margin: 1rem 0 0;
+  color: var(--muted);
 }
 
 .toolbar .spacer {

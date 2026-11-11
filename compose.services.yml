@@ -1,20 +1,24 @@
 services:
 
   metabase-service:
-   image: metabase/metabase:v0.57.3
+   image: metabase/metabase:${METABASE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
    ports:
        - "127.0.0.1:3000:3000"
    networks:
        - mtas-network
 
   openrefine-service:
-   build: ./provision/openrefine
-   image: openrefine:3.10.1
+   # versions come from versions.env, the same file that the web app reads
+   build:
+     context: ./provision/openrefine
+     args:
+       OPENREFINE_VERSION: ${OPENREFINE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
+   image: openrefine:${OPENREFINE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
    networks:
        - mtas-network
 
   postgresql-service:
-    image: "postgres:17.11"
+    image: "postgres:${POSTGRESQL_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}"
     env_file:
       - envs/postgresql-service.env # configure postgres service
     ports:
@@ -25,7 +29,7 @@ services:
       - mtas-network
 
   pgadmin4-service:
-    image: "dpage/pgadmin4:8.12"
+    image: "dpage/pgadmin4:${PGADMIN4_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}"
     env_file:
       - envs/pgadmin4-service.env # configures pgadmin4 service
     ports:

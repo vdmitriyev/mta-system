@@ -30,11 +30,19 @@ from app.models import (
 )
 from app.security import csrf_protect, random_string
 from app.service_settings import (
+    SERVICE_INFO,
     ServiceSettingError,
     service_setting_rows,
     set_creates_accounts,
 )
-from app.services import docker_ctl, metabase_api, openrefine_api
+from app.services import (
+    docker_ctl,
+    metabase_api,
+    nifi_api,
+    openrefine_api,
+    postgresql,
+    wordpress_api,
+)
 from app.tasks import TaskError, enqueue, recent_tasks
 from app.users import (
     access_url,
@@ -44,7 +52,7 @@ from app.users import (
     generate_accounts_task,
     get_user_services,
 )
-from app.visibility import change_ui_visibility_settings, ui_visibility_rows
+from app.visibility import change_ui_visibility_settings, grouped_visibility_rows
 from app.web import Page, flash, redirect, require_admin
 
 # Services with an own container per user that the admin can manage
@@ -448,14 +456,23 @@ def grouped_settings() -> dict:
     return result
 
 
+@router.get("/settings")
+def settings_page(page: Page = Depends()):
+    return page.render("admin/settings.html", groups=grouped_settings())
+
+
 @router.get("/configs")
-def configs_page(page: Page = Depends()):
-    return page.render("admin/configs.html", groups=grouped_settings())
+def old_settings_address():
+    """Old address of the settings page"""
+
+    return redirect("/mtas-admin/settings")
 
 
 @router.get("/visibility")
 def visibility_page(page: Page = Depends()):
-    return page.render("admin/visibility.html", rows=ui_visibility_rows(page.db))
+    return page.render(
+        "admin/visibility.html", categories=grouped_visibility_rows(page.db)
+    )
 
 
 @router.post("/visibility", dependencies=[Depends(csrf_protect)])
@@ -470,15 +487,33 @@ def visibility_change(
     return redirect("/mtas-admin/visibility")
 
 
-@router.get("/service-accounts")
-def service_accounts_page(page: Page = Depends()):
+@router.get("/auto-creation")
+def auto_creation_page(page: Page = Depends()):
     return page.render(
-        "admin/service_accounts.html", rows=service_setting_rows(page.db)
+        "admin/auto_creation.html",
+        rows=service_setting_rows(page.db),
+        info=SERVICE_INFO,
+        images=container_images(),
     )
 
 
-@router.post("/service-accounts", dependencies=[Depends(csrf_protect)])
-def service_accounts_change(
+def container_images() -> dict:
+    """Images of the services whose version is known (versions.env): service -> images"""
+
+    settings = get_settings()
+    return {
+        "postgresql": [postgresql.image()],
+        "pgadmin4": [f"dpage/pgadmin4:{settings.pgadmin4_version}"],
+        "metabase": [metabase_api.image()],
+        "openrefine": [openrefine_api.image()],
+        "mariadb": [f"mariadb:{settings.mariadb_version}"],
+        "wordpress": [wordpress_api.image(), wordpress_api.cli_image()],
+        "nifi": [nifi_api.IMAGE],
+    }
+
+
+@router.post("/auto-creation", dependencies=[Depends(csrf_protect)])
+def auto_creation_change(
     page: Page = Depends(), service: str = Form(...), on: bool = Form(...)
 ):
     try:
@@ -486,13 +521,21 @@ def service_accounts_change(
     except ServiceSettingError as error:
         flash(page.request, str(error), "danger")
     else:
-        state = "creates" if on else "no longer creates"
+        name = SERVICE_INFO[service].name
+        state = "now creates" if on else "no longer creates"
         flash(
             page.request,
-            f"The app {state} an account in “{service}” for new users.",
+            f"The app {state} an account in {name} for new users.",
             "success",
         )
-    return redirect("/mtas-admin/service-accounts")
+    return redirect("/mtas-admin/auto-creation")
+
+
+@router.get("/service-accounts")
+def old_auto_creation_address():
+    """Old address of the page "Auto creation" """
+
+    return redirect("/mtas-admin/auto-creation")
 
 
 def check_basic_auth(url: str, login: str, password: str) -> str:

@@ -2,6 +2,18 @@
 History
 =======
 
+2.2.0 (2026-11-11)
+-------------------
+
+* New file `versions.env` with the versions of all service images: Metabase, OpenRefine, WordPress (and its installer), PostgreSQL, pgAdmin 4 and MariaDB. The app, all `task` commands and the compose files read it. The page "Auto creation" shows the images. The PostgreSQL page compares the server version with it.
+* New tasks `services:*` that show, pull or build the images. `services:update-all` gets all of them.
+* OpenRefine Dockerfile: fixed the download address, which mixed 3.9.5 and 3.10.1 (404). Removed `provision/openrefine/build.sh`.
+* The test copy uses the PostgreSQL version of `versions.env` (before: 15.8).
+* MariaDB is pinned to 13.0.2 (before: `latest`, which was 13.0.2).
+* Renamed the admin pages "Configuration" to "Settings" and "Service accounts" to "Auto creation". The old addresses forward. The command `service-accounts` is now `auto-creation`.
+* Auto creation: separate columns for the service, how it runs, the version and a note.
+* Visibility: the settings are grouped by category and service.
+
 2.1.0 (2026-11-11)
 -------------------
 

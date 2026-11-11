@@ -97,7 +97,7 @@ def no_email(monkeypatch):
 
 
 def switch_on(db, *services):
-    """Lets the app create accounts in these services (admin page "Service accounts")"""
+    """Lets the app create accounts in these services (admin page "Auto creation")"""
 
     for service in services:
         set_creates_accounts(db, service, True)

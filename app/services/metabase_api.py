@@ -7,10 +7,14 @@ import requests
 from app.config import get_settings
 from app.services import docker_ctl
 
-METABASE_VERSION = "v0.57.3"
-IMAGE = f"metabase/metabase:{METABASE_VERSION}"
 IMAGE_HINT = "Download it on the server:"
-IMAGE_COMMAND = f"docker pull {IMAGE}"
+
+
+def image() -> str:
+    """Image of the Metabase containers. The version is the setting METABASE_VERSION."""
+
+    return f"metabase/metabase:{get_settings().metabase_version}"
+
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +40,9 @@ def create_user_and_docker_mb(user_data: UserDataMetabase, docker_port: int) -> 
 
 
 def check_image(ask_registry: bool = True) -> docker_ctl.ImageCheck:
-    return docker_ctl.check_image(IMAGE, ask_registry, IMAGE_HINT, IMAGE_COMMAND)
+    return docker_ctl.check_image(
+        image(), ask_registry, IMAGE_HINT, f"docker pull {image()}"
+    )
 
 
 def create_docker_container(port: int) -> bool:
@@ -44,7 +50,7 @@ def create_docker_container(port: int) -> bool:
         return False
     try:
         container = docker_ctl.get_client().containers.run(
-            image=IMAGE,
+            image=image(),
             detach=True,
             name=f"metabase-{port}",
             ports={"80/tcp": ("127.0.0.1", port)},

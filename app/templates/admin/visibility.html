@@ -2,30 +2,36 @@
 {% block title %}Visibility{% endblock %}
 {% block admin %}
 {{ ui.page_head("Visibility", "Choose which services, importers and menu entries the users see.") }}
-<div class="card flush">
-  <div class="table-wrap">
-    <table class="table">
-      <thead>
-        <tr><th>Element</th><th>Key</th><th>State</th><th>Action</th></tr>
-      </thead>
-      <tbody>
-        {% for row in rows %}
-        <tr>
-          <td>{{ row.description or row.ui_key }}</td>
-          <td><code>{{ row.ui_key }}</code></td>
-          <td>{{ ui.yes_no(row.visible, "shown", "hidden") }}</td>
-          <td>
-            <form method="post" action="/mtas-admin/visibility" class="inline-form">
-              {{ ui.csrf(csrf_token) }}
-              <input type="hidden" name="ui_key" value="{{ row.ui_key }}">
-              <input type="hidden" name="visible" value="{{ 'false' if row.visible else 'true' }}">
-              <button type="submit" class="btn sm">{{ "Hide" if row.visible else "Show" }}</button>
-            </form>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% for category, groups in categories.items() %}
+<section class="settings-category">
+  <h2>{{ category }}</h2>
+  <div class="block-list">
+    {% for group, items in groups.items() %}
+    <section class="card flush">
+      <div class="table-wrap">
+        <table class="table">
+          <thead><tr><th colspan="3">{{ group }}</th></tr></thead>
+          <tbody>
+            {% for row, label in items %}
+            <tr>
+              <td>{{ label }}<br><code class="muted small">{{ row.ui_key }}</code></td>
+              <td>{{ ui.yes_no(row.visible, "shown", "hidden") }}</td>
+              <td class="nowrap">
+                <form method="post" action="/mtas-admin/visibility" class="inline-form">
+                  {{ ui.csrf(csrf_token) }}
+                  <input type="hidden" name="ui_key" value="{{ row.ui_key }}">
+                  <input type="hidden" name="visible" value="{{ 'false' if row.visible else 'true' }}">
+                  <button type="submit" class="btn sm">{{ "Hide" if row.visible else "Show" }}</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+    {% endfor %}
   </div>
-</div>
+</section>
+{% endfor %}
 {% endblock %}

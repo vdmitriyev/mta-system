@@ -4,10 +4,12 @@
 ###################
 
 FROM openjdk:22-ea-22-jdk-slim
-#ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.7.6/openrefine-linux-3.7.6.tar.gz
-# ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.8.7/openrefine-linux-3.8.7.tar.gz
-# ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.9.5/openrefine-linux-3.9.5.tar.gz
-ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.9.5/openrefine-linux-3.10.1.tar.gz
+
+# Version of OpenRefine: OPENREFINE_VERSION in versions.env (project folder).
+#   task services:build-openrefine
+ARG OPENREFINE_VERSION
+RUN test -n "$OPENREFINE_VERSION" || (echo "Build argument OPENREFINE_VERSION is missing: see versions.env" && false)
+ENV OR_URL=https://github.com/OpenRefine/OpenRefine/releases/download/${OPENREFINE_VERSION}/openrefine-linux-${OPENREFINE_VERSION}.tar.gz
 
 WORKDIR /app
 
@@ -15,7 +17,7 @@ WORKDIR /app
 #    && apk add --no-cache bash curl grep tar \
 #    && curl -sSL ${OR_URL} | tar xz --strip 1
 RUN apt-get update && apt-get install -y curl
-RUN curl -sSL ${OR_URL} | tar xz --strip 1
+RUN curl -fsSL ${OR_URL} | tar xz --strip 1
 
 VOLUME /data
 WORKDIR /data

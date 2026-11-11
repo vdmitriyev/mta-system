@@ -1,8 +1,10 @@
 version: '3.8'
 
+# Versions come from versions.env in the project folder:
+#   docker compose --env-file versions.env -f provision/wordpress/docker-compose.yml up -d
 services:
   wp-db:
-    image: mariadb
+    image: mariadb:${MARIADB_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=<PASS-ROOT>
@@ -15,7 +17,7 @@ services:
       - "127.0.0.1:3306:3306"
 
   wp-wordpress:
-    image: wordpress
+    image: wordpress:${WORDPRESS_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
     restart: always
     depends_on:
       - wp-db

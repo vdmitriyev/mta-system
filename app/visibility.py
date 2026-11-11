@@ -1,29 +1,74 @@
+from dataclasses import dataclass
+
 from sqlalchemy import insert, inspect
 from sqlalchemy.orm import Session
 
 from app.models import UIVisibilitySettings
 
-# Default UI visibility settings: (ui_key, visible, description)
+SERVICES_CATEGORY = "Services"
+MENU_CATEGORY = "Menu"
+OTHER = "Other"
+
+
+@dataclass(frozen=True)
+class VisibilityItem:
+    """A part of the UI that the admin can show or hide (all are shown at the start)"""
+
+    ui_key: str
+    category: str
+    group: str
+    label: str
+
+
+SERVICE_CARD = "Service on the services page"
+SELF_START = "Users can start it"
+
+VISIBILITY_ITEMS = [
+    VisibilityItem("postgresql", SERVICES_CATEGORY, "PostgreSQL", SERVICE_CARD),
+    VisibilityItem(
+        "importers_flights",
+        SERVICES_CATEGORY,
+        "PostgreSQL",
+        "Dataset importer: Flights",
+    ),
+    VisibilityItem(
+        "importers_airbnb", SERVICES_CATEGORY, "PostgreSQL", "Dataset importer: Airbnb"
+    ),
+    VisibilityItem(
+        "importers_adventureworks",
+        SERVICES_CATEGORY,
+        "PostgreSQL",
+        "Dataset importer: AdventureWorks",
+    ),
+    VisibilityItem("pgadmin4", SERVICES_CATEGORY, "pgAdmin 4", SERVICE_CARD),
+    VisibilityItem("metabase", SERVICES_CATEGORY, "Metabase", SERVICE_CARD),
+    VisibilityItem(
+        "metabase_self_managment", SERVICES_CATEGORY, "Metabase", SELF_START
+    ),
+    VisibilityItem("openrefine", SERVICES_CATEGORY, "OpenRefine", SERVICE_CARD),
+    VisibilityItem(
+        "openrefine_self_managment", SERVICES_CATEGORY, "OpenRefine", SELF_START
+    ),
+    VisibilityItem("mariadb", SERVICES_CATEGORY, "MariaDB", SERVICE_CARD),
+    VisibilityItem("mariadb_self_managment", SERVICES_CATEGORY, "MariaDB", SELF_START),
+    VisibilityItem("wordpress", SERVICES_CATEGORY, "WordPress", SERVICE_CARD),
+    VisibilityItem(
+        "wordpress_self_managment", SERVICES_CATEGORY, "WordPress", SELF_START
+    ),
+    VisibilityItem("nifi", SERVICES_CATEGORY, "NiFi", SERVICE_CARD),
+    VisibilityItem("nifi_self_managment", SERVICES_CATEGORY, "NiFi", SELF_START),
+    VisibilityItem("superset", SERVICES_CATEGORY, "Superset", SERVICE_CARD),
+    VisibilityItem("jupyterhub", SERVICES_CATEGORY, "JupyterHub", SERVICE_CARD),
+    VisibilityItem(
+        "reviews", MENU_CATEGORY, "Menu entries", "Reviews of the exercises"
+    ),
+    VisibilityItem("bonus", MENU_CATEGORY, "Menu entries", "Bonus points"),
+]
+VISIBILITY_INFO = {item.ui_key: item for item in VISIBILITY_ITEMS}
+
+# (ui_key, visible, description) for the database
 DEFAULT_UI_VISIBILITY_SETTINGS = [
-    ("pgadmin4", True, "pgAdmin 4 service"),
-    ("postgresql", True, "PostgreSQL service"),
-    ("importers_flights", True, "Dataset importer: flights"),
-    ("importers_airbnb", True, "Dataset importer: Airbnb"),
-    ("importers_adventureworks", True, "Dataset importer: AdventureWorks"),
-    ("metabase", True, "Metabase service"),
-    ("metabase_self_managment", True, "Metabase: users can start it"),
-    ("openrefine", True, "OpenRefine service"),
-    ("openrefine_self_managment", True, "OpenRefine: users can start it"),
-    ("mariadb", True, "MariaDB service"),
-    ("mariadb_self_managment", True, "MariaDB: users can start it"),
-    ("wordpress", True, "WordPress service"),
-    ("wordpress_self_managment", True, "WordPress: users can start it"),
-    ("nifi", True, "NiFi service"),
-    ("nifi_self_managment", True, "NiFi: users can start it"),
-    ("superset", True, "Superset service"),
-    ("jupyterhub", True, "JupyterHub service"),
-    ("reviews", True, "Menu: reviews of the exercises"),
-    ("bonus", True, "Menu: bonus points"),
+    (item.ui_key, True, f"{item.group}: {item.label}") for item in VISIBILITY_ITEMS
 ]
 
 
@@ -65,3 +110,23 @@ def change_ui_visibility_settings(db: Session, ui_key: str, visible: bool) -> bo
     )
     db.commit()
     return changed > 0
+
+
+def grouped_visibility_rows(db: Session) -> dict:
+    """Rows grouped for the admin page: category -> group -> [(row, label)].
+
+    Categories and groups are in the order of VISIBILITY_ITEMS. Unknown keys are in "Other".
+    """
+
+    order = {item.ui_key: number for number, item in enumerate(VISIBILITY_ITEMS)}
+    rows = sorted(
+        ui_visibility_rows(db), key=lambda row: order.get(row.ui_key, len(order))
+    )
+    groups = {}
+    for row in rows:
+        item = VISIBILITY_INFO.get(row.ui_key)
+        category = item.category if item else OTHER
+        group = item.group if item else OTHER
+        label = item.label if item else (row.description or row.ui_key)
+        groups.setdefault(category, {}).setdefault(group, []).append((row, label))
+    return groups

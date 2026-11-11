@@ -1,5 +1,9 @@
 version: '3'
 
+# Versions of the service images (METABASE_VERSION, OPENREFINE_VERSION, WORDPRESS_VERSION)
+# for all tasks, e.g. the docker compose calls. A variable in the shell wins.
+dotenv: ['versions.env']
+
 vars:
   ENV_FILE_NAME: '{{.ENV_FILE_NAME | default "envs/webapp-dev-local.env"}}'
   VENV_DIR: '.venv'
@@ -15,6 +19,7 @@ includes:
   pre-commit: ./taskfiles/Taskfile_pre_commit.yml
   prod: ./taskfiles/Taskfile_prod.yml
   sandbox: ./taskfiles/Taskfile_sandbox.yml
+  services: ./taskfiles/Taskfile_services.yml
   testenv: ./taskfiles/Taskfile_testenv.yaml
 
 tasks:

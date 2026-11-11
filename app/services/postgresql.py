@@ -38,6 +38,26 @@ class ServerStatus:
     ok: bool
     address: str
     text: str
+    # version that the server reports, e.g. "17.11 (Debian 17.11-1.pgdg120+1)"
+    version: str = ""
+
+    @property
+    def expected_version(self) -> str:
+        return get_settings().postgresql_version
+
+    @property
+    def version_matches(self) -> bool:
+        """True if the server runs POSTGRESQL_VERSION (versions.env). "17" matches 17.x."""
+
+        running = self.version.split(" ")[0]
+        expected = self.expected_version
+        return running == expected or running.startswith(f"{expected}.")
+
+
+def image() -> str:
+    """Image of the PostgreSQL service. The version is the setting POSTGRESQL_VERSION."""
+
+    return f"postgres:{get_settings().postgresql_version}"
 
 
 def config() -> PostgreSQLConfig:
@@ -85,7 +105,7 @@ def server_status() -> ServerStatus:
     except DBSetupMateException as error:
         logger.error("PostgreSQL server %s is not reachable: %s", address, error)
         return ServerStatus(False, address, error.message)
-    return ServerStatus(True, address, f"PostgreSQL {version}")
+    return ServerStatus(True, address, f"PostgreSQL {version}", version)
 
 
 def check_user_access(db_name: str, db_user: str, password: str) -> str:

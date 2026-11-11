@@ -41,7 +41,42 @@ tests/              automated tests, tests/testenv/ is the Docker test copy
 
 Registration, dataset imports and the setup of containers can take minutes. The app starts them as background tasks and answers at once. The page then asks `/api/tasks/<id>` for the state and shows the result. A task fails if its worker process stops (for example on a restart) or if it runs for more than 30 minutes, so a page does not wait forever.
 
-Metabase and OpenRefine run in one container per user. Before the app creates one, it checks that the image (`metabase/metabase:v0.57.3`, `openrefine:3.9.5`) is on the server or in the registry. The OpenRefine image is not in a public registry: build it with `docker compose -f compose.services.yml build openrefine-service`.
+Metabase and OpenRefine run in one container per user. Before the app creates one, it checks that the image is on the server or in the registry.
+
+### Versions of the services
+
+The versions of the service images are in one file, `versions.env` in the project folder:
+
+```ini
+# containers for each user
+METABASE_VERSION=v0.57.3      # metabase/metabase:<version> from Docker Hub
+OPENREFINE_VERSION=3.10.1     # openrefine:<version>, built on the server from provision/openrefine
+WORDPRESS_VERSION=latest      # wordpress:<version> from Docker Hub
+WORDPRESS_CLI_VERSION=cli     # wordpress:<tag>, the installer (WP-CLI) that the app starts
+# shared services
+POSTGRESQL_VERSION=17.11      # postgres:<version> from Docker Hub
+PGADMIN4_VERSION=8.12         # dpage/pgadmin4:<version> from Docker Hub
+MARIADB_VERSION=13.0.2        # mariadb:<version> from Docker Hub, for WordPress
+```
+
+These read the same file:
+
+| Who | How |
+| --- | --- |
+| the web app | as an env file with the lowest priority: a variable in the environment or in the env file of the app wins |
+| all `task` commands | `dotenv` in `Taskfile.yaml`, e.g. for the docker compose calls |
+| `compose.services.yml`, `tests/testenv/compose.yaml`, `provision/wordpress/docker-compose.yml` | `task dev:up`, `task prod:up`, `task testenv:deploy`, or `docker compose --env-file versions.env ...`. Without the file, compose stops with a message. |
+
+The admin page **Services → Auto creation** shows the versions, `task services:versions` too. The page **Services → PostgreSQL** compares the version that the server runs with `POSTGRESQL_VERSION`.
+
+To change a version:
+
+1. Change it in `versions.env`.
+2. Get the image on the server: `task services:pull-metabase`, `task services:build-openrefine`, `task services:pull-wordpress`, `task services:pull-postgresql`, `task services:pull-pgadmin4` or `task services:pull-mariadb`. `task services:update-all` gets all of them.
+3. Restart the app. The admin page of the service shows if the image is on the server.
+4. New users get the new version. For an existing user, use "Create again" on the admin page of the service. For PostgreSQL and pgAdmin 4, restart the service: `task prod:up`. For MariaDB, restart `provision/wordpress/docker-compose.yml` with `--env-file versions.env`.
+
+A new major version of PostgreSQL (for example 15 to 17) cannot open the data of the old one. Dump the databases before the change and restore them afterwards. MariaDB cannot go back to an older version once a newer one wrote the data.
 
 ## Setup
 
@@ -96,11 +131,11 @@ ENV_FILE_NAME=envs/webapp-dev-docker.env task app:config
 
 ### Services for the users
 
-In which services a new user gets an account (PostgreSQL, pgAdmin 4, Metabase, ...) is not in the env file. It is stored in the database. An admin changes it on the page **Admin → Service accounts**, or on the command line:
+In which services a new user gets an account (PostgreSQL, pgAdmin 4, Metabase, ...) is not in the env file. It is stored in the database. An admin changes it on the page **Admin → Services → Auto creation**, or on the command line:
 
 ```bash
-task app:cli -- service-accounts                                   # shows the switches
-task app:cli -- service-accounts --on postgresql --on pgadmin4
+task app:cli -- auto-creation                                   # shows the switches
+task app:cli -- auto-creation --on postgresql --on pgadmin4
 ```
 
 All services are switched off at the start. The app then runs on its own, without Docker and without PostgreSQL. WordPress needs MariaDB: switch on MariaDB first. A change affects only new users.
@@ -157,7 +192,7 @@ python -m app.cli --help
 | `grant-public-schema` | Lets all users create tables in their database |
 | `nginx-config` | Creates the nginx config parts for OpenRefine and NiFi |
 | `show-config` | Shows the env file and the settings without passwords and keys |
-| `service-accounts` | Shows or changes in which services new users get an account (`--on <service>`, `--off <service>`) |
+| `auto-creation` | Shows or changes in which services new users get an account (`--on <service>`, `--off <service>`) |
 | `check-mail` | Connects and logs in to the SMTP server (`MAIL_*`). `--to <address>` also sends a test e-mail |
 
 ## API and API docs

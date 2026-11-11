@@ -4,7 +4,8 @@ Sources, highest priority first:
 
 1. environment variables
 2. the env file in ENV_FILE_NAME (default: envs/webapp-dev-local.env)
-3. the defaults below
+3. versions.env: the versions of the service images, shared with compose and Task
+4. the defaults below
 
 Empty values count as "not set". Wrong values stop the start with a clear message.
 """
@@ -15,6 +16,7 @@ import re
 from pathlib import Path
 from typing import Annotated, Literal, Mapping, get_args
 
+from dotenv import dotenv_values
 from pydantic import (
     AliasChoices,
     Field,
@@ -30,6 +32,8 @@ from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DEFAULT_ENV_FILE = os.path.join("envs", "webapp-dev-local.env")
+# Versions of the service images. Also read by Taskfile.yaml and compose.services.yml.
+VERSIONS_FILE = BASE_DIR / "versions.env"
 SERVER_MODES = ("development", "production")
 # Names of the accounts and databases that the app creates for the users
 POSTGRESQL_DB_PREFIX = "bicourse_db"
@@ -63,6 +67,9 @@ DEFAULT_SERVICES_UI = [
 ]
 
 logger = logging.getLogger(__name__)
+
+# Version of a Docker image ("tag"), e.g. v0.57.3 or 3.10.1
+ImageVersion = Annotated[str, Field(pattern=r"^[A-Za-z0-9_][A-Za-z0-9_.-]{0,127}$")]
 
 # Lists in env files are separated by ";": "a@x.org; b@x.org"
 SemicolonList = Annotated[list[str], NoDecode]
@@ -151,6 +158,16 @@ class Settings(BaseSettings):
 
     # ---- containers of the users ----
     docker_network_name: str = "mtas-network"
+    # versions of the images that the app starts for each user
+    # no defaults here: they are in versions.env
+    metabase_version: ImageVersion
+    openrefine_version: ImageVersion
+    wordpress_version: ImageVersion
+    wordpress_cli_version: ImageVersion
+    # versions of the shared services (compose.services.yml)
+    postgresql_version: ImageVersion
+    pgadmin4_version: ImageVersion
+    mariadb_version: ImageVersion
     metabase_base_url: str = "http://localhost"
     metabase_try_count: PositiveInt = 3
     metabase_try_sleep_sec: NonNegativeInt = 30
@@ -215,11 +232,14 @@ class Settings(BaseSettings):
 
     @classmethod
     def from_env(cls, env: Mapping[str, str]) -> "Settings":
-        """Settings from these values only: no environment, no env file (for tests)"""
+        """Settings from these values and versions.env only: no environment, no env file.
+
+        For tests.
+        """
 
         values = {
             key.lower(): value
-            for key, value in env.items()
+            for key, value in {**read_versions(), **env}.items()
             if not (isinstance(value, str) and value.strip() == "")
         }
         try:
@@ -303,14 +323,30 @@ def env_file() -> Path:
     return Path(name) if name else BASE_DIR / DEFAULT_ENV_FILE
 
 
+def read_versions() -> dict:
+    """The values in versions.env (empty if the file is missing)"""
+
+    if not VERSIONS_FILE.is_file():
+        return {}
+    return {
+        key: value
+        for key, value in dotenv_values(VERSIONS_FILE).items()
+        if value is not None
+    }
+
+
 def load_settings() -> Settings:
-    """Reads the settings from the environment and the env file"""
+    """Reads the settings from the environment, the env file and versions.env"""
 
     path = env_file()
     if os.environ.get("ENV_FILE_NAME") and not path.is_file():
         logger.warning("Env file does not exist: %s", path)
+    if not VERSIONS_FILE.is_file():
+        logger.warning("Versions file does not exist: %s", VERSIONS_FILE)
+    # later files win: the env file of the app wins over versions.env
+    files = tuple(file for file in (VERSIONS_FILE, path) if file.is_file())
     try:
-        return Settings(_env_file=path if path.is_file() else None)
+        return Settings(_env_file=files or None)
     except ValidationError as error:
         raise _config_error(error) from None
 

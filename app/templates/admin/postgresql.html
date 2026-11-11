@@ -6,6 +6,9 @@
   <div>
     {% if server.ok %}
     <p>The database server is reachable: <strong><code>{{ server.address }}</code></strong> · {{ server.text }}</p>
+    <p>Expected version (POSTGRESQL_VERSION in versions.env): <code>{{ server.expected_version }}</code>
+      {% if server.version_matches %}<span class="badge success">matches</span>{% else %}<span class="badge warning">differs</span>{% endif %}</p>
+    {% if not server.version_matches %}<p class="muted small">The server runs another version than versions.env. Update the server, or set POSTGRESQL_VERSION to the version that runs.</p>{% endif %}
     <p>Demo database <code>{{ demo_db }}</code>: {{ ui.yes_no(demo_exists, "exists", "missing") }}</p>
     {% if not demo_exists %}<p class="muted small">Create it with:</p><pre class="command"><code>python -m app.cli create-demo-db</code></pre>{% endif %}
     {% else %}

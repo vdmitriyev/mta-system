@@ -62,7 +62,7 @@ def test_openrefine_container_and_login(settings, docker):
 
     run = docker.containers.runs[0]
     assert run["name"] == "openrefine-4001"
-    assert run["image"] == f"openrefine:{openrefine_api.OPENREFINE_VERSION}"
+    assert run["image"] == "openrefine:3.10.1"
     assert run["ports"] == {"80/tcp": ("127.0.0.1", 4001)}
     assert run["network"] == "mtas-network"
     assert HtpasswdFile(basic_auth.port_auth_file(4001)).check_password(
@@ -77,7 +77,7 @@ def test_openrefine_stops_without_docker(settings, no_docker):
 
 
 def test_openrefine_stops_without_the_image(settings, docker):
-    docker.images.missing.add(openrefine_api.IMAGE)
+    docker.images.missing.add(openrefine_api.image())
     user = openrefine_api.UserDataOpenRefine("common_user_01", "pw")
     assert openrefine_api.create_user_and_docker_or(user, 4001) is False
     assert docker.containers.runs == []
@@ -85,15 +85,15 @@ def test_openrefine_stops_without_the_image(settings, docker):
 
 
 def test_metabase_stops_without_the_image(settings, docker, monkeypatch):
-    docker.images.missing.add(metabase_api.IMAGE)
+    docker.images.missing.add(metabase_api.image())
     monkeypatch.setattr(metabase_api.time, "sleep", pytest.fail)
     assert metabase_api.create_user_and_docker_mb(MB_USER, 3001) is False
     assert docker.containers.runs == []
 
 
 def test_metabase_image_from_the_registry_is_used(settings, docker, monkeypatch):
-    docker.images.missing.add(metabase_api.IMAGE)
-    docker.images.in_registry.add(metabase_api.IMAGE)
+    docker.images.missing.add(metabase_api.image())
+    docker.images.in_registry.add(metabase_api.image())
     monkeypatch.setattr(metabase_api, "run_create_user", lambda *_args: True)
     assert metabase_api.create_user_and_docker_mb(MB_USER, 3001) is True
     assert docker.containers.runs[0]["image"] == "metabase/metabase:v0.57.3"
@@ -148,7 +148,7 @@ def test_metabase_container_and_first_user(settings, docker, monkeypatch):
     assert metabase_api.create_user_and_docker_mb(MB_USER, 3001) is True
     run = docker.containers.runs[0]
     assert run["name"] == "metabase-3001"
-    assert run["image"] == f"metabase/metabase:{metabase_api.METABASE_VERSION}"
+    assert run["image"] == "metabase/metabase:v0.57.3"
     assert run["ports"] == {"80/tcp": ("127.0.0.1", 3001)}
 
     method, url, payload = calls[-1]
@@ -214,6 +214,8 @@ def test_wordpress_containers(settings, docker, monkeypatch):
     )
     assert site["volumes"] == cli["volumes"] == ["wordpress-7001:/var/www/html"]
     assert cli["name"] == "wordpress-cli-7001"
+    # both images come from versions.env
+    assert (site["image"], cli["image"]) == ("wordpress:latest", "wordpress:cli")
     assert "--admin_user=wordpress_user_01" in cli["command"]
     assert "--url=http://mtas.example.org/wordpress " in cli["command"]
     assert pauses == [wordpress_api.SLEEP_TIME_BETWEEN_CONTAINERS_SECONDS]
@@ -302,3 +304,20 @@ def test_superset_login_error(superset):
 
     superset.post = broken
     assert superset_api.SupersetAPIClient(NEW_SUPERSET_USER).create_new_user() is False
+
+
+def test_image_versions_come_from_the_settings(use_settings, docker, monkeypatch):
+    use_settings(
+        METABASE_VERSION="v0.56.1", OPENREFINE_VERSION="3.9.5", WORDPRESS_VERSION="6.8"
+    )
+    assert metabase_api.image() == "metabase/metabase:v0.56.1"
+    assert openrefine_api.image() == "openrefine:3.9.5"
+    assert wordpress_api.image() == "wordpress:6.8"
+    assert openrefine_api.build_command() == (
+        "docker build --build-arg OPENREFINE_VERSION=3.9.5 "
+        "-t openrefine:3.9.5 provision/openrefine"
+    )
+
+    user = openrefine_api.UserDataOpenRefine("common_user_01", "pw")
+    openrefine_api.create_user_and_docker_or(user, 4001)
+    assert docker.containers.runs[0]["image"] == "openrefine:3.9.5"

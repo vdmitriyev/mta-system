@@ -5,8 +5,20 @@ from dataclasses import dataclass
 from app.config import get_settings
 from app.services import docker_ctl
 
-WORDPRESS_VERSION = "latest"
 SLEEP_TIME_BETWEEN_CONTAINERS_SECONDS = 15
+
+
+def image() -> str:
+    """Image of the WordPress containers. The version is the setting WORDPRESS_VERSION."""
+
+    return f"wordpress:{get_settings().wordpress_version}"
+
+
+def cli_image() -> str:
+    """Image of the WordPress installer (WP-CLI). The tag is the setting WORDPRESS_CLI_VERSION."""
+
+    return f"wordpress:{get_settings().wordpress_cli_version}"
+
 
 HTACCESS_PATH = "/var/www/html/.htaccess"
 HTACCESS_CONTENT = """
@@ -68,7 +80,7 @@ def create_user_and_docker_wordpress(
     try:
         client = docker_ctl.get_client()
         container = client.containers.run(
-            image=f"wordpress:{WORDPRESS_VERSION}",
+            image=image(),
             detach=True,
             name=f"wordpress-{docker_port}",
             ports={"80/tcp": ("127.0.0.1", docker_port)},
@@ -98,7 +110,7 @@ def create_user_and_docker_wordpress(
             " --skip-email"
         )
         cli_container = client.containers.run(
-            image="wordpress:cli",
+            image=cli_image(),
             detach=True,
             name=f"wordpress-cli-{docker_port}",
             restart_policy={"Name": "on-failure", "MaximumRetryCount": 5},

@@ -64,6 +64,8 @@ __run_report*.html
 *.env
 *.env-*
 *.env.*
+# versions of the service images: no secrets, part of git
+!/versions.env
 
 # docker / docker compose downloaded by task testenv:tools
 .tools/

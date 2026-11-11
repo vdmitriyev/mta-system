@@ -28,10 +28,10 @@ ADMIN_PAGES = [
     "/mtas-admin/services/metabase",
     "/mtas-admin/services/openrefine",
     "/mtas-admin/services/openrefine?check=access",
-    "/mtas-admin/service-accounts",
+    "/mtas-admin/auto-creation",
     "/mtas-admin/monitoring",
     "/mtas-admin/visibility",
-    "/mtas-admin/configs",
+    "/mtas-admin/settings",
 ]
 
 
@@ -463,8 +463,10 @@ def test_server_summary(no_docker):
     assert summary["memory_total_mb"] > 0
 
 
-def test_configs_page_hides_secrets(admin_client, settings):
-    text = admin_client.get("/mtas-admin/configs").text
+def test_settings_page_hides_secrets(admin_client, settings):
+    text = admin_client.get("/mtas-admin/settings").text
+    assert "<title>Settings" in text
+    assert 'href="/mtas-admin/settings" aria-current="page">Settings</a>' in text
     assert "SERVER_FQDN" in text and "mtas.example.org" in text
     assert "METABASE_PORT_OFFSET" in text
     for secret in (
@@ -602,22 +604,22 @@ def test_metabase_page_has_no_access_check(admin_client, docker):
 
 
 def test_service_page_warns_about_a_missing_image(admin_client, docker):
-    docker.images.missing.add("openrefine:3.9.5")
+    docker.images.missing.add("openrefine:3.10.1")
     text = admin_client.get("/mtas-admin/services/openrefine").text
     assert (
-        "Image is not on this server: <strong><code>openrefine:3.9.5</code></strong>"
+        "Image is not on this server: <strong><code>openrefine:3.10.1</code></strong>"
         in text
     )
     assert "<p>Build it on the server:</p>" in text
     assert (
-        '<pre class="command"><code>docker compose -f compose.services.yml '
-        "build openrefine-service</code></pre>" in text
+        '<pre class="command"><code>docker build --build-arg OPENREFINE_VERSION=3.10.1 '
+        "-t openrefine:3.10.1 provision/openrefine</code></pre>" in text
     )
 
 
 def test_create_again_keeps_the_old_container_without_image(db, student, docker):
     old = docker.containers.add("openrefine-4001", "running")
-    docker.images.missing.add("openrefine:3.9.5")
+    docker.images.missing.add("openrefine:3.10.1")
     with pytest.raises(TaskError, match="not on this server and not in the registry"):
         create_service_task(db, "openrefine", student.itid)
     assert (old.name, old.status) == ("openrefine-4001", "running")
@@ -631,8 +633,61 @@ def test_services_menu(admin_client, docker):
     for href in (
         "/mtas-admin/services/metabase",
         "/mtas-admin/services/openrefine",
-        "/mtas-admin/service-accounts",
+        "/mtas-admin/auto-creation",
     ):
         assert f'href="{href}"' in menu
     text = admin_client.get("/mtas-admin/users").text
     assert "<summary>Services" in text
+
+
+def test_old_settings_address_leads_to_the_settings_page(admin_client):
+    response = admin_client.get("/mtas-admin/configs", follow_redirects=False)
+    assert response.headers["location"] == "/mtas-admin/settings"
+
+
+def test_visibility_is_grouped_by_category_and_service(admin_client, db):
+    text = admin_client.get("/mtas-admin/visibility").text
+    # stacked blocks over the full width, as on the services page of a user
+    assert '<div class="block-list">' in text and "grid two" not in text
+    services = text.index("<h2>Services</h2>")
+    menu = text.index("<h2>Menu</h2>")
+    assert services < menu
+
+    def block(group):
+        start = text.index(f'<th colspan="3">{group}</th>')
+        return text[start : text.index("</table>", start)]
+
+    postgresql = block("PostgreSQL")
+    for key in (
+        "postgresql",
+        "importers_flights",
+        "importers_airbnb",
+        "importers_adventureworks",
+    ):
+        assert f'<code class="muted small">{key}</code>' in postgresql
+    assert "Dataset importer: Flights" in postgresql
+
+    metabase = block("Metabase")
+    assert "Service on the services page" in metabase
+    assert "Users can start it" in metabase
+    assert "metabase_self_managment" in metabase
+
+    entries = block("Menu entries")
+    assert text.index('<th colspan="3">Menu entries</th>') > menu
+    assert "Reviews of the exercises" in entries and "Bonus points" in entries
+
+
+def test_unknown_visibility_keys_are_in_other(db):
+    from app.models import UIVisibilitySettings
+    from app.visibility import (
+        add_default_ui_visibility_settings,
+        grouped_visibility_rows,
+    )
+
+    add_default_ui_visibility_settings(db)
+    db.add(UIVisibilitySettings(ui_key="old_key", visible=True, description="Old part"))
+    db.commit()
+    groups = grouped_visibility_rows(db)
+    assert list(groups) == ["Services", "Menu", "Other"]
+    assert [label for _row, label in groups["Other"]["Other"]] == ["Old part"]
+    assert list(groups["Services"])[:3] == ["PostgreSQL", "pgAdmin 4", "Metabase"]

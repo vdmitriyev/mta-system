@@ -1,5 +1,6 @@
 # Development: the app with auto-reload behind nginx. Use it together with the services:
-#   docker compose -f compose.yml -f compose.services.yml up -d --build
+#   docker compose --env-file versions.env -f compose.yml -f compose.services.yml up -d --build
+#   (or: task dev:up, which reads versions.env)
 # The project folder is mounted into the container: code changes restart the app.
 services:
 

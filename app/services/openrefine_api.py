@@ -4,11 +4,25 @@ from dataclasses import dataclass
 from app.config import get_settings
 from app.services import basic_auth, docker_ctl
 
-OPENREFINE_VERSION = "3.9.5"
-IMAGE = f"openrefine:{OPENREFINE_VERSION}"
-# the image is built from provision/openrefine, it is not in a public registry
+# The image is built from provision/openrefine, it is not in a public registry
 IMAGE_HINT = "Build it on the server:"
-IMAGE_COMMAND = "docker compose -f compose.services.yml build openrefine-service"
+
+
+def image() -> str:
+    """Image of the OpenRefine containers. The version is the setting OPENREFINE_VERSION."""
+
+    return f"openrefine:{get_settings().openrefine_version}"
+
+
+def build_command() -> str:
+    """Builds the image that the app expects (OPENREFINE_VERSION, see versions.env)"""
+
+    version = get_settings().openrefine_version
+    return (
+        f"docker build --build-arg OPENREFINE_VERSION={version} "
+        f"-t openrefine:{version} provision/openrefine"
+    )
+
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +48,7 @@ def create_user_and_docker_or(user_data: UserDataOpenRefine, docker_port: int) -
 
 
 def check_image(ask_registry: bool = True) -> docker_ctl.ImageCheck:
-    return docker_ctl.check_image(IMAGE, ask_registry, IMAGE_HINT, IMAGE_COMMAND)
+    return docker_ctl.check_image(image(), ask_registry, IMAGE_HINT, build_command())
 
 
 def create_docker_container(port: int) -> bool:
@@ -42,7 +56,7 @@ def create_docker_container(port: int) -> bool:
         return False
     try:
         container = docker_ctl.get_client().containers.run(
-            image=IMAGE,
+            image=image(),
             detach=True,
             name=f"openrefine-{port}",
             ports={"80/tcp": ("127.0.0.1", port)},

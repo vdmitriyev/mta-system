@@ -3,6 +3,9 @@ from dataclasses import dataclass
 
 from app.services import basic_auth, docker_ctl
 
+# built on the server, without a version
+IMAGE = "nifi-custom"
+
 logger = logging.getLogger(__name__)
 
 
@@ -27,7 +30,7 @@ def create_docker_container(port: int) -> bool:
         return False
     try:
         container = docker_ctl.get_client().containers.run(
-            image="nifi-custom",
+            image=IMAGE,
             detach=True,
             name=f"nifi-{port}",
             ports={"8080/tcp": ("127.0.0.1", port)},

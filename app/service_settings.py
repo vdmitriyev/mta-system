@@ -1,23 +1,44 @@
 """Switches in the database: in which services the app creates an account for a new user"""
 
+from dataclasses import dataclass
+
 from sqlalchemy import insert, inspect
 from sqlalchemy.orm import Session
 
 from app.models import ServiceSettings
 
-# (service, description). All are off until an admin switches them on.
+SHARED_SERVER = "One shared server, an own database for each user"
+SHARED_SERVICE = "One shared service, an own login for each user"
+OWN_CONTAINER = "An own container for each user"
+
+
+@dataclass(frozen=True)
+class ServiceInfo:
+    key: str
+    name: str
+    runs: str
+    note: str = ""
+
+
+# All are off until an admin switches them on (admin page "Auto creation")
 SERVICES = [
-    ("postgresql", "PostgreSQL: own database"),
-    ("pgadmin4", "pgAdmin 4: login (needs PostgreSQL)"),
-    ("metabase", "Metabase: own container"),
-    ("openrefine", "OpenRefine: own container"),
-    ("mariadb", "MariaDB: own database"),
-    ("wordpress", "WordPress: own container (needs MariaDB)"),
-    ("nifi", "NiFi: own container"),
-    ("superset", "Superset: login"),
-    ("jupyterhub", "JupyterHub: login (an admin creates the account in JupyterHub)"),
+    ServiceInfo("postgresql", "PostgreSQL", SHARED_SERVER),
+    ServiceInfo("pgadmin4", "pgAdmin 4", SHARED_SERVICE, "Needs PostgreSQL"),
+    ServiceInfo("metabase", "Metabase", OWN_CONTAINER),
+    ServiceInfo("openrefine", "OpenRefine", OWN_CONTAINER),
+    ServiceInfo("mariadb", "MariaDB", SHARED_SERVER),
+    ServiceInfo("wordpress", "WordPress", OWN_CONTAINER, "Needs MariaDB"),
+    ServiceInfo("nifi", "NiFi", OWN_CONTAINER),
+    ServiceInfo("superset", "Superset", SHARED_SERVICE),
+    ServiceInfo(
+        "jupyterhub",
+        "JupyterHub",
+        SHARED_SERVICE,
+        "The app stores the login. An admin creates the account in JupyterHub.",
+    ),
 ]
-SERVICE_KEYS = [service for service, _description in SERVICES]
+SERVICE_KEYS = [service.key for service in SERVICES]
+SERVICE_INFO = {service.key: service for service in SERVICES}
 
 
 class ServiceSettingError(Exception):
@@ -30,8 +51,8 @@ def add_default_service_settings(db: Session) -> None:
     if not inspect(db.get_bind()).has_table(ServiceSettings.__tablename__):
         return
     rows = [
-        {"service": service, "create_accounts": False, "description": description}
-        for service, description in SERVICES
+        {"service": info.key, "create_accounts": False, "description": info.name}
+        for info in SERVICES
     ]
     # "OR IGNORE" (SQLite) keeps the existing rows, also when several workers start at once
     db.execute(insert(ServiceSettings).prefix_with("OR IGNORE"), rows)

@@ -263,3 +263,15 @@ def test_metabase_page_still_works(admin_client, docker):
         "metabase": "Metabase",
         "openrefine": "OpenRefine",
     }
+
+
+def test_postgresql_page_compares_the_version(admin_client, mate, use_settings):
+    # the fake server runs 15.8
+    text = admin_client.get("/mtas-admin/services/postgresql").text
+    assert "<code>17.11</code>" in text
+    assert '<span class="badge warning">differs</span>' in text
+
+    use_settings(POSTGRESQL_VERSION="15.8")
+    text = admin_client.get("/mtas-admin/services/postgresql").text
+    assert '<span class="badge success">matches</span>' in text
+    assert "differs" not in text

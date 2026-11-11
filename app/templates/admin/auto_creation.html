@@ -1,0 +1,40 @@
+{% extends "admin/base.html" %}
+{% block title %}Auto creation{% endblock %}
+{% block admin %}
+{{ ui.page_head("Auto creation", "Choose the services in which the app creates an account for each new user at the registration. Existing accounts are not changed.") }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr><th>Service</th><th>How it runs</th><th>Version</th><th>Note</th><th>Key</th><th>New users get an account</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set service = info.get(row.service) %}
+        <tr>
+          <td><strong>{{ service.name if service else row.service }}</strong></td>
+          <td>{{ service.runs if service else "–" }}</td>
+          <td>
+            {% if images.get(row.service) %}
+            {% for image in images[row.service] %}<code>{{ image }}</code>{% if not loop.last %}<br>{% endif %}{% endfor %}
+            {% else %}<span class="muted" title="The version is set where the service is deployed">–</span>{% endif %}
+          </td>
+          <td class="muted small">{{ service.note if service and service.note else "–" }}</td>
+          <td><code>{{ row.service }}</code></td>
+          <td>{{ ui.yes_no(row.create_accounts, "on", "off") }}</td>
+          <td>
+            <form method="post" action="/mtas-admin/auto-creation" class="inline-form">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="service" value="{{ row.service }}">
+              <input type="hidden" name="on" value="{{ 'false' if row.create_accounts else 'true' }}">
+              <button type="submit" class="btn sm">{{ "Switch off" if row.create_accounts else "Switch on" }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+<p class="page-note">The versions come from the file <code>versions.env</code> in the project folder.</p>
+{% endblock %}

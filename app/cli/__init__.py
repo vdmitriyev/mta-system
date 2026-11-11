@@ -2,6 +2,7 @@
 
 import click
 
+from app.cli.auto_creation import auto_creation
 from app.cli.config import show_config
 from app.cli.database import (
     create_custom_db,
@@ -13,7 +14,6 @@ from app.cli.database import (
 )
 from app.cli.mail import check_mail
 from app.cli.nginx import nginx_config
-from app.cli.services import service_accounts
 
 
 @click.group()
@@ -31,6 +31,6 @@ for command in (
     nginx_config,
     show_config,
     check_mail,
-    service_accounts,
+    auto_creation,
 ):
     cli.add_command(command)

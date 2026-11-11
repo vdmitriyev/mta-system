@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir uv \
     && uv sync --no-dev --no-cache \
     && rm -f uv.lock
 
-COPY run.py ./
+COPY run.py versions.env ./
 COPY configs-logging configs-logging
 COPY migrations migrations
 COPY app app
