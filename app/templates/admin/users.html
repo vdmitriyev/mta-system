@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}Users{% endblock %}
+{% block admin %}
+{{ ui.page_head("Users", "All accounts of the course. A login link logs in as this user: handle it like a password.") }}
+{{ ui.table_filter("users-table", rows | length) }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="users-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          <th data-sort>E-mail</th>
+          <th data-sort>Internal e-mail</th>
+          <th data-sort>State</th>
+          <th>Services</th>
+          <th data-sort>Created (UTC)</th>
+          <th>Login link</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.user.email }}</td>
+          <td>{{ row.user.internal_email }}</td>
+          <td>{{ ui.yes_no(row.user.is_user_assigned, "registered", "prepared") }}</td>
+          <td class="small">{{ row.services | join(", ") or "–" }}</td>
+          <td class="nowrap">{{ row.user.created_at.strftime("%Y-%m-%d %H:%M") if row.user.created_at else "" }}</td>
+          <td>{{ ui.copy_button(row.access_url) }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+{% endblock %}

@@ -1,178 +1,110 @@
-import argparse
-import json
-import os
-from datetime import datetime
+import logging
 
 import requests
 from bs4 import BeautifulSoup
 
+from app.config import get_settings
+
+logger = logging.getLogger(__name__)
+
 
 class SupersetUser:
-
-    def __init__(self, login, password, email):
+    def __init__(self, login: str, password: str, email: str):
         self.login = login
         self.password = password
         self.email = email
 
 
 class SupersetAPIClient:
+    """Creates users in Superset through its web forms (as the admin)"""
 
-    def __init__(self, new_user, logger=None):
+    def __init__(self, new_user: SupersetUser):
+        settings = get_settings()
         self.new_user = new_user
-        self.logger = logger
-        self.load_env()
-        self.start_session()
+        self.base_url = settings.superset_base_url
+        self.session = None
+        self.csrf_token = None
+        password = settings.superset_password
+        self.start_session(
+            settings.superset_login, password.get_secret_value() if password else None
+        )
 
-    def load_env(self):
-        self.SUPERSET_BASE_URL = os.environ.get("SUPERSET_BASE_URL")
-        self.SUPERSET_LOGIN = os.environ.get("SUPERSET_LOGIN")
-        self.SUPERSET_PASSWORD = os.environ.get("SUPERSET_PASSWORD")
+    def start_session(self, admin_login: str, admin_password: str) -> None:
+        """Logs in as the admin and keeps the CSRF token"""
 
-    def print_msg(self, msg):
-        """Prints a message into console and log (if needed)"""
-
-        if self.logger is not None:
-            logger.info(msg)
-
-        print(f"{datetime.now()}  {__name__}  {msg}")
-
-    def start_session(self, admin_login=None, admin_password=None):
-        """Start HTTP session and get token"""
-
-        if admin_login is None:
-            admin_login = self.SUPERSET_LOGIN
-        if admin_password is None:
-            admin_password = self.SUPERSET_PASSWORD
-
-        sess = requests.Session()
-
-        # get auth together with csrf token
-        res = sess.get(self.SUPERSET_BASE_URL + "/login/")
-        signin = BeautifulSoup(res._content, "html.parser")
-        csrf_token_html = signin.find("input", id="csrf_token")
-
-        if csrf_token_html is None:
-            self.print_msg("The csrf_token WAS NOT found: {0}".format(csrf_token_html))
+        session = requests.Session()
+        response = session.get(self.base_url + "/login/", timeout=60)
+        token_field = BeautifulSoup(response.content, "html.parser").find(
+            "input", id="csrf_token"
+        )
+        if token_field is None:
+            logger.error("Superset login page has no CSRF token")
             return
 
-        csrf_token = csrf_token_html["value"]
-        self.print_msg("The csrf_token found: {0}".format(csrf_token))
-
-        payload_auth = {
-            "username": "{0}".format(admin_login),
-            "password": "{0}".format(admin_password),
-        }
-        payload_auth["csrf_token"] = csrf_token
-
+        csrf_token = token_field["value"]
         try:
-            url = self.SUPERSET_BASE_URL + "/login/"
-            res = sess.post(url, data=dict(payload_auth), timeout=60)
-            self.print_msg(
-                "Status of getting csrf_token (login): {0}".format(res.status_code)
+            session.post(
+                self.base_url + "/login/",
+                data={
+                    "username": admin_login,
+                    "password": admin_password,
+                    "csrf_token": csrf_token,
+                },
+                timeout=60,
             )
-            # signin = BeautifulSoup(res._content, 'html.parser')
-            # print (signin)
-            # csrf_token = signin.find('input', id='csrf_token')['value']
-        except Exception as ex:
-            self.print_msg("[e] Exception (POST): {0}".format(ex))
+        except requests.RequestException as error:
+            logger.error("Superset login failed: %s", error)
+            return
 
-        self.session = sess
+        self.session = session
         self.csrf_token = csrf_token
 
-    def user_exists(self):
-        """Checks if user exists or not"""
-
-        url_list_users = "{baseURL}/users/api/read".format(
-            baseURL=self.SUPERSET_BASE_URL
+    def user_exists(self) -> bool:
+        response = self.session.get(
+            f"{self.base_url}/users/api/read",
+            headers={"X-CSRFToken": self.csrf_token},
+            timeout=60,
         )
-        headers = {}
-        headers["X-CSRFToken"] = self.csrf_token
-        response = self.session.get(url_list_users, headers=headers)
-        print(response.status_code)
-        response_json = json.loads(response._content)
-        for _user in response_json["result"]:
+        for user in response.json()["result"]:
             if (
-                _user["email"] == self.new_user.email
-                or _user["username"] == self.new_user.login
+                user["email"] == self.new_user.email
+                or user["username"] == self.new_user.login
             ):
                 return True
         return False
 
-    def user_create(self):
-        """Creates user, if possible"""
-
-        url_new_user = "{baseURL}/users/api/create".format(
-            baseURL=self.SUPERSET_BASE_URL
-        )
-
-        full_name = self.new_user.email[0 : self.new_user.email.find("@")]
-        tokens = full_name.split(".")
+    def user_create(self) -> bool:
+        tokens = self.new_user.email.split("@")[0].split(".")
         if len(tokens) < 2:
             tokens = ["Unknown", "Unknown"]
 
-        payload_new_user = {}
-        payload_new_user = {
+        payload = {
             "first_name": tokens[0].capitalize(),
             "last_name": tokens[1].capitalize(),
             "username": self.new_user.login,
             "email": self.new_user.email,
             "password": self.new_user.password,
             "conf_password": self.new_user.password,
-            #'active': 'y', 'roles': [4, 7]
             "active": "y",
             "roles": [3, 4, 7],  # the maximum privileges, after admin
         }
-
-        headers = {}
-        headers["X-CSRFToken"] = self.csrf_token
-        # headers['Referer'] = res.url
-        # headers['Content-Type'] = 'application/json'
-        res_new_user = self.session.post(
-            url_new_user, data=payload_new_user, headers=headers
+        response = self.session.post(
+            f"{self.base_url}/users/api/create",
+            data=payload,
+            headers={"X-CSRFToken": self.csrf_token},
+            timeout=60,
         )
+        if response.status_code >= 400:
+            logger.error("Superset user was not created: %s", response.status_code)
+            return False
+        return True
 
-        if res_new_user.status_code == 500:
-            print_msg(json.loads(res_new_user._content))
+    def create_new_user(self) -> bool:
+        """Creates the user. Returns True if the user exists afterwards."""
 
-            # TODO - New roles / Updates / Prove if exists
-
-    def create_new_user(self):
-        """Create a user in the superset"""
-
-        # user_login, user_password, user_email, admin_login=None, admin_password=None, logger = None
-
-        self.print_msg('Run method "new_user_superset"')
-        self.print_msg("Main endpoint: {0}".format(self.SUPERSET_BASE_URL))
-
-        is_created = False
-
-        # create new user
-        if not self.user_exists():
-            self.user_create()
-        else:
-            self.print_msg("User already exists: {0}".format(self.new_user.login))
-
-        return is_created
-
-
-def main(user_login, user_password, user_email):
-    print("[i] Create superset user using the script approach")
-    obj = SupersetAPIClient(SupersetUser(user_login, user_password, user_email))
-    obj.create_new_user()
-
-
-if __name__ == "__main__":
-    # construct the argument parse and parse the arguments
-
-    ap = argparse.ArgumentParser()
-    ap.add_argument("-l", "--login", required=True, help="userEmail")
-    ap.add_argument("-p", "--password", required=True, help="userPasword")
-    ap.add_argument("-e", "--email", required=True, help="userEmail")
-
-    args = vars(ap.parse_args())
-
-    main(
-        user_login=args["login"],
-        user_password=args["password"],
-        user_email=args["email"],
-    )
+        if self.session is None:
+            return False
+        if self.user_exists():
+            logger.info("Superset user already exists: %s", self.new_user.login)
+            return True
+        return self.user_create()

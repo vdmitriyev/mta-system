@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Registration{% endblock %}
+{% block content %}
+<section class="card narrow center">
+  {% if task.status in ("queued", "running") %}
+    <div data-task="{{ task.public_id }}">
+      <p><span class="spinner lg"></span></p>
+      <h1>We set up your account</h1>
+      <p class="muted">This can take a few minutes. You can keep this page open or close it: we send you an e-mail with the login data.</p>
+      <p><a class="btn sm" href="/register/status/{{ task.public_id }}">{{ ui.icon("refresh") }} Check again</a></p>
+    </div>
+  {% elif task.status == "done" %}
+    <h1>Registration complete</h1>
+    {{ ui.alert(task.message, "success") }}
+    <p><a class="btn primary" href="/login">Log in</a></p>
+  {% else %}
+    <h1>Registration not complete</h1>
+    {{ ui.alert(task.message or "The registration failed.", "danger") }}
+    <p><a class="btn primary" href="/register">Try again</a></p>
+  {% endif %}
+</section>
+{% endblock %}

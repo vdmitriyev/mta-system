@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Reviews{% endblock %}
+{% block content %}
+{{ ui.page_head("Reviews", "Feedback on the solutions that you submitted. Select an exercise to read its review.") }}
+{% if not reviews %}
+  <div class="card empty">There are no exercises with reviews yet.</div>
+{% endif %}
+{% for item in reviews %}
+<details class="item">
+  <summary>
+    <span>{{ item.name }}</span>
+    <span class="row">
+      {% if item.submitted %}
+        <span class="badge success">submitted</span>
+        {% if item.reviewed %}<span class="badge success">reviewed</span>{% else %}<span class="badge warning">under review</span>{% endif %}
+      {% else %}
+        <span class="badge">not submitted</span>
+      {% endif %}
+    </span>
+  </summary>
+  <div class="body prose">
+    {% if item.visible and item.content %}
+      {{ item.content }}
+    {% else %}
+      <p class="muted">There is no review to show yet.</p>
+    {% endif %}
+  </div>
+</details>
+{% endfor %}
+{% endblock %}

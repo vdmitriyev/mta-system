@@ -1,78 +1,43 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
+{% block title %}Bonus points{% endblock %}
 {% block content %}
-
-	<div class="card text-center pt-1 mt-1">
-	  <div class="card-body">
-		<h5 class="card-title">Bonus Points</h5>
-	  </div>
-	</div>
-
-	{% if message is defined %}
-		{% if message is not none %}
-
-		<div class="card text-center mt-2 mb-2">
-		  <div class="card-body bg-light">
-			<p class="card-text"><span class="badge badge-warning">Message</span>&nbsp;<i><b>{{message}}</b></i></p>
-		  </div>
-		</div>
-
-		{% endif %}
-	{% endif %}
-
-	{% if userBonusPoints is defined %}
-		{% if 'bonuses' and 'bonus_total' in userBonusPoints %}
-
-			<table class="table table-striped mt-2">
-				<thead>
-					<tr>
-					  <th scope="col" style="width: 5.00%">#</th>
-					  <th scope="col" style="width: 25.00%">Bonus name</th>
-					  <th scope="col" style="width: 15.00%">Bonus Points</th>
-					</tr>
-				</thead>
-				<tbody>
-					{% for bonus_item in userBonusPoints["bonuses"] %}
-
-						{% set elemColorHTML = "#0275d8" %}
-						{%if bonus_item['points'] == 0 %}
-							{% set elemColorHTML = "#d9534f" %}
-						{% endif %}
-						{% set elemTextDecorationHTML = "inherit" %}
-						{%if not bonus_item['is_addable'] and bonus_item['points'] != 0 %}
-							{% set elemTextDecorationHTML = "line-through" %}
-							{% set elemColorHTML = "#d9534f" %}
-						{% endif %}
-
-						<tr>
-							<th scope="row">{{loop.index}}</th>
-							<td>{{bonus_item.name}}</td>
-							<!--<td>{{bonus_item.code}}</td>-->
-							<td>
-								{%if bonus_item['visible'] and bonus_item['is_addable'] %}
-									<span style="color:{{elemColorHTML}}; text-decoration: {{elemTextDecorationHTML}};">{{bonus_item['points']}}</span>
-								{% else %}
-									<span style="color:{{elemColorHTML}}; text-decoration: {{elemTextDecorationHTML}};"></span>
-								{% endif %}
-							</td>
-
-						</tr>
-					{% endfor %}
-					<tr>
-						<td></td>
-						<td><b>Total</b></td>
-						<td><b>{{userBonusPoints["bonus_total"]}}</b></td>
-					<tr>
-				</tbody>
-			</table>
-
-		{% endif %}
-	{% endif %}
-
-<style>
-* {
-    outline: 0px solid red;
-}
-
-</style>
-
+{{ ui.page_head("Bonus points", "Your bonus points for each exercise.") }}
+{% if not bonuses %}
+  <div class="card empty">There are no exercises with bonus points yet.</div>
+{% else %}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Exercise</th>
+          <th class="num">Points</th>
+          <th class="num">Maximum</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in bonuses %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ item.name }}</td>
+          <td class="num">
+            {% if item.visible and item.is_addable %}{{ item.points }}{% else %}<span class="muted">–</span>{% endif %}
+          </td>
+          <td class="num muted">{{ item.max_points if item.max_points is not none else "–" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot>
+        <tr>
+          <td></td>
+          <td>Total</td>
+          <td class="num">{{ bonus_total }}</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+</div>
+{% endif %}
 {% endblock %}

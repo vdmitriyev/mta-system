@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% set wide = true %}
+{# (address, label) or (none, label, [entries of a drop-down menu]) #}
+{% set admin_links = [
+  ("/mtas-admin/", "Overview"),
+  ("/mtas-admin/users", "Users"),
+  ("/mtas-admin/reviews", "Reviews"),
+  ("/mtas-admin/bonus", "Bonus points"),
+  (none, "Services", [
+    ("/mtas-admin/services/metabase", "Metabase"),
+    ("/mtas-admin/services/openrefine", "OpenRefine"),
+    none,
+    ("/mtas-admin/service-accounts", "Service accounts"),
+  ]),
+  ("/mtas-admin/monitoring", "Monitoring"),
+  ("/mtas-admin/visibility", "Visibility"),
+  ("/mtas-admin/configs", "Configuration"),
+] %}
+{% macro is_current(href) -%}
+{{ path == href or (href != "/mtas-admin/" and path.startswith(href)) }}
+{%- endmacro %}
+{% block content %}
+<nav class="subnav" aria-label="Admin">
+  {% for link in admin_links %}
+    {% if link[0] %}
+    <a href="{{ link[0] }}"{% if is_current(link[0]) == "True" %} aria-current="page"{% endif %}>{{ link[1] }}</a>
+    {% else %}
+    {% set menu = namespace(active=false) %}
+    {% for entry in link[2] if entry and is_current(entry[0]) == "True" %}{% set menu.active = true %}{% endfor %}
+    <details class="menu" data-menu>
+      <summary{% if menu.active %} aria-current="page"{% endif %}>{{ link[1] }} <span class="caret" aria-hidden="true"></span></summary>
+      <div class="menu-list">
+        {% for entry in link[2] %}
+          {% if entry %}
+          <a href="{{ entry[0] }}"{% if is_current(entry[0]) == "True" %} aria-current="page"{% endif %}>{{ entry[1] }}</a>
+          {% else %}
+          <hr>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </details>
+    {% endif %}
+  {% endfor %}
+</nav>
+{% block admin %}{% endblock %}
+{% endblock %}

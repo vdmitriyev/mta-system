@@ -1,0 +1,55 @@
+{% extends "admin/base.html" %}
+{% block title %}Reviews{% endblock %}
+{% block admin %}
+{{ ui.page_head("Reviews", "Select a cell to write or change the review of a user for an exercise.") }}
+{% if not exercises %}
+  <div class="card empty">There are no exercises with a review part. Import them with <code>task db:init</code>.</div>
+{% else %}
+{{ ui.table_filter("reviews-table", rows | length) }}
+<p class="legend">
+  <span>The four dots show:</span>
+  <span>1. review text</span><span>2. submitted</span><span>3. reviewed</span><span>4. visible to the user</span>
+</p>
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="reviews-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          <th>Login link</th>
+          {% for exercise in exercises %}
+          <th class="center" title="{{ exercise.name }}">{{ exercise.code }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td>{{ ui.copy_button(row.access_url) }}</td>
+          {% for item in row.reviews %}
+          <td class="center">
+            <a class="cell-link" href="/mtas-admin/reviews/edit?user={{ row.user.itid }}&amp;exercise={{ item.code }}"
+               title="Review of {{ row.name }} for {{ item.name }}">
+              <span class="dots" aria-hidden="true">
+                <span class="dot{{ ' on' if item.has_content }}"></span>
+                <span class="dot{{ ' on' if item.submitted }}"></span>
+                <span class="dot{{ ' on' if item.reviewed }}"></span>
+                <span class="dot{{ ' on' if item.visible }}"></span>
+              </span>
+              {{ ui.icon("edit") }}
+              <span class="sr-only">Edit: text {{ "yes" if item.has_content else "no" }}, submitted {{ "yes" if item.submitted else "no" }}, reviewed {{ "yes" if item.reviewed else "no" }}, visible {{ "yes" if item.visible else "no" }}</span>
+            </a>
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,6 +1,0 @@
-{% import "services/_macros.html" as ui %}
-{% call ui.card("Jupyter Notebook (via JupyterHub)", "fab fa-python", "#F37524") %}
-	{{ ui.url_row("URL", service['url']) }}
-	{{ ui.copy_row("User", service['user'], "jupyterhubUser") }}
-	{{ ui.copy_row("Password", service['password'], "jupyterhubPassword") }}
-{% endcall %}

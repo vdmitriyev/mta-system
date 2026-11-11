@@ -1,33 +1,98 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
+{% block title %}Services{% endblock %}
+{% set icons = {"postgresql": "database", "mariadb": "database", "pgadmin4": "database", "metabase": "chart", "superset": "chart"} %}
 {% block content %}
+{{ ui.page_head("Your services", "Addresses, logins and passwords of the services that are set up for you.") }}
+{{ ui.alert("Do not change the passwords inside the services: this page would still show the old ones.", "warning") }}
 
-		<div class="card text-center">
-          <div class="card-body">
-            <h5 class="card-title">Personalized <i class="text-success">access credential</i> for the provided services</h5>
-			<p class="card-text">Please, <span class="badge badge-warning">do not change</span> any passwords of provided to you systems. Because these changes <span class="badge badge-warning">won't be</span> reflected here</p>
-          </div>
-        </div>
+{% if not cards %}
+  <div class="card empty">
+    <p>No services are set up for your account yet.</p>
+    <p class="small">If you registered a moment ago, wait a few minutes and reload this page. Otherwise ask your instructor.</p>
+  </div>
+{% endif %}
 
+<div class="grid two">
+  {% for card in cards %}
+  <section class="card" id="service-{{ card.name }}">
+    <div class="card-head">
+      <div class="row">
+        <span class="service-icon">{{ ui.icon(icons.get(card.name, "box")) }}</span>
+        <h2>{{ card.title }}</h2>
+      </div>
+      {% if card.status is defined %}{{ ui.container_badge(card.status, card.name) }}{% endif %}
+    </div>
 
-		{% if message is defined %}
-			{% if message is not none %}
+    <dl class="kv">
+      {% for field in card.fields %}
+      {% set field_id = card.name ~ "-" ~ loop.index %}
+      <div>
+        <dt>{{ field.label }}</dt>
+        <dd>
+          {% if field.link %}
+            <a href="{{ field.value }}" target="_blank" rel="noopener">{{ field.value }} {{ ui.icon("external") }}</a>
+          {% elif field.secret %}
+            <span class="value" id="{{ field_id }}" data-secret="{{ field.value }}">••••••••</span>
+          {% else %}
+            <span class="value">{{ field.value }}</span>
+          {% endif %}
+          <span class="actions">
+            {% if field.secret %}
+              <button type="button" class="btn sm" data-reveal="{{ field_id }}" aria-pressed="false">{{ ui.icon("eye") }} <span data-label>Show</span></button>
+            {% endif %}
+            {% if field.can_copy %}{{ ui.copy_button(field.value) }}{% endif %}
+          </span>
+        </dd>
+      </div>
+      {% endfor %}
+    </dl>
 
-			<div class="card text-center mt-2 mb-2">
-			  <div class="card-body bg-light">
-				<p class="card-text"><span class="badge badge-warning">Message</span>&nbsp;<i><b>{{message}}</b></i></p>
-			  </div>
-			</div>
-			{% endif %}
-		{% endif %}
+    {% if card.can_start %}
+    <div class="card-foot">
+      <form method="post" action="/services/{{ card.name }}/start" class="inline-form">
+        {{ ui.csrf(csrf_token) }}
+        <button type="submit" class="btn">{{ ui.icon("play") }} Start service</button>
+      </form>
+      <span class="muted small">Use this if the service does not answer.</span>
+    </div>
+    {% endif %}
 
-		{# Each service has its own template in services/; SERVICES_UI (config.py) sets which ones are shown and the order #}
-		{% if serviceVisibility is defined and data is defined %}
-			{% for service_name in config['SERVICES_UI'] %}
-				{% set service = data.get(service_name ~ '_service') %}
-				{% if serviceVisibility.get(service_name) and service %}
-					{% include "services/" ~ service_name ~ ".html" ignore missing %}
-				{% endif %}
-			{% endfor %}
-		{% endif %}
+    {% if card.datasets %}
+    <div class="card-foot">
+      <span class="muted small">Import a sample dataset into your database:</span>
+      {% for dataset in card.datasets %}
+        {% if dataset.task %}
+          <span class="badge info" data-task="{{ dataset.task.public_id }}"><span class="spinner"></span> Importing {{ dataset.title }}…</span>
+        {% else %}
+          <form method="post" action="/importer" class="inline-form" data-confirm="Import the dataset {{ dataset.title }} into your PostgreSQL database?">
+            {{ ui.csrf(csrf_token) }}
+            <input type="hidden" name="dataset" value="{{ dataset.name }}">
+            <button type="submit" class="btn sm">{{ ui.icon("download") }} {{ dataset.title }}</button>
+          </form>
+        {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+  </section>
+  {% endfor %}
+</div>
 
+{% if finished_imports %}
+<section class="card">
+  <h2>Last imports</h2>
+  <div class="table-wrap">
+    <table class="table">
+      <tbody>
+        {% for task in finished_imports %}
+        <tr>
+          <td class="nowrap">{{ task.finished_at.strftime("%Y-%m-%d %H:%M") if task.finished_at else "" }}</td>
+          <td>{{ ui.task_badge(task.status) }}</td>
+          <td>{{ task.message }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
 {% endblock %}

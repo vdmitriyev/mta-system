@@ -9,7 +9,7 @@ import urllib.error
 import urllib.request
 
 BASE_URL = os.environ.get("SMOKE_BASE_URL", "http://127.0.0.1:5151").rstrip("/")
-PAGES = ["/about", "/login", "/register"]
+PAGES = ["/", "/about", "/login", "/register", "/api/health", "/static/css/app.css"]
 
 
 def check(path: str) -> bool:

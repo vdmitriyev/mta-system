@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% block title %}Bonus points{% endblock %}
+{% block admin %}
+{{ ui.page_head("Bonus points", "Select a cell to change the points. Struck-out points do not count for the total.") }}
+{% if not exercises %}
+  <div class="card empty">There are no exercises with a bonus part. Import them with <code>task db:init</code>.</div>
+{% else %}
+{{ ui.table_filter("bonus-table", rows | length) }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="bonus-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          <th>Login link</th>
+          <th class="num" data-sort="number">Total</th>
+          {% for exercise in exercises %}
+          <th class="num" title="{{ exercise.name }}">{{ exercise.code }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td>{{ ui.copy_button(row.access_url) }}</td>
+          <td class="num"><strong>{{ row.bonus_total }}</strong></td>
+          {% for item in row.bonuses %}
+          <td class="num">
+            <a class="cell-link" href="/mtas-admin/bonus/edit?user={{ row.user.itid }}&amp;exercise={{ item.code }}"
+               title="Bonus points of {{ row.name }} for {{ item.name }}">
+              <span class="{{ 'struck' if not item.is_addable and item.points else '' }}">{{ item.points }}</span>
+              {{ ui.icon("edit") }}
+            </a>
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

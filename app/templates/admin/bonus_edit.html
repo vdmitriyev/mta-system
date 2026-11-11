@@ -1,0 +1,29 @@
+{% extends "admin/base.html" %}
+{% block title %}Edit bonus points{% endblock %}
+{% block admin %}
+{{ ui.page_head("Edit bonus points") }}
+<section class="card narrow">
+  {% if error %}{{ ui.alert(error, "danger") }}{% endif %}
+  <dl class="kv">
+    <div><dt>Student</dt><dd>{{ student_name }} <span class="muted small">{{ student.email }}</span></dd></div>
+    <div><dt>Exercise</dt><dd>{{ exercise.name }} <span class="badge">{{ exercise.code }}</span></dd></div>
+    <div><dt>Maximum</dt><dd>{{ exercise.bonus_max_points if exercise.bonus_max_points is not none else "–" }}</dd></div>
+  </dl>
+  <form class="form" method="post" action="/mtas-admin/bonus/edit">
+    {{ ui.csrf(csrf_token) }}
+    <input type="hidden" name="user" value="{{ student.itid }}">
+    <input type="hidden" name="exercise" value="{{ exercise.code }}">
+    <div class="field">
+      <label for="points">Bonus points</label>
+      <input class="input short" type="text" id="points" name="points" inputmode="decimal" required
+             value="{{ bonus.points if bonus else (exercise.bonus_max_points if exercise.bonus_max_points is not none else '') }}">
+    </div>
+    <label class="check"><input type="checkbox" name="visible" {% if not bonus or bonus.visible %}checked{% endif %}> The user can see the points</label>
+    <label class="check"><input type="checkbox" name="is_addable" {% if not bonus or bonus.is_addable %}checked{% endif %}> The points count for the total</label>
+    <div class="row">
+      <button type="submit" class="btn primary">Save</button>
+      <a class="btn" href="/mtas-admin/bonus">Back to the bonus points</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

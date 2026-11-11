@@ -48,7 +48,7 @@ tasks:
   migrate:
     desc: Migrate the production database to the newest revision
     cmds:
-      - "{{.PROD_COMPOSE}} exec webapp flask db upgrade"
+      - "{{.PROD_COMPOSE}} exec webapp python -m app.cli db-upgrade"
 
   cert:
     desc: "Get a Let's Encrypt certificate (task prod:cert -- mtas.example.org)"

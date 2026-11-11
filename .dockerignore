@@ -1,5 +1,5 @@
 # Only what the image needs goes in. The Dockerfile copies:
-# pyproject.toml, *.py, configs-logging/, migrations/, app/, docker-entrypoint.sh
+# pyproject.toml, run.py, configs-logging/, migrations/, app/, docker-entrypoint.sh
 
 # environment files hold secrets: pass them at runtime (env_file / --env-file)
 envs/
@@ -37,6 +37,9 @@ setup/
 # not used by the app container
 docs/
 tests/
+samples/
+.coverage
+htmlcov/
 provision/
 TODOs.txt
 uv.lock

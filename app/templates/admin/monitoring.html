@@ -1,0 +1,51 @@
+{% extends "admin/base.html" %}
+{% block title %}Monitoring{% endblock %}
+{% block admin %}
+{{ ui.page_head("Monitoring", "Load of the server and state of the Docker containers.") }}
+<div class="stack">
+  <div class="grid stats">
+    <div class="stat">
+      <div class="value">{{ summary.cpu_percent }} %</div>
+      <div class="label">CPU</div>
+      <meter min="0" max="100" high="85" value="{{ summary.cpu_percent }}"></meter>
+    </div>
+    <div class="stat">
+      <div class="value">{{ summary.memory_percent }} %</div>
+      <div class="label">Memory: {{ summary.memory_used_mb }} of {{ summary.memory_total_mb }} MB used</div>
+      <meter min="0" max="100" high="85" value="{{ summary.memory_percent }}"></meter>
+    </div>
+    <div class="stat"><div class="value">{{ summary.memory_available_mb }} MB</div><div class="label">Memory available</div></div>
+    <div class="stat"><div class="value">{{ summary.containers.running }}</div><div class="label">Containers running</div></div>
+    <div class="stat"><div class="value">{{ summary.containers.exited }}</div><div class="label">Containers not running</div></div>
+    <div class="stat"><div class="value">{{ summary.containers.total }}</div><div class="label">Containers in total</div></div>
+  </div>
+
+  {{ ui.table_filter("containers-table", containers | length, "Filter by name or image") }}
+  <div class="card flush">
+    <div class="table-wrap">
+      <table class="table" id="containers-table">
+        <thead>
+          <tr><th>ID</th><th data-sort>Name</th><th data-sort>Image</th><th data-sort>State</th><th>Last log lines</th></tr>
+        </thead>
+        <tbody>
+          {% for item in containers %}
+          <tr>
+            <td><code>{{ item.id }}</code></td>
+            <td>{{ item.name }}</td>
+            <td class="small">{{ item.image }}</td>
+            <td>{{ ui.container_badge(item.status) }}</td>
+            <td>
+              <details>
+                <summary>Show log</summary>
+                <pre class="log">{{ item.logs }}</pre>
+              </details>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not containers %}<div class="empty">No containers, or no access to Docker.</div>{% endif %}
+  </div>
+</div>
+{% endblock %}

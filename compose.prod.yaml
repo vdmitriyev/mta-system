@@ -17,6 +17,8 @@ services:
     environment:
       TARGET_SERVER: production
       TZ: Europe/Berlin
+      # worker processes of uvicorn
+      WEB_CONCURRENCY: "${WEB_CONCURRENCY:-4}"
       # network of this project: the app starts the service containers of the students in it
       DOCKER_NETWORK_NAME: mta-system-prod_mtas-network
     volumes:
@@ -28,7 +30,7 @@ services:
     expose:
       - "5151"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5151/about', timeout=5)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5151/api/health', timeout=5)"]
       interval: 30s
       timeout: 10s
       start_period: 30s

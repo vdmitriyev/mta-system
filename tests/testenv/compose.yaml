@@ -10,6 +10,7 @@ services:
       - ${ENV_FILE_NAME:-envs/webapp-dev-docker.env}
     environment:
       TARGET_SERVER: production
+      SESSION_COOKIE_SECURE: "false" # the test copy has no HTTPS
       TZ: Europe/Berlin
       POSTGRESQL_DB_HOST: database
       POSTGRESQL_DB_HOST_PORT: "5432"
@@ -22,7 +23,7 @@ services:
     ports:
       - "127.0.0.1:${MTAS_APP_PORT:-5354}:5151"
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5151/about', timeout=5)"]
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5151/api/health', timeout=5)"]
       interval: 10s
       timeout: 10s
       start_period: 20s

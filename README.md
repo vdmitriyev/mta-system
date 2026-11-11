@@ -1,74 +1,228 @@
 ## About
 
-**mta-system** (**m**odular **t**eaching **a**ssistance **system**) was designed to help students to acquire new hands-on software experience. The solution was designed to be modular by design and to be hosted by a lecturer/faculty member for students.
+**mta-system** (**m**odular **t**eaching **a**ssistance **system**) helps students to get hands-on experience with software. A lecturer hosts it for a course. Students register and get their own access to services such as PostgreSQL, pgAdmin 4, Metabase and OpenRefine.
 
-## Dependencies
+What the web app does:
 
-* Python 3.12 or newer
-    + Dependencies: `pyproject.toml`
-* Docker + Docker Compose
+* **Students** register with their e-mail address and a course code. They see the address, login and password of each of their services, start their containers, import sample datasets, and read reviews and bonus points for their exercises.
+* **Admins** write reviews and bonus points, manage the containers of the users (menu **Services**), check the OpenRefine logins, prepare accounts in advance, choose which parts of the UI are visible, and watch the server (CPU, memory, containers, logs).
 
-## Documentation
+The pages have a light and a dark theme. The button in the header switches between them. The browser stores the choice. Without a choice, the system setting decides.
 
-Documentation is available [here](https://vdmitriyev.github.io/mta-system/)
+Documentation is available [here](https://vdmitriyev.github.io/mta-system/).
 
 ## Architecture
 
-## Setup
+| Part | Technology |
+| --- | --- |
+| Web app | [FastAPI](https://fastapi.tiangolo.com/) with Jinja2 templates, served by uvicorn |
+| Data of the app | SQLite (users, exercises, reviews, bonus points, settings), migrations with Alembic |
+| Long-running jobs | Background tasks of FastAPI. Their state is in the table `background_tasks`. No Redis and no extra worker process. |
+| Services for the students | Docker containers (one per user for Metabase, OpenRefine, NiFi, WordPress), PostgreSQL, MariaDB |
+| Entry point in production | nginx (HTTPS, basic auth for the service containers) |
 
-The mta-system stores its own data (users, exercises, reviews, bonus points, settings) in a SQLite database.
-PostgreSQL is only used as a service for the students (optional, see `CREATE_POSTGRESQL_SERVICE`).
+```
+app/
+  app.py            creates the FastAPI app (middleware, error pages, API docs switch)
+  config.py         settings from environment variables
+  routers/          pages (public, account, admin) and the JSON API
+  tasks.py          background tasks
+  users.py          login data and registration
+  provisioning.py   creates the accounts of a user in the services
+  services/         PostgreSQL, MariaDB, Docker, Metabase, OpenRefine, ...
+  importers/        sample datasets for the PostgreSQL database of a user
+  cli/              commands: python -m app.cli <command>
+  templates/        HTML pages
+  static/           stylesheet, script, images (no files from a CDN)
+migrations/         Alembic migrations of the SQLite database
+samples/            templates for the env files and the exercises
+tests/              automated tests, tests/testenv/ is the Docker test copy
+```
+
+Registration, dataset imports and the setup of containers can take minutes. The app starts them as background tasks and answers at once. The page then asks `/api/tasks/<id>` for the state and shows the result. A task fails if its worker process stops (for example on a restart) or if it runs for more than 30 minutes, so a page does not wait forever.
+
+Metabase and OpenRefine run in one container per user. Before the app creates one, it checks that the image (`metabase/metabase:v0.57.3`, `openrefine:3.9.5`) is on the server or in the registry. The OpenRefine image is not in a public registry: build it with `docker compose -f compose.services.yml build openrefine-service`.
+
+## Setup
 
 ### Requirements
 
 * Python 3.12 or newer, [uv](https://docs.astral.sh/uv/) and [Task](https://taskfile.dev/)
-* A TrueType font for the captcha on the registration page (Ubuntu/Debian: `sudo apt install fonts-freefont-ttf`)
+* Docker and Docker Compose, if you want the services for the students or the Docker deployment
 
-### Create the virtual environment
+### Install
 
 ```bash
-task app:install                 # installs the dependencies from pyproject.toml into .venv
-source .venv/bin/activate
+uv venv .venv
+source .venv/bin/activate        # Windows: call .venv\Scripts\activate.bat
+task app:install-dev             # dependencies and development tools from pyproject.toml
 ```
 
-* `task app:install-dev` also installs the development tools (pytest, black, pre-commit, ...).
+`task app:install` installs only what the app needs to run.
 
 ### Configure
 
-* The app reads its settings from the file in `ENV_FILE_NAME` (default: `envs/webapp-dev-local.env`).
-* The env files are in the folder `envs/` (not in git and not in the Docker image). Use `envs/sample-dev-docker.env` as a template.
-* `MTAS_DB_PATH` sets the SQLite file (default: `data/mta-system.db`, relative to the project folder).
-* Admin rights: put your e-mail in `SYSTEM_ADMINS`.
+```bash
+task app:init-env
+```
+
+This copies the samples from `samples/` to `envs/` and `setup/`. Existing files are kept. Both folders are not in git and not in the Docker image. Then change the values in `envs/webapp-dev-local.env`:
+
+| Setting | Meaning |
+| --- | --- |
+| `SECRET_KEY` | Signs the session cookie. Use a long random value. |
+| `HASH_KEY_LINKS`, `HASH_KEY_HIDDEN` | Keys for the login links and the captcha. Do not change `HASH_KEY_LINKS` after the first registration: the login links and PINs depend on it. |
+| `COURSE_SECURITY_CODE` | Users need this code to register. |
+| `SERVER_FQDN` | Name of the server as the users see it. |
+| `SYSTEM_ADMINS` | E-mail addresses with admin rights, separated by `;`. |
+| `ALLOWED_FQDN_FOR_EMAILS` | E-mail domains that can register, e.g. `uol.de;uni-oldenburg.de`. Upper and lower case do not matter. Subdomains must be listed on their own. Empty: all domains. |
+| `MTAS_DB_PATH` | SQLite file. Default: `data/mta-system.db`. |
+| `MAIL_*` | SMTP server for the registration e-mail. |
+| `TARGET_SERVER` | `development` or `production`. |
+| `ENABLE_API_DOCS` | Switches the FastAPI docs on or off. See below. |
+
+`samples/webapp.env` lists all settings. The app takes each setting from the first of these places:
+
+1. an environment variable
+2. the env file in `ENV_FILE_NAME` (default: `envs/webapp-dev-local.env`)
+3. the default value in `app/config.py`
+
+Empty values count as "not set". The app checks the values on start. A wrong value, for example `MAIL_PORT=abc`, stops the start with a message that names the variable. To check your settings:
+
+```bash
+task app:config                                       # envs/webapp-dev-local.env
+ENV_FILE_NAME=envs/webapp-dev-docker.env task app:config
+```
+
+### Services for the users
+
+In which services a new user gets an account (PostgreSQL, pgAdmin 4, Metabase, ...) is not in the env file. It is stored in the database. An admin changes it on the page **Admin → Service accounts**, or on the command line:
+
+```bash
+task app:cli -- service-accounts                                   # shows the switches
+task app:cli -- service-accounts --on postgresql --on pgadmin4
+```
+
+All services are switched off at the start. The app then runs on its own, without Docker and without PostgreSQL. WordPress needs MariaDB: switch on MariaDB first. A change affects only new users.
+
+Before version 2.0.0, the env file had the settings `CREATE_<NAME>_SERVICE`. `task db:upgrade` copies their values into the database once. After that, the app ignores them and you can delete them from the env file.
 
 ### Create the database and run the app
 
 ```bash
-task db:init      # creates the SQLite database and imports the exercises from setup/initial_exercises.csv
-task app:serve    # runs the app on http://127.0.0.1:5353
+task db:init      # creates the SQLite database and imports setup/initial_exercises.csv
+task app:serve    # runs the app on http://127.0.0.1:5353 and reloads on code changes
 ```
 
-* `setup/initial_exercises.csv` lists the exercises of the course. Each exercise has a review part (`has_review`) and/or a bonus part (`has_bonus`, `bonus_max_points`). Reviews and bonus points are stored per exercise and user.
-* On start, the app adds the default UI visibility settings (`app/main/shared_helpers.py`) that are not in the database yet. Changes made in the admin UI are kept.
-* After a change in `app/models.py`, run `task db:migrate` to create and apply a new migration.
+`task setup` does the install, the env files and the database in one step.
+
+| Task | What it does |
+| --- | --- |
+| `task app:serve` | Runs the app and reloads on code changes. Other port: `PORT=8000 task app:serve` |
+| `task app:start` | Runs the app without reload, as in production. More workers: `WORKERS=4 task app:start` |
+| `task app:cli -- <command>` | Runs a command of the app, see [Commands](#commands) |
+| `task app:config` | Checks the settings and shows them without passwords and keys |
+
+### Run in Docker for development
+
+The app (with reload) runs behind nginx, together with PostgreSQL, pgAdmin 4, Metabase and OpenRefine. The settings come from `envs/webapp-dev-docker.env`.
+
+```bash
+task dev:up                   # builds and starts, app on http://127.0.0.1:5252
+task dev:init                 # database, exercises, demo database
+task dev:logs -- webapp       # logs of the app
+task dev:cli -- show-config   # a command of the app in its container
+task dev:down
+```
+
+* Register with an e-mail address from `SYSTEM_ADMINS` to get the admin pages.
+* In development mode, the app writes the login link of a registration to the log. You do not need a mail server to try the app.
+* `setup/initial_exercises.csv` lists the exercises of the course. Each exercise has a review part (`has_review`) and/or a bonus part (`has_bonus`, `bonus_max_points`).
+* After a change in `app/models.py`, run `task db:migrate -- -m "what changed"` to create and apply a migration.
 * Run `task` to see all tasks.
 
-### Docker
+### Commands
+
+```bash
+python -m app.cli --help
+```
+
+| Command | What it does |
+| --- | --- |
+| `db-upgrade` | Creates the SQLite database or updates it |
+| `db-migrate` | Creates a migration from the changes in the models |
+| `import-data-exercises` | Imports the exercises from the CSV file |
+| `create-demo-db` | Creates the demo database and a read-only user in PostgreSQL |
+| `create-custom-db` | Creates a database with its own user in PostgreSQL |
+| `grant-public-schema` | Lets all users create tables in their database |
+| `nginx-config` | Creates the nginx config parts for OpenRefine and NiFi |
+| `show-config` | Shows the env file and the settings without passwords and keys |
+| `service-accounts` | Shows or changes in which services new users get an account (`--on <service>`, `--off <service>`) |
+| `check-mail` | Connects and logs in to the SMTP server (`MAIL_*`). `--to <address>` also sends a test e-mail |
+
+## API and API docs
+
+The pages are HTML. A small JSON API serves the scripts of the pages and health checks:
+
+| Address | What it returns |
+| --- | --- |
+| `GET /api/health` | State and version of the app (used by the Docker health check) |
+| `GET /api/tasks/{id}` | State of a background task |
+| `GET /api/services/status` | State of the containers of the logged-in user |
+
+FastAPI creates docs for this API at `/docs` (Swagger UI), `/redoc` and `/openapi.json`.
+
+* In development, the docs are **on**.
+* In production (`TARGET_SERVER=production`), the docs are **off**: the three addresses answer with 404.
+* `ENABLE_API_DOCS=true` or `ENABLE_API_DOCS=false` sets it for both modes.
+
+## Tests
+
+```bash
+task app:test                 # all tests
+task app:test -- -k login     # tests with "login" in the name
+task app:coverage             # shows the lines of app/ that no test runs
+```
+
+The tests use a temporary SQLite database. They do not need Docker, PostgreSQL or a mail server: these are replaced by test doubles.
+
+To try the app with Docker and a real PostgreSQL database, use the test copy. It runs next to a real deployment (app on `127.0.0.1:5354`, database on `127.0.0.1:35433`, own volumes):
+
+```bash
+task testenv:deploy   # builds, starts and checks: pages, registration, login, dataset import
+task testenv:logs
+task testenv:down     # removes containers, volumes and the app image
+```
+
+## Deployment with Docker
 
 ```bash
 task app:build-image   # builds mta-system:latest
 ```
 
-* On start, the container applies the migrations and imports the initial data, then runs gunicorn on port `5151`.
+* On start, the container applies the migrations and imports the exercises. Then it runs uvicorn on port `5151`.
+* `WEB_CONCURRENCY` sets the number of worker processes (default: 4).
 * Mount `/mta-system/data` (SQLite database) and `/mta-system/.logs` as volumes.
 * To start and stop the service containers, the app needs `/var/run/docker.sock`.
 
-## System UI
+### Production
 
-* User view. It is user by an user user to get access to the features of the system such as - services credentials, datasets imports, start/stop for services
+```bash
+cp samples/webapp.env envs/.env        # then set TARGET_SERVER=production and your values
+task prod:up                           # app, nginx and the services
+task prod:cert -- mtas.example.org     # Let's Encrypt certificate
+task prod:logs
+```
 
-* Admin view. It is used by an admin to monitor various parameters of a server - CPU usage, RAM usage, amount of containers running, logs, etc.
+Before you go live:
 
-### Citing - BibTeX
+1. Set `TARGET_SERVER=production`. This switches off the debug pages and the API docs, and makes the session cookie HTTPS-only.
+2. Use new random values for `SECRET_KEY`, `HASH_KEY_LINKS` and `HASH_KEY_HIDDEN`, and for all passwords in `envs/`.
+3. Set `SERVER_FQDN`, `SYSTEM_ADMINS`, `ALLOWED_FQDN_FOR_EMAILS` and the `MAIL_*` settings.
+4. Keep the app behind nginx. Only nginx publishes ports to all interfaces (`80`, `443`). All other ports are bound to `127.0.0.1`.
+5. Back up the folder `data/` (SQLite database) and `.htpasswd_nginx/`.
+
+## Citing - BibTeX
 
 ```bibtex
 @inproceedings{Dmitriyev:2021:HandOn,

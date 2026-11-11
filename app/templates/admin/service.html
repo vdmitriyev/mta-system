@@ -1,0 +1,75 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ service_title }}{% endblock %}
+{% block admin %}
+{{ ui.page_head(service_title ~ " containers", "Each user has an own container. “Create again” stops the old container and sets up a new one.") }}
+<div class="alert {{ 'success' if image.ok else 'warning' }} image-state" role="status">
+  <div>
+    <p>{{ image.state }}: <strong><code>{{ image.image }}</code></strong></p>
+    {% if image.hint %}<p>{{ image.hint }}</p>{% endif %}
+    {% if image.command %}<pre class="command"><code>{{ image.command }}</code></pre>{% endif %}
+    {% if not image.ok %}<p class="muted small">“Create again” also asks the registry and stops if the image is not there.</p>{% endif %}
+  </div>
+</div>
+{% if can_check_access %}
+<div class="toolbar">
+  {% if access_checked %}
+  <a class="btn sm" href="/mtas-admin/services/{{ service }}">Hide access check</a>
+  {% endif %}
+  <a class="btn sm" href="/mtas-admin/services/{{ service }}?check=access" title="Requests the container of each user with the login of the user. 200 means that the access works.">{{ ui.icon("refresh") }} Check access</a>
+</div>
+{% endif %}
+{{ ui.table_filter("service-table", rows | length) }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="service-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          <th>Login link</th>
+          <th data-sort>Account</th>
+          <th data-sort>Container</th>
+          <th data-sort>State</th>
+          {% if access_checked %}<th data-sort title="HTTP status with the login of the user. 200: the access works.">Access</th>{% endif %}
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td>{{ ui.copy_button(row.access_url) }}</td>
+          <td>
+            {% if not row.entry %}<span class="badge">none</span>
+            {% elif row.entry.created %}<span class="badge success">created</span>
+            {% else %}<span class="badge warning">not created</span>{% endif %}
+          </td>
+          <td><code>{{ row.container or "–" }}</code></td>
+          <td>{{ ui.container_badge(row.status) }}</td>
+          {% if access_checked %}
+          <td><span class="badge {{ 'success' if row.access == '200' else ('' if row.access == 'NO SERVICE' else 'danger') }}">{{ row.access }}</span></td>
+          {% endif %}
+          <td class="nowrap">
+            {% for action, label, icon_name in [("start", "Start", "play"), ("stop", "Stop", "stop")] %}
+            <form method="post" action="/mtas-admin/services/{{ service }}/{{ action }}" class="inline-form">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm"{% if not row.container %} disabled{% endif %}>{{ ui.icon(icon_name) }} {{ label }}</button>
+            </form>
+            {% endfor %}
+            <form method="post" action="/mtas-admin/services/{{ service }}/create" class="inline-form"
+                  data-confirm="Create {{ service_title }} again for {{ row.user.email }}? The data in the old container is no longer used.">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm danger">{{ ui.icon("refresh") }} Create again</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+{% endblock %}

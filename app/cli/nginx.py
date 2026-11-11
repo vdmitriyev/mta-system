@@ -4,15 +4,19 @@ Every user of a service gets an own location with basic auth:
 the port of the user's container is part of the URL and of the .htpasswd file name.
 nginx-docker.conf includes the generated files (see provision/nginx).
 
-$> flask nginx-config                       # all services, into provision/nginx
-$> flask nginx-config -s openrefine -n 50   # only OpenRefine, for 50 users
+$> python -m app.cli nginx-config                       # all services, into provision/nginx
+$> python -m app.cli nginx-config -s openrefine -n 50   # only OpenRefine, for 50 users
 """
 
 import os
 
 import click
 
-from app import settings
+from app.config import (
+    MAX_USERS_NGINX_GENERATE,
+    NIFI_PORT_OFFSET,
+    OPENREFINE_PORT_OFFSET,
+)
 
 PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 DEFAULT_TARGET_DIR = os.path.join(PROJECT_DIR, "provision", "nginx")
@@ -28,7 +32,7 @@ DEFAULT_HTPASSWD_DIR = "/.htpasswd_nginx/"
 # Forwards to the container "openrefine-<port>" (Docker DNS, resolver 127.0.0.11).
 #             The container name comes from app/services/openrefine_api.py.
 # Login:      <htpasswd_dir>/<port>.htpasswd
-# Ports:      OPENREFINE_PORT_OFFSET + 1, + 2, ... (app/settings.py)
+# Ports:      OPENREFINE_PORT_OFFSET + 1, + 2, ... (app/config.py)
 #
 # Placeholders in the template: {port}, {htpasswd_dir}
 # Double braces {{ }} are single braces in the nginx config.
@@ -72,7 +76,7 @@ OPENREFINE_FOOTER = """
 #             not in the nginx container (there, 127.0.0.1 is the container).
 #             The NiFi containers are named "nifi-<port>" (app/services/nifi_api.py).
 # Login:      <htpasswd_dir>/<port>.htpasswd
-# Ports:      NIFI_PORT_OFFSET + 1, + 2, ... (app/settings.py)
+# Ports:      NIFI_PORT_OFFSET + 1, + 2, ... (app/config.py)
 #
 # Placeholders in the template: {port}, {htpasswd_dir}
 # Double braces {{ }} are single braces in the nginx config.
@@ -155,7 +159,7 @@ def create_openrefine_config(target_dir: str, max_users: int, htpasswd_dir: str)
         header=OPENREFINE_HEADER,
         location=OPENREFINE_LOCATION,
         footer=OPENREFINE_FOOTER,
-        port_offset=settings.OPENREFINE_PORT_OFFSET,
+        port_offset=OPENREFINE_PORT_OFFSET,
         max_users=max_users,
         htpasswd_dir=htpasswd_dir,
     )
@@ -169,7 +173,7 @@ def create_nifi_config(target_dir: str, max_users: int, htpasswd_dir: str):
         header=NIFI_HEADER,
         location=NIFI_LOCATION,
         footer=NIFI_FOOTER,
-        port_offset=settings.NIFI_PORT_OFFSET,
+        port_offset=NIFI_PORT_OFFSET,
         max_users=max_users,
         htpasswd_dir=htpasswd_dir,
     )
@@ -183,7 +187,7 @@ SERVICES = {
 
 
 ################################################################################
-# Flask CLI: $> flask nginx-config
+# CLI: $> python -m app.cli nginx-config
 ################################################################################
 
 
@@ -215,7 +219,7 @@ SERVICES = {
     "--max-users",
     "-n",
     type=click.IntRange(min=1),
-    default=settings.MAX_USERS_NGINX_GENERATE,
+    default=MAX_USERS_NGINX_GENERATE,
     show_default=True,
     help="Number of users (one location per user)",
 )

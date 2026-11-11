@@ -25,7 +25,6 @@ data/.jsons/*
 .backups/*
 .profile/*
 certs/*
-redis/*
 nginx_htpasswd/*
 .htpasswd_nginx/*
 latex-data/*
@@ -48,6 +47,9 @@ __pycache__/
 *.py[cod]
 
 # files
+.coverage
+htmlcov/
+.pytest_cache/
 TODOs.txt
 README.html
 README-Materials.md
@@ -65,3 +67,6 @@ __run_report*.html
 
 # docker / docker compose downloaded by task testenv:tools
 .tools/
+
+# sample files (templates for envs/ and setup/)
+!/samples/*

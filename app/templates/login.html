@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}Log in{% endblock %}
+{% block content %}
+<section class="card narrow">
+  {{ ui.page_head("Log in", "Use your e-mail address and the PIN from the registration e-mail.") }}
+  {% if error %}{{ ui.alert(error, "danger") }}{% endif %}
+  <form class="form" method="post" action="/login">
+    {{ ui.csrf(csrf_token) }}
+    <div class="field">
+      <label for="email">E-mail</label>
+      <input class="input" type="email" id="email" name="email" value="{{ email }}" autocomplete="username" required autofocus>
+    </div>
+    <div class="field">
+      <label for="pin">PIN</label>
+      <input class="input short" type="password" id="pin" name="pin" inputmode="numeric" autocomplete="current-password" required>
+    </div>
+    <div class="row">
+      <button type="submit" class="btn primary">Log in</button>
+      <a href="/register">No account? Register</a>
+    </div>
+  </form>
+  <p class="muted small">Lost your PIN? Register again with the same e-mail address: we send the login data again.</p>
+</section>
+{% endblock %}

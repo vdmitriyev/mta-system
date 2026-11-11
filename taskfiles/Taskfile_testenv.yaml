@@ -58,20 +58,22 @@ tasks:
       - '{{.TESTENV_COMPOSE}} up -d --build --wait app database'
 
   init:
-    desc: applies the migrations, imports the exercises and creates the demo database
+    desc: applies the migrations, imports the exercises, switches on PostgreSQL accounts and creates the demo database
     aliases: [i]
     deps: [tools]
     cmds:
-      - '{{.TESTENV_COMPOSE}} exec -T app flask db upgrade'
-      - '{{.TESTENV_COMPOSE}} exec -T app flask import-data-exercises'
-      - '{{.TESTENV_COMPOSE}} exec -T app flask create-demo-db'
+      - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli db-upgrade'
+      - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli import-data-exercises'
+      - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli service-accounts --on postgresql'
+      - '{{.TESTENV_COMPOSE}} exec -T app python -m app.cli create-demo-db'
 
   check:
-    desc: checks the main pages and the demo database of the test copy
+    desc: checks the pages, the main flow (register, log in, import) and the demo database of the test copy
     aliases: [c]
     deps: [tools]
     cmds:
       - '{{.TESTENV_COMPOSE}} exec -T app python - < {{.TESTENV_DIR}}/smoke.py'
+      - '{{.TESTENV_COMPOSE}} exec -T app python - < {{.TESTENV_DIR}}/e2e.py'
       - |
         DEMO_DB=$(tr -d '\r' < {{.TESTENV_ENV_FILE}} | sed -nE "s/^POSTGRESQL_DEMO_DB *= *'?([^' ]+)'?.*/\1/p")
         {{.TESTENV_COMPOSE}} exec -T database psql -U postgres -Atc "SELECT datname FROM pg_database" | grep -qx "$DEMO_DB"
@@ -84,7 +86,6 @@ tasks:
     cmds:
       - '{{.TESTENV_COMPOSE}} ps -a'
       - '{{.TESTENV_COMPOSE}} logs --tail 30'
-      - tail -n 30 .logs/testenv/gunicorn-error.log
       - tail -n 30 .logs/testenv/app-server.log
 
   down:

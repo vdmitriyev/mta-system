@@ -9,33 +9,33 @@ tasks:
     aliases: [i]
     deps: [":app:check-virtualenv"]
     cmds:
-      - flask db upgrade
+      - python -m app.cli db-upgrade
       # the app adds the default UI visibility settings on start
-      - flask import-data-exercises
+      - python -m app.cli import-data-exercises
 
   upgrade:
     desc: applies the database migrations (migrations/versions)
     aliases: [u]
     deps: [":app:check-virtualenv"]
     cmds:
-      - flask db upgrade
+      - python -m app.cli db-upgrade
 
   migrate:
-    desc: creates a new migration from the models and applies it
+    desc: creates a new migration from the models and applies it (name after --, e.g. '-- -m "add column"')
     aliases: [m]
     deps: [":app:check-virtualenv"]
     cmds:
       # first the existing migrations: "stamp head" would skip them
-      - flask db upgrade
-      - flask db migrate
-      - flask db upgrade
+      - python -m app.cli db-upgrade
+      - python -m app.cli db-migrate {{.CLI_ARGS}}
+      - python -m app.cli db-upgrade
 
   create-demo:
     desc: creates the demo database and its read-only user in the PostgreSQL service
     aliases: [cd]
     deps: [":app:check-virtualenv"]
     cmds:
-      - flask create-demo-db
+      - python -m app.cli create-demo-db
 
   create-custom:
     desc: creates a custom database and user in the PostgreSQL service
@@ -43,4 +43,4 @@ tasks:
     deps: [":app:check-virtualenv"]
     interactive: true
     cmds:
-      - flask create-custom-db
+      - python -m app.cli create-custom-db

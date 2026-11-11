@@ -1,7 +1,0 @@
-{% import "services/_macros.html" as ui %}
-{% call ui.card("Apache Superset", "fas fa-chart-bar", "#696969") %}
-	{{ ui.url_row("URL", service['url']) }}
-	{{ ui.copy_row("Login", service['user'], "supersetLogin") }}
-	{{ ui.copy_row("Password", service['password'], "supersetPassword") }}
-	{{ ui.copy_row("SQLAlchemy URI", service['SQLAlchemyURI'], "supersetSQLAlchemyURL") }}
-{% endcall %}

@@ -14,7 +14,7 @@ services:
        - mtas-network
 
   postgresql-service:
-    image: "postgres:15.8"
+    image: "postgres:17.11"
     env_file:
       - envs/postgresql-service.env # configure postgres service
     ports:
@@ -37,18 +37,6 @@ services:
         target: /pgadmin4/config_local.py
     networks:
       - mtas-network
-
-  #mariadb-service:
-  #  image: mariadb
-  #  env_file:
-  #    - envs/mariadb-service.env # configures mariadb service
-  #  volumes:
-  #    - mariadbvolume-service:/var/lib/mysqlmdb
-  #  ports:
-  #    - "127.0.0.1:3306:3306"
-  #    #- 3306:3306
-  #  networks:
-  #    - mtas-network
 
 networks:
     mtas-network:

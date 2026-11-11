@@ -24,26 +24,76 @@ tasks:
       - python -c "import sys; print('Virtual environment->', sys.prefix)"
       - python --version
 
+  init-env:
+    desc: copies the sample env files and exercises to envs/ and setup/ (keeps existing files)
+    cmds:
+      - mkdir -p envs setup
+      - cp -n samples/webapp.env envs/webapp-dev-local.env
+      - cp -n samples/webapp.env envs/webapp-dev-docker.env
+      - cp -n samples/postgresql-service.env envs/postgresql-service.env
+      - cp -n samples/pgadmin4-service.env envs/pgadmin4-service.env
+      - cp -n samples/initial_exercises.csv setup/initial_exercises.csv
+      - echo "Change the secrets in envs/ before you use them"
+
   serve:
-    desc: runs the flask server for development
+    desc: runs the app for development and reloads on code changes (other port, e.g. 'PORT=8000 task app:serve')
     aliases: [r]
     deps: [check-virtualenv]
     silent: true
     env:
       PYTHONDONTWRITEBYTECODE: '1'
     vars:
-      HOST: 127.0.0.1
-      PORT: 5353
+      HOST: '{{.HOST | default "127.0.0.1"}}'
+      PORT: '{{.PORT | default "5353"}}'
     cmds:
-      - echo "Run flask-> {{.HOST}}:{{.PORT}}"
-      - flask run --debug --host={{.HOST}} --port={{.PORT}}
+      - echo "Run mta-system-> http://{{.HOST}}:{{.PORT}} (settings-> {{.ENV_FILE_NAME}})"
+      - uvicorn run:app --reload --host={{.HOST}} --port={{.PORT}}
+
+  start:
+    desc: runs the app like in production, without reload (e.g. 'WORKERS=4 task app:start')
+    deps: [check-virtualenv]
+    silent: true
+    vars:
+      HOST: '{{.HOST | default "127.0.0.1"}}'
+      PORT: '{{.PORT | default "5353"}}'
+      WORKERS: '{{.WORKERS | default "1"}}'
+    cmds:
+      - echo "Run mta-system-> http://{{.HOST}}:{{.PORT}} (settings-> {{.ENV_FILE_NAME}})"
+      - uvicorn run:app --host={{.HOST}} --port={{.PORT}} --workers={{.WORKERS}}
+
+  cli:
+    desc: runs a command of the app (e.g. 'task app:cli -- --help' or '-- create-custom-db')
+    deps: [check-virtualenv]
+    interactive: true
+    cmds:
+      - python -m app.cli {{.CLI_ARGS}}
+
+  config:
+    desc: checks the settings and shows them without passwords and keys (other file, e.g. 'ENV_FILE_NAME=envs/x.env task app:config')
+    aliases: [c]
+    deps: [check-virtualenv]
+    silent: true
+    cmds:
+      - python -m app.cli show-config
 
   test:
-    desc: runs the tests (pytest options after --, e.g. 'task app:test -- -v -s' or '-- -m marker')
+    desc: runs the tests (pytest options after --, e.g. 'task app:test -- -v -s' or '-- -k login')
     aliases: [t]
     deps: [check-virtualenv]
     cmds:
-      - pytest {{.CLI_ARGS}}
+      - python -m pytest {{.CLI_ARGS}}
+
+  coverage:
+    desc: runs the tests and shows the lines of app/ that no test runs
+    deps: [check-virtualenv]
+    cmds:
+      - python -m pytest --cov=app --cov-report=term-missing {{.CLI_ARGS}}
+
+  nginx-config:
+    desc: creates the nginx config parts for OpenRefine and NiFi (options after --, e.g. '-- -n 50')
+    deps: [check-virtualenv]
+    cmds:
+      - python -m app.cli nginx-config {{.CLI_ARGS}}
 
   bandit:
     desc: runs bandit (static code analysis)

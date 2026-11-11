@@ -1,6 +1,4 @@
-from flask import redirect, url_for
-from flask_login import AnonymousUserMixin, UserMixin, login_user
-from sqlalchemy import (  # UniqueConstraint,
+from sqlalchemy import (
     Boolean,
     Column,
     DateTime,
@@ -12,12 +10,10 @@ from sqlalchemy import (  # UniqueConstraint,
 )
 from sqlalchemy.sql import func
 
-from app.extensions import db, login_manager
+from app.database import Base
 
 
-class Users(db.Model):
-    """Mapping to database table here"""
-
+class Users(Base):
     __tablename__ = "users"
 
     itid = Column(Integer, primary_key=True)
@@ -32,18 +28,11 @@ class Users(db.Model):
     deleted = Column(Boolean, default=False, nullable=False, index=True)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class PostgreSQLService(db.Model):
-    """Mapping to database table here"""
-
+class PostgreSQLService(Base):
     __tablename__ = "postgresql_service"
 
     itid = Column(Integer, primary_key=True)
-    # user_id                = Column(Integer)
     user_id = Column(Integer, ForeignKey("users.itid"))
     postgresql_db = Column(String(50), nullable=False)
     postgresql_user = Column(String(50), nullable=False)
@@ -52,18 +41,11 @@ class PostgreSQLService(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class PGAdmin4Service(db.Model):
-    """Mapping to database table here"""
-
+class PGAdmin4Service(Base):
     __tablename__ = "pgadmin4_service"
 
     itid = Column(Integer, primary_key=True)
-    # user_id                 = Column(Integer)
     user_id = Column(Integer, ForeignKey("users.itid"))
     pgadmin4_user = Column(String(50), nullable=False)
     pgadmin4_password = Column(String(50), nullable=False)
@@ -71,18 +53,11 @@ class PGAdmin4Service(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class MetabaseService(db.Model):
-    """Mapping to database table here"""
-
+class MetabaseService(Base):
     __tablename__ = "metabase_service"
 
     itid = Column(Integer, primary_key=True)
-    # user_id                 = Column(Integer)
     user_id = Column(Integer, ForeignKey("users.itid"))
     metabase_login = Column(String(50), nullable=False)
     metabase_password = Column(String(50), nullable=False)
@@ -91,18 +66,11 @@ class MetabaseService(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class OpenRefineService(db.Model):
-    """Mapping to database table here"""
-
+class OpenRefineService(Base):
     __tablename__ = "openrefine_service"
 
     itid = Column(Integer, primary_key=True)
-    # user_id                 = Column(Integer)
     user_id = Column(Integer, ForeignKey("users.itid"))
     openrefine_user = Column(String(50))
     openrefine_password = Column(String(50))
@@ -111,18 +79,11 @@ class OpenRefineService(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class JupyterHubService(db.Model):
-    """Mapping to database table here"""
-
+class JupyterHubService(Base):
     __tablename__ = "jupyterhub_service"
 
     itid = Column(Integer, primary_key=True)
-    # user_id                 = Column(Integer)
     user_id = Column(Integer, ForeignKey("users.itid"))
     jupyterhub_user = Column(String(50))
     jupyterhub_password = Column(String(50))
@@ -130,18 +91,11 @@ class JupyterHubService(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class NiFiService(db.Model):
-    """Mapping to database table here"""
-
+class NiFiService(Base):
     __tablename__ = "nifi_service"
 
     itid = Column(Integer, primary_key=True)
-    # user_id                 = Column(Integer)
     user_id = Column(Integer, ForeignKey("users.itid"))
     nifi_user = Column(String(50))
     nifi_password = Column(String(50))
@@ -150,18 +104,11 @@ class NiFiService(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class SupersetService(db.Model):
-    """Mapping to database table here"""
-
+class SupersetService(Base):
     __tablename__ = "superset_service"
 
     itid = Column(Integer, primary_key=True)
-    # user_id                 = Column(Integer)
     user_id = Column(Integer, ForeignKey("users.itid"))
     superset_user = Column(String(50), nullable=False)
     superset_password = Column(String(50), nullable=False)
@@ -169,14 +116,8 @@ class SupersetService(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class MariaDBService(db.Model):
-    """Mapping to database table here"""
-
+class MariaDBService(Base):
     __tablename__ = "mariadb_service"
 
     itid = Column(Integer, primary_key=True)
@@ -188,14 +129,8 @@ class MariaDBService(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class WordpressService(db.Model):
-    """Mapping to database table here"""
-
+class WordpressService(Base):
     __tablename__ = "wordpress_service"
 
     itid = Column(Integer, primary_key=True)
@@ -207,12 +142,25 @@ class WordpressService(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
+
+# Name of a service (as in SERVICES_UI) -> table with the accounts of the users
+SERVICE_MODELS = {
+    "postgresql": PostgreSQLService,
+    "pgadmin4": PGAdmin4Service,
+    "metabase": MetabaseService,
+    "openrefine": OpenRefineService,
+    "jupyterhub": JupyterHubService,
+    "nifi": NiFiService,
+    "superset": SupersetService,
+    "mariadb": MariaDBService,
+    "wordpress": WordpressService,
+}
+
+# Services that run in an own Docker container per user: "<service>-<port>"
+CONTAINER_SERVICES = ("metabase", "openrefine", "nifi", "wordpress")
 
 
-class Exercises(db.Model):
+class Exercises(Base):
     """Exercise of the course. Reviews and bonus points belong to an exercise."""
 
     __tablename__ = "exercises"
@@ -225,18 +173,13 @@ class Exercises(db.Model):
     visible = Column(Boolean, default=True, nullable=False)
     exercise_order = Column(Integer)
     submission_deadline = Column(DateTime)
-    # parts of the exercise
     has_review = Column(Boolean, default=True, nullable=False)
     has_bonus = Column(Boolean, default=False, nullable=False)
     bonus_max_points = Column(Float, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class ExerciseReviews(db.Model):
+class ExerciseReviews(Base):
     """Review of a user's solution. Each save adds a row; the newest row is valid."""
 
     __tablename__ = "exercise_reviews"
@@ -254,12 +197,8 @@ class ExerciseReviews(db.Model):
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class ExerciseBonusPoints(db.Model):
+class ExerciseBonusPoints(Base):
     """Bonus points of a user. Each save adds a row; the newest row is valid."""
 
     __tablename__ = "exercise_bonus_points"
@@ -275,14 +214,8 @@ class ExerciseBonusPoints(db.Model):
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
 
-
-class UIVisibilitySettings(db.Model):
-    """Mapping to database table here"""
-
+class UIVisibilitySettings(Base):
     __tablename__ = "ui_visibility_settings"
 
     itid = Column(Integer, primary_key=True)
@@ -291,50 +224,32 @@ class UIVisibilitySettings(db.Model):
     description = Column(String(200), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
-    def __getitem__(self, field):
-        '''Makes object "subscriptable"'''
-        return self.__dict__[field]
+
+class ServiceSettings(Base):
+    """Per service: does the app create an account for each new user? (admin page "Service accounts")"""
+
+    __tablename__ = "service_settings"
+
+    itid = Column(Integer, primary_key=True)
+    service = Column(String(50), nullable=False, unique=True)
+    create_accounts = Column(Boolean, default=False, nullable=False)
+    description = Column(String(200), nullable=True)
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
-class User(UserMixin):
-    """Handles user"""
+class BackgroundTask(Base):
+    """Long-running job that runs after the response (see app/tasks.py)"""
 
-    pass
+    __tablename__ = "background_tasks"
 
-
-class AnonymousUser(AnonymousUserMixin):
-    """Handles anonymous user"""
-
-    def can(self, permissions):
-        return False
-
-    def is_administrator(self):
-        return False
-
-    def check_role(self, role):
-        return False
-
-
-login_manager.anonymous_user = AnonymousUser
-
-
-@login_manager.user_loader
-def load_user(uHash):
-    # user = Users.query.get(int(user_id))
-    # user.is_admin = user.check_admin()
-    # return user
-
-    user = User()
-    user.id = uHash
-    return user
-
-
-@login_manager.unauthorized_handler
-def unauth_handler():
-    return redirect(url_for("auth.loginView"))
-
-
-def create_auth_session(u_hash):
-    user = User()
-    user.id = u_hash
-    login_user(user, remember=True)
+    itid = Column(Integer, primary_key=True)
+    public_id = Column(String(32), nullable=False, unique=True)
+    kind = Column(String(50), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.itid"), nullable=True, index=True)
+    status = Column(String(20), default="queued", nullable=False, index=True)
+    message = Column(Text)
+    created_at = Column(DateTime, server_default=func.now())
+    started_at = Column(DateTime)
+    finished_at = Column(DateTime)
+    # process that runs the task: if it is gone, the task was lost
+    worker_pid = Column(Integer)

@@ -1,88 +1,52 @@
+# Development: the app with auto-reload behind nginx. Use it together with the services:
+#   docker compose -f compose.yml -f compose.services.yml up -d --build
+# The project folder is mounted into the container: code changes restart the app.
 services:
+
   webapp:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    #command: flask --debug run --host=0.0.0.0 --port=5151 #debug/dev mode
-    #command: tail -f /dev/null #test mode
-    command: gunicorn --config gunicorn.config.docker.prod.py --reload run:app
-    #command: gunicorn --config gunicorn.config.docker.prod.py run:app
+    build: .
+    command: uvicorn run:app --host 0.0.0.0 --port 5151 --reload --proxy-headers --forwarded-allow-ips "*"
     volumes:
       - ./:/mta-system
-      - ./.logs:/mta-system/.logs
-      - ./.profile:/mta-system/.profile
-      - ./migrations:/mta-system/migrations
-      - ./setup:/mta-system/setup:ro # initial data (initial_exercises.csv)
-      - ./latex-data:/mta-system/latex-data
-      - ./.htpasswd_nginx:/mta-system/.htpasswd_nginx
-      #- //var/run/docker.sock://var/run/docker.sock #windows
-      - /var/run/docker.sock:/var/run/docker.sock #linux
+      - /var/run/docker.sock:/var/run/docker.sock # starts and stops the service containers
     ports:
       - "127.0.0.1:5252:5151"
     env_file:
-       - ${ENV_FILE_NAME}
+      - ${ENV_FILE_NAME}
     environment:
-       - FLASK_APP=run.py
-       - TARGET_SERVER=production
-       - ENV_FILE_NAME=${ENV_FILE_NAME}
-       - "TZ=Europe/Berlin"
+      TARGET_SERVER: development
+      WEB_CONCURRENCY: "1"
+      ENV_FILE_NAME: ${ENV_FILE_NAME}
+      TZ: Europe/Berlin
     depends_on:
       postgresql-service:
         condition: service_started
       pgadmin4-service:
         condition: service_started
-      #mariadb-service:
-      #  condition: service_started
     networks:
       - mtas-network
 
   nginx:
-     build: ./provision/nginx
-     image: mta-system-nginx:dev
-     volumes:
-       - ./provision/nginx/nginx_part_openrefine.config:/etc/nginx/conf.d/nginx_part_openrefine.config:ro
-       - ./certbot/www:/var/www/certbot/:ro
-       - ./certbot/conf/:/etc/nginx/ssl/:ro
-       - ./.logs/nginx:/var/log/nginx
-       - ./.htpasswd_nginx:/.htpasswd_nginx
-     ports:
-       - "127.0.0.1:80:80"
-       - "127.0.0.1:443:443"
-     depends_on:
-       - webapp
-     networks:
-       - mtas-network
-  #certbot:
-  #  image: certbot/certbot:latest
-  #  volumes:
-  #    - ./.logs/certbot/:/var/log/letsencrypt/
-  #    - ./certbot/www/:/var/www/certbot/:rw
-  #    - ./certbot/conf/:/etc/letsencrypt/:rw
-  #  command: certonly --webroot --webroot-path=/var/www/certbot --email admin@mtas.example.org --agree-tos --no-eff-email -d mtas.example.org
-  #  depends_on:
-  #    - nginx
-  #  networks:
-  #    - mtas-network
-  #certbot-renew:
-  #  image: certbot/certbot:latest
-  #  volumes:
-  #    - ./.logs/certbot/:/var/log/letsencrypt/
-  #    - ./certbot/www/:/var/www/certbot/:rw
-  #    - ./certbot/conf/:/etc/letsencrypt/:rw
-  #  entrypoint: certbot renew --renew-by-default
-  #  #entrypoint: tail -f /dev/null
-  #  depends_on:
-  #    - nginx
-  #  networks:
-  #    - mtas-network
+    build: ./provision/nginx
+    image: mta-system-nginx:dev
+    volumes:
+      - ./provision/nginx/nginx_part_openrefine.config:/etc/nginx/conf.d/nginx_part_openrefine.config:ro
+      - ./certbot/www:/var/www/certbot/:ro
+      - ./certbot/conf/:/etc/nginx/ssl/:ro
+      - ./.logs/nginx:/var/log/nginx
+      - ./.htpasswd_nginx:/.htpasswd_nginx
+    ports:
+      - "127.0.0.1:80:80"
+      - "127.0.0.1:443:443"
+    depends_on:
+      - webapp
+    networks:
+      - mtas-network
+
 networks:
-    mtas-network:
-      driver: bridge
-      # Adjust the MTU value according to your physical system setup. Default is 1500.
-      # A wrong value will lead to weird connection issues (e.g., apt cannot retrieve packages and so on).
-      # driver_opts:
-      #   com.docker.network.driver.mtu: 1450
-volumes:
-  pg15volume-service:
-  pga4volume-service:
-  mariadbvolume-service:
+  mtas-network:
+    driver: bridge
+    # Set the MTU to the value of your network, if packages cannot be downloaded
+    # inside the containers. Default is 1500.
+    # driver_opts:
+    #   com.docker.network.driver.mtu: 1450

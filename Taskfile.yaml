@@ -5,13 +5,13 @@ vars:
   VENV_DIR: '.venv'
 
 env:
-  FLASK_APP: 'run.py'
   ENV_FILE_NAME: '{{.ENV_FILE_NAME}}'
 
 includes:
 
   app: ./taskfiles/Taskfile_app.yml
   db: ./taskfiles/Taskfile_db.yaml
+  dev: ./taskfiles/Taskfile_dev.yml
   pre-commit: ./taskfiles/Taskfile_pre_commit.yml
   prod: ./taskfiles/Taskfile_prod.yml
   sandbox: ./taskfiles/Taskfile_sandbox.yml
@@ -26,3 +26,11 @@ tasks:
       - task --list-all
       - echo ""
       - echo "Example usage-> 'task app:serve'"
+
+  setup:
+    desc: first setup for local development (dependencies, env files, SQLite database)
+    cmds:
+      - task: app:install-dev
+      - task: app:init-env
+      - task: db:init
+      - echo "Change the secrets in envs/, then run 'task app:serve'"

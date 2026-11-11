@@ -1,0 +1,53 @@
+{% extends "admin/base.html" %}
+{% block title %}Admin{% endblock %}
+{% block admin %}
+{{ ui.page_head("Admin overview", "State of the course, prepared accounts and background tasks.") }}
+<div class="stack">
+  <div class="grid stats">
+    <div class="stat"><div class="value">{{ users_assigned }}</div><div class="label">Registered users</div></div>
+    <div class="stat"><div class="value">{{ users_total - users_assigned }}</div><div class="label">Prepared accounts (free)</div></div>
+    {% for name, count in service_counts.items() %}
+    <div class="stat"><div class="value">{{ count }}</div><div class="label">{{ name }} accounts</div></div>
+    {% endfor %}
+  </div>
+
+  <section class="card">
+    <div class="card-head">
+      <h2>Prepare accounts</h2>
+      <form method="post" action="/mtas-admin/accounts/generate" class="inline-form"
+            data-confirm="Prepare {{ accounts_to_create }} accounts with all services? This starts containers and can take a while.">
+        {{ ui.csrf(csrf_token) }}
+        <button type="submit" class="btn primary">Prepare {{ accounts_to_create }} accounts</button>
+      </form>
+    </div>
+    <p class="muted">A prepared account has all services set up. A new user gets a prepared account at once and does not wait for the setup. Set the number with <code>MAX_USER_ACCOUNTS_TO_CREATE</code>.</p>
+  </section>
+
+  <section class="card flush">
+    <div class="card-head">
+      <h2>Background tasks</h2>
+    </div>
+    {% if not tasks %}
+      <div class="empty">No background tasks yet.</div>
+    {% else %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>Created (UTC)</th><th>Task</th><th>State</th><th>Result</th></tr>
+        </thead>
+        <tbody>
+          {% for task in tasks %}
+          <tr>
+            <td class="nowrap">{{ task.created_at.strftime("%Y-%m-%d %H:%M:%S") if task.created_at else "" }}</td>
+            <td><code>{{ task.kind }}</code></td>
+            <td>{{ ui.task_badge(task.status) }}</td>
+            <td>{{ task.message or "" }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

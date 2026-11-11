@@ -1,0 +1,65 @@
+{% import "_macros.html" as ui %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}{% if self.title() %} · {% endif %}{{ course_name or "mta-system" }}</title>
+  <link rel="stylesheet" href="/static/css/app.css?v={{ app_version }}">
+  <script src="/static/js/theme.js?v={{ app_version }}"></script>
+  <script src="/static/js/app.js?v={{ app_version }}" defer></script>
+</head>
+<body>
+  {% macro nav_link(href, label) -%}
+  <a href="{{ href }}"{% if path == href or (href != "/" and path.startswith(href)) %} aria-current="page"{% endif %}>{{ label }}</a>
+  {%- endmacro %}
+
+  <header class="site-header">
+    <div class="container wide inner">
+      <a class="brand" href="/">
+        <span class="brand-mark" aria-hidden="true">mta</span>
+        <span>{{ course_name or "mta-system" }}</span>
+      </a>
+      <button type="button" class="nav-toggle" data-nav-toggle aria-controls="main-nav" aria-expanded="false">Menu</button>
+      <nav class="nav" id="main-nav" aria-label="Main">
+        {% if user %}
+          {{ nav_link("/services", "Services") }}
+          {% if visibility.get("reviews") %}{{ nav_link("/reviews", "Reviews") }}{% endif %}
+          {% if visibility.get("bonus") %}{{ nav_link("/bonus", "Bonus points") }}{% endif %}
+        {% endif %}
+        {{ nav_link("/about", "About") }}
+        <span class="spacer"></span>
+        <button type="button" class="theme-toggle" data-theme-toggle hidden>Theme</button>
+        {% if user %}
+          {% if is_admin %}{{ nav_link("/mtas-admin/", "Admin") }}{% endif %}
+          <span class="muted small nowrap">{{ user.email }}</span>
+          <form method="post" action="/logout">
+            {{ ui.csrf(csrf_token) }}
+            <button type="submit">Log out</button>
+          </form>
+        {% else %}
+          {{ nav_link("/register", "Register") }}
+          {{ nav_link("/login", "Log in") }}
+        {% endif %}
+      </nav>
+    </div>
+  </header>
+
+  <main class="container{% if wide %} wide{% endif %}">
+    {% for message in flashes %}
+      {{ ui.alert(message.text, message.level) }}
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+
+  <footer class="site-footer">
+    <div class="container wide inner">
+      <span>mta-system {{ app_version }} · modular teaching assistance system</span>
+      <span>
+        {% if api_docs %}<a href="/docs">API docs</a> · {% endif %}
+        Questions? Ask your instructor.
+      </span>
+    </div>
+  </footer>
+</body>
+</html>

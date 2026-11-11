@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% block title %}Edit review{% endblock %}
+{% block admin %}
+{{ ui.page_head("Edit review") }}
+<div class="grid two">
+  <section class="card">
+    <dl class="kv">
+      <div><dt>Student</dt><dd>{{ student_name }} <span class="muted small">{{ student.email }}</span></dd></div>
+      <div><dt>Exercise</dt><dd>{{ exercise.name }} <span class="badge">{{ exercise.code }}</span></dd></div>
+    </dl>
+    <form class="form" method="post" action="/mtas-admin/reviews/edit">
+      {{ ui.csrf(csrf_token) }}
+      <input type="hidden" name="user" value="{{ student.itid }}">
+      <input type="hidden" name="exercise" value="{{ exercise.code }}">
+      <label class="check"><input type="checkbox" name="submitted" {% if not review or review.submitted %}checked{% endif %}> The solution was submitted</label>
+      <label class="check"><input type="checkbox" name="reviewed" {% if not review or review.reviewed %}checked{% endif %}> The solution was reviewed</label>
+      <label class="check"><input type="checkbox" name="visible" {% if not review or review.visible %}checked{% endif %}> The user can see the review</label>
+      <div class="field">
+        <label for="content">Review (Markdown)</label>
+        <textarea class="input" id="content" name="content">{{ review.content if review and review.content else "" }}</textarea>
+      </div>
+      <div class="row">
+        <button type="submit" class="btn primary">Save</button>
+        <a class="btn" href="/mtas-admin/reviews">Back to the reviews</a>
+      </div>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Saved review, as the user sees it</h2>
+    {% if preview %}
+      <div class="prose">{{ preview }}</div>
+    {% else %}
+      <p class="muted">No review is saved yet.</p>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

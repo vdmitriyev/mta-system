@@ -1,0 +1,48 @@
+{# Building blocks of the pages. Import with: {% import "_macros.html" as ui %} #}
+
+{% macro icon(name) -%}
+<svg class="icon" aria-hidden="true"><use href="/static/img/icons.svg#{{ name }}"></use></svg>
+{%- endmacro %}
+
+{% macro csrf(token) -%}
+<input type="hidden" name="csrf_token" value="{{ token }}">
+{%- endmacro %}
+
+{% macro page_head(title, lead=none) %}
+<header class="page-head">
+  <h1>{{ title }}</h1>
+  {% if lead %}<p>{{ lead }}</p>{% endif %}
+</header>
+{% endmacro %}
+
+{% macro alert(text, level="info") %}
+<div class="alert {{ level }}" role="{{ 'alert' if level == 'danger' else 'status' }}">{{ text }}</div>
+{% endmacro %}
+
+{# State of a Docker container #}
+{% macro container_badge(status, service=none) -%}
+<span class="badge {{ {'running': 'success', 'exited': 'danger'}.get(status, '') }}"
+      {%- if service %} data-container-status="{{ service }}"{% endif %}>{{ status }}</span>
+{%- endmacro %}
+
+{# State of a background task #}
+{% macro task_badge(status) -%}
+<span class="badge {{ {'done': 'success', 'failed': 'danger', 'running': 'info', 'queued': 'warning'}.get(status, '') }}">
+  {%- if status in ('queued', 'running') %}<span class="spinner"></span> {% endif %}{{ status }}</span>
+{%- endmacro %}
+
+{% macro yes_no(value, yes="yes", no="no") -%}
+<span class="badge {{ 'success' if value else '' }}">{{ yes if value else no }}</span>
+{%- endmacro %}
+
+{% macro copy_button(value, label="Copy") -%}
+<button type="button" class="btn sm" data-copy="{{ value }}">{{ icon("copy") }} <span data-label>{{ label }}</span></button>
+{%- endmacro %}
+
+{% macro table_filter(table_id, total, placeholder="Filter by name or e-mail") %}
+<div class="toolbar">
+  <label class="sr-only" for="{{ table_id }}-filter">Filter the table</label>
+  <input class="input" type="search" id="{{ table_id }}-filter" data-filter="{{ table_id }}" placeholder="{{ placeholder }}" autocomplete="off">
+  <span class="muted small"><span data-filter-count="{{ table_id }}">{{ total }}</span> of {{ total }}</span>
+</div>
+{% endmacro %}

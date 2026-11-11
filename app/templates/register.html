@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}Register{% endblock %}
+{% block content %}
+<section class="card narrow">
+  {{ ui.page_head("Register", "Get your personal access to the services of the course.") }}
+  {% if error %}{{ ui.alert(error, "danger") }}{% endif %}
+  <form class="form" method="post" action="/register">
+    {{ ui.csrf(csrf_token) }}
+    <div class="field">
+      <label for="email">E-mail</label>
+      <input class="input" type="email" id="email" name="email" value="{{ email }}" autocomplete="email" required autofocus>
+      <p class="hint">We use your e-mail address only for messages from this portal.</p>
+    </div>
+    <div class="field">
+      <label for="code">Course code</label>
+      <input class="input" type="text" id="code" name="code" autocomplete="off" required>
+      <p class="hint">Your instructor gives you this code.</p>
+    </div>
+    <div class="field">
+      <label for="captcha">Digits in the picture</label>
+      <img class="captcha" src="data:image/png;base64,{{ captcha_image }}" width="200" height="150" alt="Picture with four digits">
+      <input class="input short" type="text" id="captcha" name="captcha" inputmode="numeric" autocomplete="off" required>
+    </div>
+    <div class="row">
+      <button type="submit" class="btn primary">Register</button>
+      <span class="muted small" data-busy hidden><span class="spinner"></span> Sending…</span>
+    </div>
+  </form>
+</section>
+{% endblock %}

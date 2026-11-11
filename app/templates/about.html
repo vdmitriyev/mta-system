@@ -1,78 +1,31 @@
-{% extends "layout.html" %}
+{% extends "base.html" %}
+{% block title %}About{% endblock %}
+{% set services = [
+  ("pgAdmin 4", "pgadmin4-screen.png", "supported", "9.9", "Web interface to manage PostgreSQL databases."),
+  ("PostgreSQL", "postgresql-logo.png", "supported", "15.14", "Relational database. Each user gets an own database."),
+  ("Metabase", "metabase-screen.png", "supported", "v0.57.3", "Dashboards and questions on your data."),
+  ("OpenRefine", "openrefine-screen.png", "supported", "3.9.5", "Tool to clean and transform data."),
+  ("Apache NiFi", "nifi-screen.png", "deprecated", none, "Data flows between systems."),
+  ("Jupyter Notebook (JupyterHub)", "jupyterhub-screen.png", "deprecated", none, "Notebooks for Python in the browser."),
+] %}
 {% block content %}
-
-		<div class="card text-center">
-          <div class="card-body">
-            <h5 class="card-title">About</h5>
-            <p class="card-text">
-				<div align="center" class="m-1">
-					The current page provides a description of available services of the given infrastructure
-				</div>
-				<div align="center">
-					For credentials/access: ask your instructor how to get personal access to the services and then use <a href="/register" class="badge badge-info">registration</a> form
-				</div>
-			</p>
-          </div>
-        </div>
-
-		</br>
-
-		<div class="card text-center">
-
-		  <div class="card-body">
-
-				<table class="table table-borderless table-hover">
-				  <tbody>
-					<tr>
-					  <td class="text-left" width="30%"><b>Service name</b></td>
-					  <td class="text-left"><b>Screenshot</b></td>
-					  <td class="text-left"><b>Status</b></td>
-					  <td class="text-left"><b>Version</b></td>
-					</tr>
-					<tr>
-					  <td class="text-left" width="30%">PGAdmin4</td>
-					  <td class="text-left"><img src="static/img/pgadmin4-screen.png?" class="rounded mx-auto" alt="" width="40%"></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-success">supported</span></p></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-info"><i>9.9</i></span></p></td>
-					</tr>
-					<tr>
-					  <td class="text-left" width="30%">PostgreSQL</td>
-					  <td class="text-left"><img src="static/img/postgresql-logo.png" class="rounded mx-auto" alt="" width="30%"></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-success">supported</span></p></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-info"><i>15.14</i></span></p></td>
-					</tr>
-					<tr>
-					  <td class="text-left" style="width: 150px;">Metabase</td>
-					  <td class="text-left"><img src="static/img/metabase-screen.png" class="rounded mx-auto" alt="" width="40%"></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-success">supported</span></p></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-info"><i>v0.57.3</i></span></p></td>
-					</tr>
-					<tr>
-					  <td class="text-left" style="width: 150px;">OpenRefine</td>
-					  <td class="text-left"><img src="static/img/openrefine-screen.png" class="rounded mx-auto" alt="" width="40%"></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-success">supported</span></p></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-info"><i>3.9.5</i></span></p></td>
-					</tr>
-					<tr>
-					  <td class="text-left" style="width: 150px;">Apache NiFi</td>
-					  <td class="text-left"><img src="static/img/nifi-screen.png" class="rounded mx-auto" alt="" width="40%"></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-warning">deprecated</span></p></td>
-					</tr>
-					<!--
-					<tr>
-					  <td class="text-left" style="width: 150px;">Apache Superset</td>
-					  <td class="text-left"><img src="static/img/superset-screen.png" class="rounded mx-auto" alt="" width="40%"></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-warning">deprecated</span></p></td>
-					</tr>
-					-->
-					<tr>
-					  <td class="text-left" style="width: 150px;">Jupyter Notebook (via JupyterHub)</td>
-					  <td class="text-left"><img src="static/img/jupyterhub-screen.png" class="rounded mx-auto" alt="" width="40%"></td>
-					  <td class="text-left"><p class="card-text"><span class="badge badge-warning">deprecated</span></p></td>
-					</tr>
-				  </tbody>
-				</table>
-			</p>
-		  </div>
-		 </div>
+{{ ui.page_head("About", "The services that this portal can give you access to. Which ones you get depends on your course.") }}
+{% if not user %}
+  {{ ui.alert("To get your personal access, ask your instructor for the course code and register.") }}
+{% endif %}
+<div class="grid">
+  {% for name, image, status, version, text in services %}
+  <article class="card">
+    <img class="shot" src="/static/img/{{ image }}" alt="" loading="lazy">
+    <div class="card-head">
+      <h3>{{ name }}</h3>
+      <span class="row">
+        {% if version %}<span class="badge info">{{ version }}</span>{% endif %}
+        <span class="badge {{ 'success' if status == 'supported' else 'warning' }}">{{ status }}</span>
+      </span>
+    </div>
+    <p class="muted">{{ text }}</p>
+  </article>
+  {% endfor %}
+</div>
 {% endblock %}

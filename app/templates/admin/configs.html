@@ -1,0 +1,24 @@
+{% extends "admin/base.html" %}
+{% block title %}Configuration{% endblock %}
+{% block admin %}
+{{ ui.page_head("Configuration", "Settings that the app started with. Passwords and keys are not shown.") }}
+<div class="grid two">
+  {% for group, items in groups.items() %}
+  <section class="card flush">
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th colspan="2">{{ group }}</th></tr></thead>
+        <tbody>
+          {% for key, value in items %}
+          <tr>
+            <td><code>{{ key }}</code></td>
+            <td>{% if value is sequence and value is not string %}{{ value | join(", ") or "–" }}{% elif value is none %}–{% else %}{{ value }}{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+  {% endfor %}
+</div>
+{% endblock %}

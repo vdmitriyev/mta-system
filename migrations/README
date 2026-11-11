@@ -1,1 +1,1 @@
-Single-database configuration for Flask.
+Alembic migrations of the SQLite database. Run: python -m app.cli db-upgrade

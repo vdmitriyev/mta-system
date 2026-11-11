@@ -1,56 +1,37 @@
 """
 Data from here is used:
-    - AnventureWorks2017
+    - AdventureWorks2017
     - https://github.com/bcafferky/shared/blob/master/PythonSQLDW/PythonSQLDW.zip
     - https://github.com/microsoft/sql-server-samples/tree/master/samples/databases/adventure-works/data-warehouse-install-script
 """
 
-import os
-import traceback
-from datetime import datetime
+import logging
 from pathlib import Path
+from zipfile import ZipFile
 
 import pandas as pd
+from sqlalchemy import create_engine
 
-SEP_DEFAULT = ";"
+logger = logging.getLogger(__name__)
 
+CUR_DIR = Path(__file__).absolute().parent
 
-def get_db_connection():
-    """Get connection to database"""
-
-    import settings as settings
-
-    DB_CONNECT_URI_TEMPLATE = "postgresql://{user}:{password}@{server}/{database}"
-    db_connect_uri = DB_CONNECT_URI_TEMPLATE.format(
-        user=settings.DB_USER_NAME,
-        password=settings.DB_USER_PASSWORD,
-        server=settings.DB_SERVER,
-        database=settings.DB_NAME,
-    )
-    return db_connect_uri, f"{settings.DB_SERVER}:{settings.DB_NAME}"
-
-
-def import_into_table(csv_fname, table_name, sep=SEP_DEFAULT, db_connect_uri=None):
-
-    print(f"{datetime.now()} importing following file into database: {csv_fname}")
-
-    if csv_fname[-3:].lower() == "csv":
-        df = pd.read_csv(csv_fname, sep=sep)
-    else:
-        df = pd.read_csv(csv_fname, compression="gzip", on_bad_lines="skip")
-
-    # postgres doesn't like capitals or spaces
-    df.columns = [upper_case_to_underscore(c) for c in df.columns]
-    print(f"Columns of the table:{df.columns}")
-
-    from sqlalchemy import create_engine
-
-    engine = create_engine(db_connect_uri)
-    df.to_sql(table_name, engine, index=False, method="multi", chunksize=10000)
+# (CSV file, table, separator)
+TABLES = [
+    ("DimCurrency.csv", "dim_currency", ","),
+    ("DimCustomer.csv", "dim_customer", ","),
+    ("DimDate.csv", "dim_date", ","),
+    ("DimGeography.csv", "dim_geography", ","),
+    ("DimProductCategory.csv", "dim_product_category", ","),
+    ("DimProductSubcategory.csv", "dim_product_subcategory", ","),
+    ("DimSalesTerritory.csv", "dim_sales_territory", ","),
+    ("DimProduct.csv", "dim_product", "|"),
+    ("FactInternetSales.csv", "fact_internet_sales", ","),
+]
 
 
-def upper_case_to_underscore(_input):
-    """Changes the all capital letters in the input to underscore"""
+def upper_case_to_underscore(_input: str) -> str:
+    """Changes capital letters to an underscore and the small letter: DimDate -> dim_date"""
 
     result = "".join("_" + ch.lower() if ch.isupper() else ch for ch in _input)
     if not _input.startswith("_"):
@@ -58,61 +39,33 @@ def upper_case_to_underscore(_input):
     return result
 
 
-def run_import(db_connect_uri=None):
-    """Runs default import"""
+def import_into_table(csv_fname, table_name: str, sep: str, engine) -> None:
+    logger.info("Import the file: %s", csv_fname)
+    df = pd.read_csv(csv_fname, sep=sep)
+    # postgres doesn't like capitals or spaces
+    df.columns = [upper_case_to_underscore(c) for c in df.columns]
+    df.to_sql(table_name, engine, index=False, method="multi", chunksize=1000)
 
-    db_info = None
-    if db_connect_uri is None:
-        db_connect_uri, db_info = get_db_connection()
 
-    print(f"{datetime.now()} use database: {db_info}")
+def run_import(db_connect_uri: str, data_dir: Path = None) -> None:
+    """Imports the AdventureWorks tables. Raises an exception with all errors at the end."""
 
-    cur_dir = Path(__file__).absolute().parent
-    data_dir = os.path.join(cur_dir, "data")
-    if not os.path.exists(data_dir):
-        print(f"{datetime.now()} unzip data")
-        from zipfile import ZipFile
-
-        data_zip = os.path.join(cur_dir, "data.zip")
-        with ZipFile(data_zip, "r") as zip_bundle:
+    data_dir = data_dir or CUR_DIR / "data"
+    if not data_dir.exists():
+        with ZipFile(CUR_DIR / "data.zip", "r") as zip_bundle:
             zip_bundle.extractall(data_dir)
 
-    mapping_csv_to_tbl = [
-        {"csv": "DimCurrency.csv", "table": "dim_currency", "sep": ","},
-        {"csv": "DimCustomer.csv", "table": "dim_customer", "sep": ","},
-        {"csv": "DimDate.csv", "table": "dim_date", "sep": ","},
-        {"csv": "DimGeography.csv", "table": "dim_geography", "sep": ","},
-        {"csv": "DimProductCategory.csv", "table": "dim_product_category", "sep": ","},
-        {
-            "csv": "DimProductSubcategory.csv",
-            "table": "dim_product_subcategory",
-            "sep": ",",
-        },
-        {"csv": "DimSalesTerritory.csv", "table": "dim_sales_territory", "sep": ","},
-        {"csv": "DimProduct.csv", "table": "dim_product", "sep": "|"},
-        {"csv": "FactInternetSales.csv", "table": "fact_internet_sales", "sep": ","},
-    ]
-
+    engine = create_engine(db_connect_uri)
     errors = []
-    for item in mapping_csv_to_tbl:
-        try:
-            sep_current = SEP_DEFAULT
-            if "sep" in item:
-                sep_current = item["sep"]
+    try:
+        for csv_name, table_name, sep in TABLES:
+            try:
+                import_into_table(data_dir / csv_name, table_name, sep, engine)
+            except Exception as error:
+                logger.exception("Import of %s failed", csv_name)
+                errors.append(error)
+    finally:
+        engine.dispose()
 
-            import_into_table(
-                csv_fname=os.path.join(data_dir, item["csv"]),
-                table_name=item["table"],
-                sep=sep_current,
-                db_connect_uri=db_connect_uri,
-            )
-        except Exception as ex:
-            print(traceback.format_exc())
-            errors.append(ex)
-
-    if len(errors) > 0:
-        raise Exception(errors)
-
-
-if __name__ == "__main__":
-    run_import()
+    if errors:
+        raise Exception(errors[0])

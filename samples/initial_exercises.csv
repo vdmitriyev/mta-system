@@ -1,0 +1,4 @@
+code;name;description;year;visible;exercise_order;submission_deadline;has_review;has_bonus;bonus_max_points
+EX01;Exercise 1: Data modelling;Model the data of the case study;2026;true;1;2026-11-30T23:59:00;true;true;5
+EX02;Exercise 2: ETL process;Load the data into your database;2026;true;2;2026-12-14T23:59:00;true;true;5
+EX03;Exercise 3: Dashboard;Build a dashboard in Metabase;2026;true;3;2027-01-11T23:59:00;true;false;

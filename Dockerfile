@@ -4,9 +4,6 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         dos2unix \
         fonts-freefont-ttf \
-        iputils-ping \
-        nano \
-        procps \
         tzdata \
     && rm -rf /var/lib/apt/lists/*
 
@@ -14,8 +11,8 @@ RUN apt-get update \
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     APP_HOME=/mta-system \
-    FLASK_APP=run.py \
     TARGET_SERVER=production \
+    WEB_CONCURRENCY=4 \
     UV_PROJECT_ENVIRONMENT=/opt/venv \
     UV_LINK_MODE=copy \
     PATH="/opt/venv/bin:$PATH"
@@ -25,10 +22,10 @@ WORKDIR $APP_HOME
 # Dependencies come from pyproject.toml (uv.lock is not part of the project)
 COPY pyproject.toml ./
 RUN pip install --no-cache-dir uv \
-    && uv sync --no-dev --group prod --no-cache \
+    && uv sync --no-dev --no-cache \
     && rm -f uv.lock
 
-COPY *.py ./
+COPY run.py ./
 COPY configs-logging configs-logging
 COPY migrations migrations
 COPY app app
@@ -44,5 +41,9 @@ VOLUME ["/mta-system/data", "/mta-system/.logs"]
 
 # Runs as root: the app starts and stops the service containers through /var/run/docker.sock
 EXPOSE 5151
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5151/api/health', timeout=5)"
+
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["gunicorn", "--config", "gunicorn.config.docker.prod.py", "run:app"]
+# Number of worker processes: WEB_CONCURRENCY. nginx sets the X-Forwarded-* headers.
+CMD ["uvicorn", "run:app", "--host", "0.0.0.0", "--port", "5151", "--proxy-headers", "--forwarded-allow-ips", "*"]
