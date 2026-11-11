@@ -6,7 +6,8 @@
 FROM openjdk:22-ea-22-jdk-slim
 #ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.7.6/openrefine-linux-3.7.6.tar.gz
 # ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.8.7/openrefine-linux-3.8.7.tar.gz
-ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.9.5/openrefine-linux-3.9.5.tar.gz
+# ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.9.5/openrefine-linux-3.9.5.tar.gz
+ENV OR_URL https://github.com/OpenRefine/OpenRefine/releases/download/3.9.5/openrefine-linux-3.10.1.tar.gz
 
 WORKDIR /app
 

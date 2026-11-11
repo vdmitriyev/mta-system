@@ -1,0 +1,63 @@
+{% extends "admin/base.html" %}
+{% block title %}pgAdmin 4{% endblock %}
+{% block admin %}
+{{ ui.page_head("pgAdmin 4 logins", "nginx checks the login of each user (basic auth) and passes the user on to pgAdmin 4. “Write login” puts the login of the user into the login file again.") }}
+<div class="alert {{ 'success' if login_count else 'warning' }} image-state" role="status">
+  <div>
+    <p>Login file: <strong><code>{{ auth_file }}</code></strong> · {{ login_count }} login{{ "" if login_count == 1 else "s" }}</p>
+    <p>pgAdmin 4 address: <a href="{{ pgadmin4_url }}" target="_blank" rel="noopener">{{ pgadmin4_url }} {{ ui.icon("external") }}</a></p>
+  </div>
+</div>
+<div class="toolbar">
+  {% if access_checked %}<a class="btn sm" href="/mtas-admin/services/pgadmin4">Hide access check</a>{% endif %}
+  <a class="btn sm" href="/mtas-admin/services/pgadmin4?check=access" title="Requests pgAdmin 4 with the login of each user. 200 means that the access works.">{{ ui.icon("refresh") }} Check access</a>
+</div>
+{{ ui.table_filter("pgadmin4-table", rows | length) }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="pgadmin4-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          <th data-sort>Login</th>
+          <th data-sort>Account</th>
+          <th data-sort title="Is the login with the stored password in the login file?">Login file</th>
+          {% if access_checked %}<th data-sort title="HTTP status with the login of the user. 200: the access works.">Access</th>{% endif %}
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set entry = row.entry %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td><code>{{ entry.pgadmin4_user if entry else "–" }}</code></td>
+          <td>
+            {% if not entry %}<span class="badge">none</span>
+            {% elif entry.created %}<span class="badge success">created</span>
+            {% else %}<span class="badge warning">not created</span>{% endif %}
+          </td>
+          <td>
+            {% if row.login_state is none %}<span class="badge">–</span>
+            {% else %}<span class="badge {{ 'success' if row.login_state == 'OK' else 'danger' }}">{{ row.login_state }}</span>{% endif %}
+          </td>
+          {% if access_checked %}
+          <td><span class="badge {{ 'success' if row.access == '200' else ('' if row.access == 'NO SERVICE' else 'danger') }}">{{ row.access }}</span></td>
+          {% endif %}
+          <td class="nowrap">
+            <form method="post" action="/mtas-admin/services/pgadmin4/login" class="inline-form">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm">{{ ui.icon("refresh") }} {{ "Write login" if entry else "Create" }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+{% endblock %}

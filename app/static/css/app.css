@@ -326,6 +326,14 @@ main {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
 }
 
+/* services page of a user: one card per row */
+.service-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
 .grid.stats {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 180px), 1fr));
 }

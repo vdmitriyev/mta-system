@@ -9,7 +9,7 @@ services:
 
   openrefine-service:
    build: ./provision/openrefine
-   image: openrefine:3.9.5
+   image: openrefine:3.10.1
    networks:
        - mtas-network
 

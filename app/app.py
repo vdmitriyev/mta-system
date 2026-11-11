@@ -11,7 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import __version__
 from app.config import BASE_DIR, Settings, get_settings, set_settings
 from app.database import init_engine, session_scope
-from app.routers import account, admin, api, public
+from app.routers import account, admin, admin_databases, api, public
 from app.service_settings import add_default_service_settings
 from app.tasks import fail_stale_tasks
 from app.visibility import add_default_ui_visibility_settings
@@ -135,7 +135,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.mount(
         "/static", StaticFiles(directory=BASE_DIR / "app" / "static"), name="static"
     )
-    for router in (public.router, account.router, admin.router, api.router):
+    # admin_databases before admin: its pages come before /services/{service}
+    for router in (
+        public.router,
+        account.router,
+        admin_databases.router,
+        admin.router,
+        api.router,
+    ):
         app.include_router(router)
 
     @app.exception_handler(NotAuthenticated)

@@ -1,6 +1,6 @@
 [project]
 name = "mta-system"
-version = "2.0.0"
+version = "2.1.0"
 description = "Modular teaching assistance system: gives students hands-on access to software services"
 readme = "README.md"
 license = "MIT"
@@ -31,6 +31,7 @@ dependencies = [
     "Pillow==13.0.0",
     # services for the students (PostgreSQL, MariaDB, Docker containers)
     "psycopg2-binary==2.9.13",
+    "dbsetupmate==0.8.1",
     "pymysql==1.2.3",
     "docker==7.2.0",
     "psutil==7.2.2",

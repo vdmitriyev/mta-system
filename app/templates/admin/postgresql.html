@@ -1,0 +1,84 @@
+{% extends "admin/base.html" %}
+{% block title %}PostgreSQL{% endblock %}
+{% block admin %}
+{{ ui.page_head("PostgreSQL databases", "Each user has an own database and login. “Create” sets up a missing database, “Set password” sets the password in PostgreSQL to the one that the user sees on the services page.") }}
+<div class="alert {{ 'success' if server.ok else 'danger' }} image-state" role="status">
+  <div>
+    {% if server.ok %}
+    <p>The database server is reachable: <strong><code>{{ server.address }}</code></strong> · {{ server.text }}</p>
+    <p>Demo database <code>{{ demo_db }}</code>: {{ ui.yes_no(demo_exists, "exists", "missing") }}</p>
+    {% if not demo_exists %}<p class="muted small">Create it with:</p><pre class="command"><code>python -m app.cli create-demo-db</code></pre>{% endif %}
+    {% else %}
+    <p>The database server is not reachable: <strong><code>{{ server.address }}</code></strong></p>
+    <pre class="command"><code>{{ server.text }}</code></pre>
+    <p class="muted small">Check POSTGRESQL_DB_HOST, POSTGRESQL_DB_HOST_PORT and POSTGRESQL_ADMIN_PASSWORD, and that the PostgreSQL service runs.</p>
+    {% endif %}
+  </div>
+</div>
+<div class="toolbar">
+  {% if access_checked %}<a class="btn sm" href="/mtas-admin/services/postgresql">Hide access check</a>{% endif %}
+  <a class="btn sm" href="/mtas-admin/services/postgresql?check=access" title="Logs in as each user into the database of the user.">{{ ui.icon("refresh") }} Check access</a>
+</div>
+{{ ui.table_filter("postgresql-table", rows | length) }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="postgresql-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          <th data-sort>Database</th>
+          <th data-sort>Login</th>
+          <th data-sort>Account</th>
+          <th data-sort>On the server</th>
+          {% if access_checked %}<th data-sort title="Login of the user into the own database">Access</th>{% endif %}
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set entry = row.entry %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td><code>{{ entry.postgresql_db if entry else "–" }}</code></td>
+          <td><code>{{ entry.postgresql_user if entry else "–" }}</code></td>
+          <td>
+            {% if not entry %}<span class="badge">none</span>
+            {% elif entry.created %}<span class="badge success">created</span>
+            {% else %}<span class="badge warning">not created</span>{% endif %}
+          </td>
+          <td>
+            {% if row.database is none %}<span class="badge">–</span>
+            {% elif row.database %}<span class="badge success">exists</span>
+            {% else %}<span class="badge danger">missing</span>{% endif %}
+          </td>
+          {% if access_checked %}
+          <td><span class="badge {{ 'success' if row.access == 'OK' else ('' if row.access == 'NO SERVICE' else 'danger') }}">{{ row.access }}</span></td>
+          {% endif %}
+          <td class="nowrap">
+            {% if not entry or row.database == false %}
+            <form method="post" action="/mtas-admin/services/postgresql/create" class="inline-form"
+                  data-confirm="Create the PostgreSQL database for {{ row.user.email }}?">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm"{% if not server.ok %} disabled{% endif %}>{{ ui.icon("database") }} Create</button>
+            </form>
+            {% endif %}
+            {% if entry and row.database %}
+            <form method="post" action="/mtas-admin/services/postgresql/password" class="inline-form"
+                  data-confirm="Set the password of {{ entry.postgresql_user }} in PostgreSQL to the one on the services page of the user?">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm">{{ ui.icon("refresh") }} Set password</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+{% endblock %}

@@ -7,7 +7,7 @@ function redeploy_openrefine(){
 
 	container_name=openrefine
 	container_name_port=3333
-	docker_image_version=3.9.5
+	docker_image_version=3.10.1
 
 	echo -e "\nRedeploy docker container: $container_name"
 	sleep 2s

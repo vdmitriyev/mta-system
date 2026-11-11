@@ -1,179 +1,228 @@
-"""PostgreSQL and MariaDB services: the tests record the SQL instead of running it"""
+"""PostgreSQL (through dbsetupmate) and MariaDB services for the students.
+
+The tests replace the database servers. The SQL of dbsetupmate runs against a real
+PostgreSQL in the Docker test copy (task testenv:deploy).
+"""
+
+from contextlib import contextmanager
 
 import pytest
-from psycopg2 import sql
+from dbsetupmate import (
+    DatabaseAlreadyExistsException,
+    DatabaseNames,
+    DBConnectionException,
+    DBUserAlreadyExistsException,
+    DBUserNotExistsException,
+    ManagedDatabase,
+)
 
 from app.services import mariadb, postgresql
 
-
-def render(statement) -> str:
-    """Shows a psycopg2 statement as text (identifiers in double quotes)"""
-
-    if isinstance(statement, str):
-        return statement
-    if isinstance(statement, sql.SQL):
-        return statement.string
-    if isinstance(statement, sql.Identifier):
-        return ".".join(f'"{part}"' for part in statement.strings)
-    if isinstance(statement, sql.Literal):
-        return f"'{statement.wrapped}'"
-    return "".join(render(part) for part in statement.seq)
+# ----- PostgreSQL -----
 
 
-class FakeCursor:
-    def __init__(self, connection):
-        self.connection = connection
+class FakeMate:
+    """Records the calls of the app. Set "fail" to raise an error in a method."""
 
-    def __enter__(self):
-        return self
-
-    def __exit__(self, *_args):
-        return False
-
-    def execute(self, statement, params=None):
-        text = render(statement)
-        if self.connection.server.fail_on and self.connection.server.fail_on in text:
-            raise RuntimeError("statement failed")
-        self.connection.server.statements.append(
-            (self.connection.database, self.connection.user, text, params)
-        )
-
-    def fetchone(self):
-        return (self.connection.server.next_number,)
-
-
-class FakeConnection:
-    def __init__(self, server, **kwargs):
-        self.server = server
-        self.database = kwargs.get("database")
-        self.user = kwargs.get("user")
-        self.kwargs = kwargs
-        self.closed = False
-
-    def set_isolation_level(self, _level):
-        pass
-
-    def cursor(self):
-        return FakeCursor(self)
-
-    def close(self):
-        self.closed = True
-
-
-class FakeServer:
     def __init__(self):
-        self.statements = []
-        self.connections = []
-        self.fail_on = None
-        self.down = False
-        self.next_number = 5
+        self.calls = []
+        self.fail = {}
+        self.databases = ["bicourse_db_01", "bicourse_db_04"]
 
-    def connect(self, **kwargs):
-        if self.down:
-            raise ConnectionError("server is down")
-        connection = FakeConnection(self, **kwargs)
-        self.connections.append(connection)
-        return connection
+    def _call(self, name, *args):
+        self.calls.append((name, *args))
+        if name in self.fail:
+            raise self.fail[name]
 
-    def sql_for(self, database):
-        return [text for db, _user, text, _params in self.statements if db == database]
+    def create_db(self, db_name, db_user, password):
+        self._call("create_db", db_name, db_user, password)
+
+    def grant_shared_access(self, role):
+        self._call("grant_shared_access", role)
+
+    def show_next_db_name(self):
+        self._call("show_next_db_name")
+        return DatabaseNames("bicourse_db_05", "bicourse_user_05", 5)
+
+    def list_dbs(self):
+        self._call("list_dbs")
+        return [ManagedDatabase(name, name) for name in self.databases]
+
+    def database_exists(self, name):
+        self._call("database_exists", name)
+        return name in self.databases
+
+    def set_user_password(self, user, password):
+        self._call("set_user_password", user, password)
+        return user
+
+    def grant_public_schema_rights(self, db_name, db_user):
+        self._call("grant_public_schema_rights", db_name, db_user)
+
+    def create_shared_db(self):
+        self._call("create_shared_db")
+
+    def harden_shared_schema(self):
+        self._call("harden_shared_schema")
+
+    def create_shared_user_readonly(self, user, password):
+        self._call("create_shared_user_readonly", user, password)
 
 
 @pytest.fixture
-def pg(settings, monkeypatch):
-    server = FakeServer()
-    monkeypatch.setattr(postgresql.psycopg2, "connect", server.connect)
-    return server
+def mate(settings, monkeypatch):
+    fake = FakeMate()
+    monkeypatch.setattr(postgresql, "mate", lambda: fake)
+    return fake
 
 
-def test_next_database_number(pg):
+def down():
+    return DBConnectionException("Could not connect: connection refused")
+
+
+def test_config_comes_from_the_settings(use_settings):
+    use_settings(
+        POSTGRESQL_DB_HOST="pg",
+        POSTGRESQL_DB_HOST_PORT="5433",
+        POSTGRESQL_ADMIN_PASSWORD="admin-pw",
+        POSTGRESQL_DEMO_DB="demo",
+        POSTGRESQL_DEMO_USER="demo_owner",
+    )
+    cfg = postgresql.config()
+    assert (cfg.host, cfg.port, cfg.admin_password) == ("pg", 5433, "admin-pw")
+    assert (cfg.shared_db, cfg.shared_user) == ("demo", "demo_owner")
+    assert (cfg.db_prefix, cfg.user_prefix) == ("bicourse_db", "bicourse_user")
+    assert "admin-pw" not in repr(cfg)
+
+
+def test_create_database_for_a_user(mate):
+    assert postgresql.create_postgresql_db("bicourse_db_05", "bicourse_user_05", "pw")
+    assert mate.calls == [
+        ("create_db", "bicourse_db_05", "bicourse_user_05", "pw"),
+        ("grant_shared_access", "bicourse_user_05"),
+    ]
+
+
+def test_database_works_without_the_demo_database(mate, caplog):
+    mate.fail["grant_shared_access"] = DBUserNotExistsException("no demo")
+    assert postgresql.create_postgresql_db("d", "u", "pw") is True
+    assert "cannot read the demo database" in caplog.text
+
+
+def test_create_database_errors(mate):
+    mate.fail["create_db"] = DatabaseAlreadyExistsException("Database 'd' exists")
+    assert postgresql.create_postgresql_db("d", "u", "pw") is False
+    with pytest.raises(postgresql.PostgreSQLError, match="Database 'd' exists"):
+        postgresql.create_database("d", "u", "pw")
+
+
+def test_next_database_number(mate):
     assert postgresql.next_database_number() == 5
-    _db, _user, text, params = pg.statements[0]
-    assert "pg_database" in text
-    assert params == ("%bicourse_db%",)
-    assert all(connection.closed for connection in pg.connections)
-
-
-def test_next_database_number_without_server(pg):
-    pg.down = True
+    mate.fail["show_next_db_name"] = down()
     assert postgresql.next_database_number() is None
 
 
-def test_create_database_for_a_user(pg):
-    assert (
-        postgresql.create_postgresql_db("bicourse_db_05", "bicourse_user_05", "pw'1")
-        is True
-    )
-
-    admin_sql = pg.sql_for("postgres")
-    assert admin_sql == [
-        'CREATE ROLE "bicourse_db_05" NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN',
-        'CREATE ROLE "bicourse_user_05" NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN '
-        "ENCRYPTED PASSWORD 'pw'1'",
-        'GRANT "bicourse_db_05" TO "bicourse_user_05"',
-        'CREATE DATABASE "bicourse_db_05" WITH OWNER = "bicourse_user_05"',
-        'REVOKE ALL ON DATABASE "bicourse_db_05" FROM public',
-        'GRANT CONNECT ON DATABASE "db_demo" TO "bicourse_user_05"',
-    ]
-
-    own = [
-        (user, text) for db, user, text, _ in pg.statements if db == "bicourse_db_05"
-    ]
-    assert own[0] == (
-        "bicourse_user_05",
-        'GRANT ALL ON SCHEMA public TO "bicourse_user_05" WITH GRANT OPTION',
-    )
-    assert own[1:] == [
-        ("postgres", 'GRANT CREATE ON SCHEMA public TO "bicourse_db_05"'),
-        ("postgres", 'GRANT CREATE ON SCHEMA public TO "bicourse_user_05"'),
-    ]
-
-    demo = [(user, text) for db, user, text, _ in pg.statements if db == "db_demo"]
-    assert demo[0] == (
-        "db_user_demo",
-        'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "bicourse_user_05"',
-    )
-    assert all(connection.closed for connection in pg.connections)
+def test_existing_databases(mate):
+    assert postgresql.existing_databases() == {"bicourse_db_01", "bicourse_db_04"}
+    assert postgresql.database_exists("bicourse_db_04") is True
+    mate.fail["list_dbs"] = mate.fail["database_exists"] = down()
+    assert postgresql.existing_databases() is None
+    assert postgresql.database_exists("x") is None
 
 
-def test_names_are_quoted_as_identifiers(pg):
-    postgresql.create_postgresql_db('x"; DROP DATABASE postgres; --', "user", "pw")
-    assert pg.sql_for("postgres")[0].startswith('CREATE ROLE "x"; DROP DATABASE')
-    statement = postgresql._sql("GRANT {role} TO {user}", role="a", user="b")
-    assert isinstance(statement.seq[1], sql.Identifier)
+def test_set_password(mate):
+    postgresql.set_password("bicourse_user_01", "new")
+    assert mate.calls == [("set_user_password", "bicourse_user_01", "new")]
+    mate.fail["set_user_password"] = DBUserNotExistsException("Role is not there")
+    with pytest.raises(postgresql.PostgreSQLError, match="Role is not there"):
+        postgresql.set_password("x", "y")
 
 
-def test_create_database_fails_if_a_grant_fails(pg):
-    pg.fail_on = "WITH GRANT OPTION"
-    assert postgresql.create_postgresql_db("d", "u", "pw") is False
+def test_grant_rights_to_own_public_schema(mate):
+    assert postgresql.grant_rights_to_own_public_schema("d", "u") is True
+    mate.fail["grant_public_schema_rights"] = down()
+    assert postgresql.grant_rights_to_own_public_schema("d", "u") is False
 
 
-def test_create_database_without_server(pg):
-    pg.down = True
-    assert postgresql.create_postgresql_db("d", "u", "pw") is False
-
-
-def test_demo_database(pg):
+def test_demo_database(mate):
     assert postgresql.init_postgresql_with_demo_user() is True
-    assert 'CREATE DATABASE "db_demo" WITH OWNER = "db_user_demo"' in pg.sql_for(
-        "postgres"
-    )
+    assert mate.calls == [("create_shared_db",)]
 
 
-def test_readonly_user_for_the_demo_database(pg):
-    assert (
-        postgresql.create_postgresql_readonly_user_for_demo_db("reader", "pw") is True
+def test_existing_demo_database_is_kept(mate):
+    mate.fail["create_shared_db"] = DatabaseAlreadyExistsException("exists")
+    assert postgresql.init_postgresql_with_demo_user() is True
+    assert mate.calls[-1] == ("harden_shared_schema",)
+
+    mate.fail["create_shared_db"] = down()
+    assert postgresql.init_postgresql_with_demo_user() is False
+
+
+def test_readonly_user_for_the_demo_database(mate):
+    assert postgresql.create_postgresql_readonly_user_for_demo_db("reader", "pw")
+    assert mate.calls == [("create_shared_user_readonly", "reader", "pw")]
+
+    mate.fail["create_shared_user_readonly"] = DBUserAlreadyExistsException("exists")
+    assert postgresql.create_postgresql_readonly_user_for_demo_db("reader", "pw")
+    assert mate.calls[-1] == ("grant_shared_access", "reader")
+
+
+class FakeCursor:
+    def __init__(self, version="15.8"):
+        self.version = version
+
+    def execute(self, statement):
+        self.statement = statement
+
+    def fetchone(self):
+        return [self.version]
+
+
+def fake_connect(error=None, seen=None):
+    @contextmanager
+    def connect(cfg, database, user, password):
+        if seen is not None:
+            seen.append((database, user, password))
+        if error is not None:
+            raise error
+        yield FakeCursor()
+
+    return connect
+
+
+def test_server_status(settings, monkeypatch):
+    seen = []
+    monkeypatch.setattr(postgresql, "connect", fake_connect(seen=seen))
+    status = postgresql.server_status()
+    assert (status.ok, status.address, status.text) == (
+        True,
+        "localhost:5432",
+        "PostgreSQL 15.8",
     )
-    assert pg.sql_for("postgres") == [
-        "CREATE USER \"reader\" WITH PASSWORD 'pw'",
-        'GRANT CONNECT ON DATABASE "db_demo" TO "reader"',
-    ]
-    assert pg.sql_for("db_demo") == [
-        "REVOKE CREATE ON SCHEMA public FROM PUBLIC",
-        'GRANT CREATE ON SCHEMA public TO "db_user_demo"',
-        'GRANT SELECT ON ALL TABLES IN SCHEMA public TO "reader"',
-        'ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO "reader"',
-    ]
+    assert seen == [("postgres", "postgres", "postgres")]
+
+    monkeypatch.setattr(postgresql, "connect", fake_connect(down()))
+    status = postgresql.server_status()
+    assert status.ok is False and "connection refused" in status.text
+
+
+@pytest.mark.parametrize(
+    "message,result",
+    [
+        (None, postgresql.ACCESS_OK),
+        (
+            'FATAL:  password authentication failed for user "u"',
+            postgresql.ACCESS_LOGIN_FAILED,
+        ),
+        ('FATAL:  role "u" does not exist', postgresql.ACCESS_LOGIN_FAILED),
+        ('FATAL:  database "d" does not exist', postgresql.ACCESS_NO_DATABASE),
+        ("could not translate host name", postgresql.ACCESS_DOWN),
+    ],
+)
+def test_check_user_access(settings, monkeypatch, message, result):
+    error = DBConnectionException(f"Could not connect: {message}") if message else None
+    monkeypatch.setattr(postgresql, "connect", fake_connect(error))
+    assert postgresql.check_user_access("d", "u", "pw") == result
 
 
 # ----- MariaDB -----

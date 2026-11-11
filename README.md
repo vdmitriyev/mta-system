@@ -5,7 +5,7 @@
 What the web app does:
 
 * **Students** register with their e-mail address and a course code. They see the address, login and password of each of their services, start their containers, import sample datasets, and read reviews and bonus points for their exercises.
-* **Admins** write reviews and bonus points, manage the containers of the users (menu **Services**), check the OpenRefine logins, prepare accounts in advance, choose which parts of the UI are visible, and watch the server (CPU, memory, containers, logs).
+* **Admins** write reviews and bonus points, manage the databases, logins and containers of the users (menu **Services**: PostgreSQL, pgAdmin 4, Metabase, OpenRefine), check the OpenRefine logins, prepare accounts in advance, choose which parts of the UI are visible, and watch the server (CPU, memory, containers, logs).
 
 The pages have a light and a dark theme. The button in the header switches between them. The browser stores the choice. Without a choice, the system setting decides.
 
@@ -18,7 +18,7 @@ Documentation is available [here](https://vdmitriyev.github.io/mta-system/).
 | Web app | [FastAPI](https://fastapi.tiangolo.com/) with Jinja2 templates, served by uvicorn |
 | Data of the app | SQLite (users, exercises, reviews, bonus points, settings), migrations with Alembic |
 | Long-running jobs | Background tasks of FastAPI. Their state is in the table `background_tasks`. No Redis and no extra worker process. |
-| Services for the students | Docker containers (one per user for Metabase, OpenRefine, NiFi, WordPress), PostgreSQL, MariaDB |
+| Services for the students | Docker containers (one per user for Metabase, OpenRefine, NiFi, WordPress), PostgreSQL (set up with [dbsetupmate](https://pypi.org/project/dbsetupmate/)), MariaDB |
 | Entry point in production | nginx (HTTPS, basic auth for the service containers) |
 
 ```

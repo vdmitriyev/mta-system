@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app import __version__
 from app.app import create_app
 from app.database import Base, get_engine
 from tests.conftest import post
@@ -106,7 +107,7 @@ def test_theme_is_set_before_the_page_is_drawn(client):
     head = text[: text.index("</head>")]
     # theme.js without "defer": it runs before the page is drawn
     assert '<script src="/static/js/theme.js' in head
-    assert 'theme.js?v=2.0.0"></script>' in head
+    assert f'theme.js?v={__version__}"></script>' in head
     assert "data-theme-toggle" in text
     assert client.get("/static/js/theme.js").status_code == 200
 

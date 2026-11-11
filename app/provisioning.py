@@ -60,9 +60,14 @@ def email_to_tokens(email: str) -> list:
 
 
 def postgresql_service_user(
-    db: Session, user_id: int, db_name: str, db_user: str, db_password: str
+    db: Session,
+    user_id: int,
+    db_name: str,
+    db_user: str,
+    db_password: str,
+    force_create: bool = False,
 ) -> bool:
-    if not creates_accounts(db, "postgresql"):
+    if not force_create and not creates_accounts(db, "postgresql"):
         return _skip("PostgreSQL")
 
     is_created = postgresql.create_postgresql_db(db_name, db_user, db_password)
@@ -76,8 +81,10 @@ def postgresql_service_user(
     return _save(db, entry, "PostgreSQL")
 
 
-def pgadmin4_user(db: Session, user_id: int, user_name: str, password: str) -> bool:
-    if not creates_accounts(db, "pgadmin4"):
+def pgadmin4_user(
+    db: Session, user_id: int, user_name: str, password: str, force_create: bool = False
+) -> bool:
+    if not force_create and not creates_accounts(db, "pgadmin4"):
         return _skip("pgAdmin 4")
 
     is_created = pgadmin4_api.new_user_pgadmin4_for_web_auth(user_name, password)

@@ -42,3 +42,28 @@ def set_basic_auth_user(user_name: str, user_password: str, auth_file: str) -> b
         auth_file,
     )
     return True
+
+
+# Results of login_state
+LOGIN_OK = "OK"
+LOGIN_WRONG_PASSWORD = "WRONG PASSWORD"  # nosec B105: a status label, not a password
+LOGIN_MISSING = "MISSING"
+
+
+def login_state(user_name: str, user_password: str, auth_file: str) -> str:
+    """Checks the login of a user in the file. Returns one of the LOGIN_* values."""
+
+    if not os.path.exists(auth_file):
+        return LOGIN_MISSING
+    htpasswd = HtpasswdFile(auth_file)
+    if user_name not in htpasswd.users():
+        return LOGIN_MISSING
+    if not htpasswd.check_password(user_name, user_password):
+        return LOGIN_WRONG_PASSWORD
+    return LOGIN_OK
+
+
+def count_logins(auth_file: str) -> int:
+    if not os.path.exists(auth_file):
+        return 0
+    return len(HtpasswdFile(auth_file).users())

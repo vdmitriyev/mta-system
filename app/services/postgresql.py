@@ -1,196 +1,232 @@
-"""Databases and users in the PostgreSQL service for the students"""
+"""Databases and users in the PostgreSQL service for the students.
+
+The SQL is done by the package dbsetupmate. Its "shared" database is the demo
+database of the course: every student can read it.
+"""
 
 import logging
+from dataclasses import dataclass
 
-import psycopg2
-from psycopg2 import sql
-from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
+from dbsetupmate import (
+    DatabaseAlreadyExistsException,
+    DBSetupMateException,
+    DBUserAlreadyExistsException,
+    PostgresMate,
+    PostgreSQLConfig,
+)
+from dbsetupmate.postgresql import connect
 
-from app.config import POSTGRESQL_DB_PREFIX, get_settings
+from app.config import POSTGRESQL_DB_PREFIX, POSTGRESQL_USER_PREFIX, get_settings
+
+CONNECT_TIMEOUT_SECONDS = 5
+
+# Results of check_user_access
+ACCESS_OK = "OK"
+ACCESS_LOGIN_FAILED = "LOGIN FAILED"
+ACCESS_NO_DATABASE = "NO DATABASE"
+ACCESS_DOWN = "DOWN"
 
 logger = logging.getLogger(__name__)
 
 
-def _connect(database: str, user: str = None, password: str = None):
+class PostgreSQLError(Exception):
+    """An action in PostgreSQL failed. The text is shown to the admin."""
+
+
+@dataclass
+class ServerStatus:
+    ok: bool
+    address: str
+    text: str
+
+
+def config() -> PostgreSQLConfig:
     settings = get_settings()
-    connection = psycopg2.connect(
-        user=user or settings.postgresql_admin_user,
-        password=password or settings.postgresql_admin_password.get_secret_value(),
+    return PostgreSQLConfig(
         host=settings.postgresql_db_host,
         port=settings.postgresql_db_host_port,
-        database=database,
-        connect_timeout=15,
+        database=settings.postgresql_db_name,
+        admin_user=settings.postgresql_admin_user,
+        admin_password=settings.postgresql_admin_password.get_secret_value(),
+        shared_db=settings.postgresql_demo_db,
+        shared_user=settings.postgresql_demo_user,
+        shared_password=settings.postgresql_demo_password.get_secret_value(),
+        shared_user_readonly=settings.postgresql_demo_user_readonly,
+        shared_user_readonly_password=(
+            settings.postgresql_demo_user_readonly_password.get_secret_value()
+        ),
+        db_prefix=POSTGRESQL_DB_PREFIX,
+        user_prefix=POSTGRESQL_USER_PREFIX,
+        connect_timeout=CONNECT_TIMEOUT_SECONDS,
+        application_name="mta-system",
     )
-    connection.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
-    return connection
 
 
-def _execute(
-    statements: list, database: str, user: str = None, password: str = None
-) -> bool:
-    """Runs the statements (as the admin, if no user is given). Returns True on success."""
+def mate() -> PostgresMate:
+    return PostgresMate(config())
 
-    connection = None
+
+def _error(error: DBSetupMateException) -> PostgreSQLError:
+    return PostgreSQLError(error.message)
+
+
+# ---- checks ----
+
+
+def server_status() -> ServerStatus:
+    """Connects as the admin and reads the version of the server"""
+
+    cfg = config()
+    address = f"{cfg.host}:{cfg.port}"
     try:
-        connection = _connect(database, user, password)
-        with connection.cursor() as cursor:
-            for statement in statements:
-                cursor.execute(statement)
-        return True
-    except Exception as error:
-        logger.error("PostgreSQL error in database %s: %s", database, error)
-        return False
-    finally:
-        if connection is not None:
-            connection.close()
+        with connect(cfg, cfg.database, cfg.admin_user, cfg.admin_password) as cursor:
+            cursor.execute("SHOW server_version")
+            version = cursor.fetchone()[0]
+    except DBSetupMateException as error:
+        logger.error("PostgreSQL server %s is not reachable: %s", address, error)
+        return ServerStatus(False, address, error.message)
+    return ServerStatus(True, address, f"PostgreSQL {version}")
 
 
-def _sql(template: str, **names) -> sql.Composed:
-    """Builds a statement. The names are quoted as identifiers."""
+def check_user_access(db_name: str, db_user: str, password: str) -> str:
+    """Logs in as the user into the user's database. Returns one of the ACCESS_* values."""
 
-    return sql.SQL(template).format(
-        **{key: sql.Identifier(value) for key, value in names.items()}
-    )
+    try:
+        with connect(config(), db_name, db_user, password) as cursor:
+            cursor.execute("SELECT 1")
+        return ACCESS_OK
+    except DBSetupMateException as error:
+        # errors while connecting have no SQLSTATE: read the text of the server
+        text = error.message.lower()
+        if "password authentication failed" in text or (
+            "role" in text and "does not exist" in text
+        ):
+            return ACCESS_LOGIN_FAILED
+        if "database" in text and "does not exist" in text:
+            return ACCESS_NO_DATABASE
+        return ACCESS_DOWN
+
+
+def existing_databases() -> set | None:
+    """Names of the databases of the students (None if the server is not reachable)"""
+
+    try:
+        return {entry.database for entry in mate().list_dbs()}
+    except DBSetupMateException as error:
+        logger.error("Cannot list the PostgreSQL databases: %s", error)
+        return None
+
+
+def database_exists(name: str) -> bool | None:
+    """True if the database is on the server (None if the server is not reachable)"""
+
+    try:
+        return mate().database_exists(name)
+    except DBSetupMateException as error:
+        logger.error("Cannot check the database %s: %s", name, error)
+        return None
 
 
 def next_database_number() -> int | None:
-    """Gets the number for the next database of a user (None if PostgreSQL is not reachable).
+    """Number for the next database of a user (None if PostgreSQL is not reachable).
 
-    Counts the databases of the users: do not delete single databases.
+    Continues after the highest number in use, so deleted databases cause no collision.
     """
 
-    settings = get_settings()
-    connection = None
     try:
-        connection = _connect(settings.postgresql_db_name)
-        with connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT count(*) + 1 FROM pg_database WHERE datname LIKE %s",
-                (f"%{POSTGRESQL_DB_PREFIX}%",),
-            )
-            return int(cursor.fetchone()[0])
-    except Exception as error:
+        return mate().show_next_db_name().order
+    except DBSetupMateException as error:
         logger.error("Cannot get the next database number: %s", error)
         return None
-    finally:
-        if connection is not None:
-            connection.close()
+
+
+# ---- changes ----
+
+
+def create_database(db_name: str, db_user: str, db_password: str) -> None:
+    """Creates a database, its owner role and the login user. The user can read the demo database.
+
+    Raises PostgreSQLError, e.g. if the database already exists.
+    """
+
+    manager = mate()
+    try:
+        manager.create_db(db_name, db_user, db_password)
+    except DBSetupMateException as error:
+        raise _error(error) from error
+    try:
+        manager.grant_shared_access(db_user)
+    except DBSetupMateException as error:
+        # the own database works without the demo database
+        logger.warning("%s cannot read the demo database: %s", db_user, error)
 
 
 def create_postgresql_db(db_name: str, db_user: str, db_password: str) -> bool:
-    """Creates a database (and a role with its name) and the user that owns it.
+    """Like create_database, but returns False instead of an error"""
 
-    The user can also read the demo database.
-    """
-
-    settings = get_settings()
-    demo_db = settings.postgresql_demo_db
-
-    _execute(
-        [
-            _sql(
-                "CREATE ROLE {role} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT NOLOGIN",
-                role=db_name,
-            ),
-            sql.SQL(
-                "CREATE ROLE {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT LOGIN "
-                "ENCRYPTED PASSWORD {}"
-            ).format(sql.Identifier(db_user), sql.Literal(db_password)),
-            _sql("GRANT {role} TO {user}", role=db_name, user=db_user),
-            _sql("CREATE DATABASE {db} WITH OWNER = {user}", db=db_name, user=db_user),
-            _sql("REVOKE ALL ON DATABASE {db} FROM public", db=db_name),
-            _sql("GRANT CONNECT ON DATABASE {db} TO {user}", db=demo_db, user=db_user),
-        ],
-        database=settings.postgresql_db_name,
-    )
-
-    # only the owner can pass on the rights for its public schema
-    is_created = _execute(
-        [_sql("GRANT ALL ON SCHEMA public TO {user} WITH GRANT OPTION", user=db_user)],
-        database=db_name,
-        user=db_user,
-        password=db_password,
-    )
-
-    grant_rights_to_own_public_schema(db_name, db_user)
-
-    # only the demo user can give access to the tables of the demo database
-    demo_granted = grant_select_on_demo_db(db_user)
-
-    return is_created and demo_granted
+    try:
+        create_database(db_name, db_user, db_password)
+        return True
+    except PostgreSQLError as error:
+        logger.error("Database %s was not created: %s", db_name, error)
+        return False
 
 
-def grant_select_on_demo_db(db_user: str) -> bool:
-    settings = get_settings()
-    return _execute(
-        [
-            _sql("GRANT SELECT ON ALL TABLES IN SCHEMA public TO {user}", user=db_user),
-            _sql(
-                "ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO {user}",
-                user=db_user,
-            ),
-        ],
-        database=settings.postgresql_demo_db,
-        user=settings.postgresql_demo_user,
-        password=settings.postgresql_demo_password.get_secret_value(),
-    )
+def set_password(db_user: str, password: str) -> None:
+    """Sets the password of a login user in PostgreSQL. Raises PostgreSQLError."""
+
+    try:
+        mate().set_user_password(db_user, password)
+    except DBSetupMateException as error:
+        raise _error(error) from error
 
 
 def grant_rights_to_own_public_schema(db_name: str, db_user: str) -> bool:
     """Lets the user create tables in the public schema of the user's database"""
 
-    return _execute(
-        [
-            _sql("GRANT CREATE ON SCHEMA public TO {role}", role=db_name),
-            _sql("GRANT CREATE ON SCHEMA public TO {user}", user=db_user),
-        ],
-        database=db_name,
-    )
+    try:
+        mate().grant_public_schema_rights(db_name, db_user)
+        return True
+    except DBSetupMateException as error:
+        logger.error("Rights in %s were not granted: %s", db_name, error)
+        return False
 
 
 def init_postgresql_with_demo_user() -> bool:
-    """Creates the demo database and its user"""
+    """Creates the demo database and its owner. An existing demo database is kept."""
 
-    settings = get_settings()
-    return create_postgresql_db(
-        db_name=settings.postgresql_demo_db,
-        db_user=settings.postgresql_demo_user,
-        db_password=settings.postgresql_demo_password.get_secret_value(),
-    )
+    manager = mate()
+    try:
+        manager.create_shared_db()
+    except (DatabaseAlreadyExistsException, DBUserAlreadyExistsException) as error:
+        logger.info("Demo database is already there: %s", error)
+        try:
+            manager.harden_shared_schema()
+        except DBSetupMateException as hardening_error:
+            logger.error("Demo database was not checked: %s", hardening_error)
+            return False
+    except DBSetupMateException as error:
+        logger.error("Demo database was not created: %s", error)
+        return False
+    return True
 
 
 def create_postgresql_readonly_user_for_demo_db(
     readonly_db_user: str, readonly_db_password: str
 ) -> bool:
-    """Creates a user that can only read the demo database"""
+    """Creates a user that can only read the demo database. An existing user is kept."""
 
-    settings = get_settings()
-    demo_db = settings.postgresql_demo_db
-
-    _execute(
-        [
-            sql.SQL("CREATE USER {} WITH PASSWORD {}").format(
-                sql.Identifier(readonly_db_user), sql.Literal(readonly_db_password)
-            ),
-            _sql(
-                "GRANT CONNECT ON DATABASE {db} TO {user}",
-                db=demo_db,
-                user=readonly_db_user,
-            ),
-        ],
-        database=settings.postgresql_db_name,
-    )
-
-    # in the demo database, only the demo user creates tables
-    _execute(
-        [
-            sql.SQL("REVOKE CREATE ON SCHEMA public FROM PUBLIC"),
-            _sql(
-                "GRANT CREATE ON SCHEMA public TO {user}",
-                user=settings.postgresql_demo_user,
-            ),
-        ],
-        database=demo_db,
-    )
-
-    return grant_select_on_demo_db(readonly_db_user)
+    manager = mate()
+    try:
+        manager.create_shared_user_readonly(readonly_db_user, readonly_db_password)
+    except DBUserAlreadyExistsException:
+        logger.info("Read-only user %s is already there", readonly_db_user)
+        try:
+            manager.grant_shared_access(readonly_db_user)
+        except DBSetupMateException as error:
+            logger.error("Read-only access was not granted: %s", error)
+            return False
+    except DBSetupMateException as error:
+        logger.error("Read-only user was not created: %s", error)
+        return False
+    return True

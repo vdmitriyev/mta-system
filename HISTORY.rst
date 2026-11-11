@@ -2,6 +2,21 @@
 History
 =======
 
+2.1.0 (2026-11-11)
+-------------------
+
+* New admin page **PostgreSQL** (menu Services). It shows if the database server is reachable (address and version) and if the demo database exists. For each user it shows the database, the login and whether the database is on the server.
+  * "Check access" logs in as each user into the own database: OK, LOGIN FAILED, NO DATABASE or DOWN.
+  * "Create" sets up a missing database (with the stored login, if there is one).
+  * "Set password" sets the password in PostgreSQL to the one that the user sees on the services page.
+* New admin page **pgAdmin 4** (menu Services). It shows the login file of nginx and, for each user, whether the login with the stored password is in it.
+  * "Check access" requests pgAdmin 4 with the login of each user.
+  * "Write login" puts the login into the file again. "Create" sets up pgAdmin 4 for a user without an account.
+* The databases and users in PostgreSQL are set up with the package `dbsetupmate` (0.8.1) instead of own SQL. Errors are reported with a clear text, for example "database already exists".
+* The number of a new database is the highest number in use plus one (before: the number of databases plus one). Deleted databases no longer cause a collision.
+* A new database of a user counts as created even if the demo database is missing. The missing access to the demo database is written to the log.
+* Services page of the users: one service per row, over the full width.
+
 2.0.0 (2026-11-10)
 -------------------
 
