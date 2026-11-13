@@ -32,6 +32,11 @@ tasks:
       - cp -n samples/webapp.env envs/webapp-dev-docker.env
       - cp -n samples/postgresql-service.env envs/postgresql-service.env
       - cp -n samples/pgadmin4-service.env envs/pgadmin4-service.env
+      - cp -n samples/sqlmate-service.env envs/sqlmate-service.env
+      - cp -n samples/surveylite-service.env envs/surveylite-service.env
+      - mkdir -p setup/sqlmate setup/surveylite
+      # demo exercise: sqlmate does not start without setup/sqlmate/sql-exercises.yaml
+      - cp -rn samples/sqlmate/. setup/sqlmate/
       - cp -n samples/initial_exercises.csv setup/initial_exercises.csv
       - echo "Change the secrets in envs/ before you use them"
 

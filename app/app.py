@@ -11,7 +11,7 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import __version__
 from app.config import BASE_DIR, Settings, get_settings, set_settings
 from app.database import init_engine, session_scope
-from app.routers import account, admin, admin_databases, api, public
+from app.routers import account, admin, admin_databases, admin_surveys, api, public
 from app.service_settings import add_default_service_settings
 from app.tasks import fail_stale_tasks
 from app.visibility import add_default_ui_visibility_settings
@@ -140,6 +140,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         public.router,
         account.router,
         admin_databases.router,
+        admin_surveys.router,
         admin.router,
         api.router,
     ):

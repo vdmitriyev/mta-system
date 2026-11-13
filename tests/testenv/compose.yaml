@@ -37,6 +37,14 @@ services:
       METABASE_TRY_SLEEP_SEC: "15"
       # for tests/testenv/services_check.py
       MTAS_PGADMIN4_URL: http://pgadmin4
+      MTAS_NGINX_URL: https://nginx
+      # sqlmate and SurveyLite
+      SQLMATE_API_URL: http://sqlmate-service:5353/sqlmate/api/v1
+      SQLMATE_API_KEY: smk_testenv-sqlmate-key-sandbox-only-0123 # see sqlmate-service
+      SQLMATE_URL: https://localhost/sqlmate/
+      SURVEYLITE_API_URL: http://surveylite-service:5001/api/v1
+      SURVEYLITE_API_KEY: testenv-surveylite-key # sandbox only, see surveylite-service
+      SURVEYLITE_URL: https://localhost/surveylite/
     volumes:
       - app-data:/mta-system/data # own SQLite database
       - /var/run/docker.sock:/var/run/docker.sock # starts the containers of the users
@@ -56,7 +64,9 @@ services:
       mariadb:
         condition: service_healthy
     networks:
-      - mtas-network
+      mtas-network:
+        # the name in the nginx configuration of production
+        aliases: [webapp]
 
   pgadmin4:
     image: dpage/pgadmin4:${PGADMIN4_VERSION:?set it in versions.env and use task}
@@ -67,6 +77,93 @@ services:
     volumes:
       # nginx logs the users in (basic auth) and passes the name on: X-Forwarded-User
       - ${MTAS_HOST_DIR:-.}/provision/pgadmin4/config_local.py:/pgadmin4/config_local.py:ro
+    networks:
+      mtas-network:
+        aliases: [pgadmin4-service]
+
+  # the nginx of production (provision/nginx): checks /sqlmate/ and /surveylite/
+  nginx:
+    build: ./provision/nginx
+    image: mtas-testenv-nginx:latest
+    volumes:
+      - ${MTAS_HOST_DIR:-.}/provision/nginx/nginx_part_openrefine.config:/etc/nginx/conf.d/nginx_part_openrefine.config:ro
+    ports:
+      - "127.0.0.1:${MTAS_NGINX_PORT:-38443}:443"
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - mtas-network
+
+  # sqlmate and its database, as in compose.services.yml (sources: versions.env)
+  sqlmate-service:
+    build: ${SQLMATE_SOURCE:?set it in versions.env and use task}
+    image: sqlmate:${SQLMATE_VERSION:?set it in versions.env and use task}
+    command: gunicorn --config gunicorn.config.docker.prod.py run:app
+    environment:
+      FLASK_APP: run.py
+      TARGET_SERVER: prod
+      SM_URL_PREFIX: sqlmate/
+      SERVER_FQDN: localhost
+      FLASK_SECRET_KEY: testenv-sqlmate-secret # sandbox only
+      HASH_KEY_HIDDEN: testenv-sqlmate-hidden
+      HASH_KEY_LINKS: testenv-sqlmate-links
+      SYSTEM_ADMINS: admin@mtas-testenv.org
+      POSTGRES_DB_HOST: sqlmate-database
+      POSTGRES_DB_HOST_PORT: "5432"
+      POSTGRES_DB: sqlmate_db
+      POSTGRES_USER: sqlmate
+      POSTGRES_PASSWORD: testenv-sqlmate
+      SM_SANDBOX_DB_NAME: sqlmate_sandbox_db
+      SM_SANDBOX_DB_USER: sqlmate_sandbox
+      SM_SANDBOX_DB_PASS: testenv-sqlmate-sandbox
+      SM_SANDBOX_DB_USER_READONLY: sqlmate_sandbox_ro
+      SM_SANDBOX_DB_PASS_READONLY: testenv-sqlmate-sandbox-ro
+      REGISTRATION_API: "True"
+      REGISTRATION_WEB: "False"
+      API_KEY: smk_testenv-sqlmate-key-sandbox-only-0123
+    volumes:
+      # the demo exercise (production: setup/sqlmate)
+      - ${MTAS_HOST_DIR:-.}/samples/sqlmate:/app/data:ro
+    depends_on:
+      sqlmate-database:
+        condition: service_healthy
+    networks:
+      - mtas-network
+
+  sqlmate-database:
+    image: postgres:${POSTGRESQL_VERSION:?set it in versions.env and use task}
+    environment:
+      POSTGRES_DB: sqlmate_db
+      POSTGRES_USER: sqlmate
+      POSTGRES_PASSWORD: testenv-sqlmate # sandbox only
+      PGDATA: /pgdata
+    volumes:
+      - sqlmate-pgdata:/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sqlmate -d sqlmate_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - mtas-network
+
+  surveylite-service:
+    build: ${SURVEYLITE_SOURCE:?set it in versions.env and use task}
+    image: surveylite:${SURVEYLITE_VERSION:?set it in versions.env and use task}
+    environment:
+      SURVEYLITE_BASE_URL: https://localhost
+      SURVEYLITE_URL_PREFIX: /surveylite
+      # trust X-Forwarded-For of nginx: login limits per user address, not per nginx
+      # (only nginx reaches SurveyLite: it publishes no port)
+      FORWARDED_ALLOW_IPS: "*"
+      SURVEYLITE_ADMIN_PASSWORD: testenv-surveylite-admin # sandbox only
+      SURVEYLITE_SECRET_KEY: testenv-surveylite-secret
+      SURVEYLITE_API_KEYS: testenv-surveylite-key
+      SURVEYLITE_API_DOCS: "false"
+      SURVEYLITE_DB_PATH: ""
+    volumes:
+      - surveylite-data:/app/data
     networks:
       - mtas-network
 
@@ -111,3 +208,5 @@ volumes:
   app-data:
   pg15volume-database:
   mariadb-data:
+  sqlmate-pgdata:
+  surveylite-data:

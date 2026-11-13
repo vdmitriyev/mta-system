@@ -1,0 +1,14 @@
+# Exercises of sqlmate (see the README of sqlmate). sqlmate does not start without this file.
+# task app:init-env copies this folder to setup/sqlmate: put your exercises there.
+exercises:
+- exercise:
+    ID: 1
+    Code: E00
+    Name: Demo
+    Description: A small table to try sqlmate
+    DataFiles:
+      - path: demo/demo_create.sql
+        order: 1
+    TasksFiles:
+      - path: demo/demo_tasks.yaml
+        order: 1

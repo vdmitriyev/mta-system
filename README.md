@@ -72,7 +72,7 @@ The admin page **Services → Auto creation** shows the versions, `task services
 To change a version:
 
 1. Change it in `versions.env`.
-2. Get the image on the server: `task services:pull-metabase`, `task services:build-openrefine`, `task services:pull-wordpress`, `task services:pull-postgresql`, `task services:pull-pgadmin4` or `task services:pull-mariadb`. `task services:update-all` gets all of them.
+2. Get the image on the server: `task services:pull-metabase`, `task services:build-openrefine`, `task services:pull-wordpress`, `task services:pull-postgresql`, `task services:pull-pgadmin4`, `task services:pull-mariadb`, `task services:build-sqlmate` or `task services:build-surveylite`. `task services:update-all` gets all of them.
 3. Restart the app. The admin page of the service shows if the image is on the server.
 4. New users get the new version. For an existing user, use "Create again" on the admin page of the service. For PostgreSQL and pgAdmin 4, restart the service: `task prod:up`. For MariaDB, restart `provision/wordpress/docker-compose.yml` with `--env-file versions.env`.
 
@@ -141,6 +141,16 @@ task app:cli -- auto-creation --on postgresql --on pgadmin4
 JupyterHub, NiFi and Superset are deprecated: the app creates no new accounts in them.
 
 All services are switched off at the start. The app then runs on its own, without Docker and without PostgreSQL. WordPress needs MariaDB: switch on MariaDB first. A change affects only new users.
+
+### sqlmate and SurveyLite
+
+[sqlmate](https://github.com/vdmitriyev/sqlmate) (SQL exercises) and [SurveyLite](https://github.com/vdmitriyev/surveylite) (anonymous surveys) run as shared services in Docker (`compose.services.yml`). The app creates the accounts through their APIs.
+
+* **sqlmate**: each user gets an account with the internal e-mail of the user. The services page shows the address, a personal login link, the login and the PIN. Admin page: **Services → sqlmate**.
+* **SurveyLite** (version 0.21.0 or newer): each user gets an anonymous participant. SurveyLite does not know who the participant is: only the table `surveylite_service` of the app links them. The services page shows the link to `/me` of SurveyLite, a personal login link (`/me?auth=…`), the login, the PIN and the survey links of the user. The survey links also log the user in, so they open surveys that need a login (`require_login`). If a login link becomes known to others, **New login link** on the admin page makes a new one: the old links stop working.
+* On the admin page **Services → SurveyLite**, an admin gives surveys to the users and chooses services that open only after a completed survey (for example sqlmate). Until then, the services page shows the survey instead of the login of the service. A new user gets these surveys at once.
+* Settings of the app: `SQLMATE_API_URL`, `SQLMATE_API_KEY`, `SQLMATE_URL`, `SURVEYLITE_API_URL`, `SURVEYLITE_API_KEY` and `SURVEYLITE_URL` (see `samples/webapp.env`).
+* If `SERVICES_UI` is set in your env file, add `sqlmate` and `surveylite` to it.
 
 Before version 2.0.0, the env file had the settings `CREATE_<NAME>_SERVICE`. `task db:upgrade` copies their values into the database once. After that, the app ignores them and you can delete them from the env file.
 
@@ -259,6 +269,15 @@ Before you go live:
 3. Set `SERVER_FQDN`, `SYSTEM_ADMINS`, `ALLOWED_FQDN_FOR_EMAILS` and the `MAIL_*` settings.
 4. Keep the app behind nginx. Only nginx publishes ports to all interfaces (`80`, `443`). All other ports are bound to `127.0.0.1`.
 5. Back up the folder `data/` (SQLite database) and `.htpasswd_nginx/`.
+
+sqlmate and SurveyLite in production:
+
+1. Put the source code of sqlmate and SurveyLite into the folders `SQLMATE_SOURCE` and `SURVEYLITE_SOURCE` of `versions.env` (default: `temp/sqlmate` and `temp/surveylite`). compose builds the images from there. The Dockerfile of SurveyLite needs BuildKit (`docker buildx`), which recent Docker versions include.
+2. `task app:init-env` copies `samples/sqlmate-service.env` and `samples/surveylite-service.env` to `envs/`. Change every `<CHANGE-ME>`. `SERVER_FQDN` of sqlmate is the one of the app. API keys of the app: `API_KEY` of sqlmate (starts with `smk_`, the sample shows how to make one) goes into the env file of the app as `SQLMATE_API_KEY`, and one of `SURVEYLITE_API_KEYS` as `SURVEYLITE_API_KEY`.
+3. SurveyLite runs at `https://<SERVER_FQDN>/surveylite/` (`SURVEYLITE_URL_PREFIX=/surveylite` in `compose.services.yml`, `location /surveylite/` in nginx). Set `SURVEYLITE_BASE_URL=https://<SERVER_FQDN>` in `envs/surveylite-service.env`. No DNS entry or certificate of its own is needed.
+4. Exercises of sqlmate: `setup/sqlmate/sql-exercises.yaml` and its files (see the README of sqlmate). sqlmate also starts without them; `task app:init-env` puts a demo exercise there. Surveys: YAML files in `setup/surveylite`, or build them in the admin pages of SurveyLite (`https://<SERVER_FQDN>/surveylite/admin`).
+5. After the first `task prod:up`: `task prod:sqlmate-init`. It creates the tables and the sandbox database of sqlmate, stores `API_KEY` and imports the exercises. Run it again after an update of sqlmate (database migrations).
+6. Switch on sqlmate and SurveyLite on the page **Services → Auto creation**.
 
 ## Citing - BibTeX
 

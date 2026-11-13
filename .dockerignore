@@ -31,7 +31,7 @@ logs/
 .backups/
 .htpasswd_nginx/
 certbot/
-temp/
+**/temp
 
 # initial data: mounted by the compose files (./setup -> /mta-system/setup)
 setup/

@@ -2,6 +2,18 @@
 History
 =======
 
+2.4.0 (2026-11-12)
+-------------------
+
+* New services **sqlmate** (SQL exercises) and **SurveyLite** (anonymous surveys) in `compose.services.yml`, built from their source folders (`SQLMATE_SOURCE`, `SURVEYLITE_SOURCE` in `versions.env`). The app creates the accounts through their APIs. The services page shows the login link, the login and the PIN of sqlmate, and the link to `/me`, the login, the PIN and the personal survey links of SurveyLite.
+* SurveyLite participants are anonymous: only the new table `surveylite_service` of the app links a participant to a user.
+* New admin pages **Services → sqlmate** and **Services → SurveyLite**: give surveys to the users, read their status, and choose services that open only after a completed survey.
+* nginx: sqlmate at `/sqlmate/`, SurveyLite at `/surveylite/` (`SURVEYLITE_URL_PREFIX`). New task `prod:sqlmate-init`.
+* sqlmate 1.9.0: the API key of the app is `API_KEY` in `envs/sqlmate-service.env` (same value as `SQLMATE_API_KEY` of the app); sqlmate stores it at start, so `flask api-create-key` is no longer needed. compose no longer mounts the `migrations` folder of the source, and sqlmate also starts without exercises.
+* SurveyLite 0.21.0: the services page shows the personal login link of `/me` ("Log in to SurveyLite"), and the survey links also log the user in, so surveys with `require_login` open with one click. The admin page makes a new login link on request ("New login link"). Participants from before get their login link on the next visit of the services page. SurveyLite trusts the forwarded address of nginx (`FORWARDED_ALLOW_IPS`), so its login limits count per user address.
+* The test copy also runs sqlmate, SurveyLite and the nginx of production, and checks them.
+* Features that the services do not have yet: `MISSING-FEATURES.md`.
+
 2.3.0 (2026-11-11)
 -------------------
 

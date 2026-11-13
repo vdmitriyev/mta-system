@@ -511,6 +511,8 @@ def container_images() -> dict:
         "openrefine": [openrefine_api.image()],
         "mariadb": [f"mariadb:{settings.mariadb_version}"],
         "wordpress": [wordpress_api.image(), wordpress_api.cli_image()],
+        "sqlmate": [f"sqlmate:{settings.sqlmate_version}"],
+        "surveylite": [f"surveylite:{settings.surveylite_version}"],
         "nifi": [nifi_api.IMAGE],
     }
 

@@ -10,15 +10,19 @@ import os
 import sys
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 import pymysql
+import requests
+import urllib3
 
+from app import surveys
 from app.config import get_settings
 from app.database import init_engine, session_scope
 from app.models import Users
-from app.services import basic_auth, docker_ctl
-from app.users import get_user_services
+from app.services import basic_auth, docker_ctl, sqlmate_api, surveylite_api
+from app.users import access_url, get_user_services
 
 settings = get_settings()
 results = {}
@@ -86,7 +90,10 @@ with session_scope() as db:
         }
         for name, entry in services.items()
     }
-print(f"[i] user {user.email}: accounts {sorted(accounts)}")
+    email = user.email
+    user_id = user.itid
+    access_path = access_url(user).split("/", 3)[3]
+print(f"[i] user {email}: accounts {sorted(accounts)}")
 
 # ---- pgAdmin 4 ----
 entry = accounts.get("pgadmin4")
@@ -231,6 +238,177 @@ else:
         f"container {container_state('wordpress', port)}, installed {installed} "
         f"(siteurl {site_url}), wp-login.php {status}",
     )
+
+# ---- sqlmate and SurveyLite: through the nginx of production (variant "names"),
+#      else directly (variant "hostports") ----
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+NGINX = os.environ.get("MTAS_NGINX_URL", "").rstrip("/")
+
+
+def web(session, method: str, public_url: str, direct_base: str, **kwargs):
+    """Requests a public address of a service, as a browser of a user does"""
+
+    parts = urllib.parse.urlsplit(public_url)
+    path = parts.path + (f"?{parts.query}" if parts.query else "")
+    if NGINX:
+        return session.request(
+            method,
+            NGINX + path,
+            headers={"Host": parts.hostname},
+            verify=False,  # nosec B501: self-signed certificate of the test copy
+            allow_redirects=False,
+            timeout=30,
+            **kwargs,
+        )
+    return session.request(
+        method, direct_base + path, allow_redirects=False, timeout=30, **kwargs
+    )
+
+
+def location_url(response, public_url: str) -> str:
+    """Public address of a redirect (absolute or relative)"""
+
+    return urllib.parse.urljoin(public_url, response.headers.get("location", ""))
+
+
+def follow(session, public_url: str, direct_base: str, max_hops: int = 5):
+    """Requests an address and follows the redirects: (last page, its address, paths)"""
+
+    url, hops = public_url, []
+    page = web(session, "GET", url, direct_base)
+    while page.is_redirect and len(hops) < max_hops:
+        url = location_url(page, url)
+        hops.append(urllib.parse.urlsplit(url).path)
+        page = web(session, "GET", url, direct_base)
+    return page, url, hops
+
+
+# ---- sqlmate ----
+sqlmate_direct = settings.sqlmate_api_url.split("/sqlmate/")[0]
+entry = accounts.get("sqlmate")
+if entry is None or not entry["created"]:
+    report("sqlmate", False, f"no account: {entry}")
+else:
+    try:
+        account = sqlmate_api.get_user(entry["sqlmate_login"])
+        api_text = f"API knows {account.login}, PIN {'same' if account.pin == entry['sqlmate_pin'] else 'DIFFERENT'}"
+        pin_ok = account.pin == entry["sqlmate_pin"]
+    except sqlmate_api.SqlmateError as error:
+        api_text, pin_ok = f"API: {error}", False
+    # the login link logs in and redirects: /sqlmate/sql -> /sqlmate/sql/exercises
+    page, url, hops = follow(
+        requests.Session(), entry["sqlmate_login_url"], sqlmate_direct
+    )
+    logged_in = (
+        bool(hops)
+        and page.status_code == 200
+        and not urllib.parse.urlsplit(url).path.endswith("/login")
+    )
+    report(
+        "sqlmate",
+        pin_ok and logged_in,
+        f"{api_text}; login link -> {' -> '.join(hops)}: {page.status_code}",
+    )
+
+# ---- SurveyLite ----
+surveylite_direct = settings.surveylite_api_url.split("/api/")[0]
+entry = accounts.get("surveylite")
+if entry is None or not entry["created"]:
+    report("surveylite", False, f"no participant: {entry}")
+else:
+    try:
+        survey_list = surveylite_api.list_surveys()
+        survey = survey_list[0]
+        # the survey link alone must not be enough: only the logged-in participant
+        requests.patch(
+            f"{settings.surveylite_api_url.rstrip('/')}/surveys/{survey.id}",
+            json={"require_login": True},
+            headers={"X-API-Key": settings.surveylite_api_key.get_secret_value()},
+            timeout=30,
+        ).raise_for_status()
+        with session_scope() as db:
+            surveys.assign_survey(db, survey, [user_id])
+            link = next(
+                row
+                for row in surveys.refresh_user(db, user_id)
+                if row.survey_id == survey.id
+            )
+            link_url, auth_url, link_status = (
+                link.survey_url,
+                link.survey_auth_url,
+                link.status,
+            )
+            login_url = surveys.participant_of(db, user_id).surveylite_login_url
+        public = settings.surveylite_public_url
+        prefix = urllib.parse.urlsplit(public).path.rstrip("/")
+
+        # 1. survey link without login: SurveyLite shows its login form (401)
+        plain, plain_url, _ = follow(requests.Session(), link_url, surveylite_direct)
+        needs_login = plain.status_code == 401 and 'name="pin"' in plain.text
+        # 2. survey link with login (services page): opens the survey
+        survey_page, survey_url, _ = follow(
+            requests.Session(), auth_url or "", surveylite_direct
+        )
+        opens_survey = (
+            survey_page.status_code == 200
+            and urllib.parse.urlsplit(survey_url).path.startswith(f"{prefix}/s/")
+            and "auth=" not in survey_url
+        )
+        # 3. personal login link: opens /me with the survey
+        me, me_url, _ = follow(requests.Session(), login_url or "", surveylite_direct)
+        link_login = (
+            me.status_code == 200
+            and urllib.parse.urlsplit(me_url).path == f"{prefix}/me"
+            and survey.title in me.text
+            and f"{prefix}/static/" in me.text
+        )
+        # 4. login with the login and the PIN
+        browser = requests.Session()
+        login = web(
+            browser,
+            "POST",
+            public + "me/login",
+            surveylite_direct,
+            data={"login": entry["surveylite_login"], "pin": entry["surveylite_pin"]},
+        )
+        pin_me = web(browser, "GET", public + "me", surveylite_direct)
+        pin_login = (
+            login.status_code == 303
+            and pin_me.status_code == 200
+            and survey.title in pin_me.text
+        )
+        report(
+            "surveylite",
+            needs_login and opens_survey and link_login and pin_login,
+            f'{len(survey_list)} surveys; "{survey.title}" given ({link_status}), '
+            f"needs login; survey link alone -> {'login page' if needs_login else f'{plain.status_code} {plain_url}'}, "
+            f"with login -> {'survey' if opens_survey else f'{survey_page.status_code} {survey_url}'}; "
+            f"login link -> {'/me with the survey' if link_login else f'{me.status_code} {me_url}'}; "
+            f"PIN login -> {'/me' if pin_login else f'{login.status_code}/{pin_me.status_code}'}",
+        )
+
+        # sqlmate waits for the survey: the services page of the user shows the survey
+        app_url = os.environ.get("SMOKE_BASE_URL", "http://127.0.0.1:5151").rstrip("/")
+        user_browser = requests.Session()
+        user_browser.get(f"{app_url}/{access_path}", timeout=30)
+        with session_scope() as db:
+            surveys.set_requirement(db, "sqlmate", survey)
+        waiting = user_browser.get(f"{app_url}/services", timeout=30).text
+        card = waiting[waiting.index('id="service-sqlmate"') :]
+        card = card[: card.index("</section>")]
+        blocked = "Complete the survey" in card and "Log in to sqlmate" not in card
+        with session_scope() as db:
+            surveys.set_requirement(db, "sqlmate", None)
+        opened = user_browser.get(f"{app_url}/services", timeout=30).text
+        free = "Log in to sqlmate" in opened
+        report(
+            "survey-gate",
+            blocked and free,
+            f"sqlmate with the survey needed: {'waits' if blocked else 'OPEN'}; "
+            f"without: {'open' if free else 'CLOSED'}",
+        )
+    except Exception as error:
+        report("surveylite", False, f"{type(error).__name__}: {error}")
 
 failed = sorted(name for name, ok in results.items() if not ok)
 print(

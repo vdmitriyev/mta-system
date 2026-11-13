@@ -55,6 +55,8 @@ VISIBILITY_ITEMS = [
     VisibilityItem(
         "wordpress_self_managment", SERVICES_CATEGORY, "WordPress", SELF_START
     ),
+    VisibilityItem("sqlmate", SERVICES_CATEGORY, "sqlmate", SERVICE_CARD),
+    VisibilityItem("surveylite", SERVICES_CATEGORY, "SurveyLite", SERVICE_CARD),
     VisibilityItem("nifi", SERVICES_CATEGORY, "NiFi", SERVICE_CARD),
     VisibilityItem("nifi_self_managment", SERVICES_CATEGORY, "NiFi", SELF_START),
     VisibilityItem("superset", SERVICES_CATEGORY, "Superset", SERVICE_CARD),

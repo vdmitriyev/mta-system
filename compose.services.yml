@@ -42,9 +42,83 @@ services:
     networks:
       - mtas-network
 
+  # sqlmate: SQL exercises, at https://<SERVER_FQDN>/sqlmate/ (nginx).
+  # Built from SQLMATE_SOURCE (versions.env). Set up once: task prod:sqlmate-init.
+  # The API key of the app is API_KEY in envs/sqlmate-service.env: sqlmate stores it at start.
+  sqlmate-service:
+    build: ${SQLMATE_SOURCE:?set it in versions.env and use task, or docker compose --env-file versions.env}
+    image: sqlmate:${SQLMATE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
+    command: gunicorn --config gunicorn.config.docker.prod.py run:app
+    restart: unless-stopped
+    env_file:
+      - envs/sqlmate-service.env
+    environment:
+      FLASK_APP: run.py
+      TARGET_SERVER: prod
+      SM_URL_PREFIX: sqlmate/
+      POSTGRES_DB_HOST: sqlmate-database
+      # users come from the app only (API), not from the registration form of sqlmate
+      REGISTRATION_API: "True"
+      REGISTRATION_WEB: "False"
+      TZ: Europe/Berlin
+    volumes:
+      # the logs on the host
+      - ./.logs/sqlmate:/app/.logs
+      # the exercises: sql-exercises.yaml and the files that it names (sqlmate also starts without them)
+      - ./setup/sqlmate:/app/data:ro
+    depends_on:
+      sqlmate-database:
+        condition: service_healthy
+    networks:
+      - mtas-network
+
+  sqlmate-database:
+    image: "postgres:${POSTGRESQL_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}"
+    restart: unless-stopped
+    env_file:
+      - envs/sqlmate-service.env
+    environment:
+      PGDATA: /pgdata
+    volumes:
+      - sqlmate-pgdata:/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - mtas-network
+
+  # SurveyLite: anonymous surveys, at https://<SERVER_FQDN>/surveylite/ (nginx).
+  # Built from SURVEYLITE_SOURCE (versions.env). It imports the YAML files of
+  # setup/surveylite at start.
+  surveylite-service:
+    build: ${SURVEYLITE_SOURCE:?set it in versions.env and use task, or docker compose --env-file versions.env}
+    image: surveylite:${SURVEYLITE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
+    restart: unless-stopped
+    env_file:
+      - envs/surveylite-service.env
+    environment:
+      # the path of SurveyLite in nginx (location /surveylite/)
+      SURVEYLITE_URL_PREFIX: /surveylite
+      # trust X-Forwarded-For of nginx: login limits per user address, not per nginx
+      # (only nginx reaches SurveyLite: it publishes no port)
+      FORWARDED_ALLOW_IPS: "*"
+      SURVEYLITE_API_DOCS: "false"
+      SURVEYLITE_DB_PATH: ""
+    volumes:
+      - surveylite-data:/app/data
+      - ./.logs/surveylite:/app/logs
+      - ./setup/surveylite:/app/surveys
+    networks:
+      - mtas-network
+
 networks:
     mtas-network:
 
 volumes:
   pg15volume-service:
   pga4volume-service:
+  sqlmate-pgdata:
+  surveylite-data:

@@ -7,6 +7,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
 )
 from sqlalchemy.sql import func
 
@@ -143,6 +144,73 @@ class WordpressService(Base):
     created_at = Column(DateTime, server_default=func.now())
 
 
+class SqlmateService(Base):
+    """Account of a user in sqlmate (SQL exercises)"""
+
+    __tablename__ = "sqlmate_service"
+
+    itid = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.itid"))
+    sqlmate_login = Column(String(100), nullable=False)
+    sqlmate_pin = Column(String(50))
+    # personal link that logs the user in without login and PIN
+    sqlmate_login_url = Column(String(500))
+    created = Column(Boolean, default=False, nullable=False)
+    deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class SurveyliteService(Base):
+    """Anonymous participant of a user in surveylite.
+
+    surveylite does not know who the participant is: this table is the only link.
+    """
+
+    __tablename__ = "surveylite_service"
+
+    itid = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.itid"))
+    surveylite_participant_id = Column(String(64))
+    surveylite_login = Column(String(100))
+    surveylite_pin = Column(String(50))
+    # personal login link of /me (secret as the PIN)
+    surveylite_login_url = Column(String(500))
+    created = Column(Boolean, default=False, nullable=False)
+    deleted = Column(Boolean, default=False, nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class SurveyAssignment(Base):
+    """A survey of surveylite that an admin gave to a user, with the personal link"""
+
+    __tablename__ = "survey_assignments"
+    __table_args__ = (UniqueConstraint("user_id", "survey_id"),)
+
+    itid = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.itid"), nullable=False, index=True)
+    survey_id = Column(Integer, nullable=False)
+    survey_title = Column(String(200))
+    survey_url = Column(String(500))
+    # the survey link that also logs the participant in (secret as the PIN)
+    survey_auth_url = Column(String(500))
+    # status in surveylite: not_started, in_progress, paused, completed, declined
+    status = Column(String(20), default="not_started", nullable=False)
+    completed_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class ServiceRequirement(Base):
+    """A service is open for a user only after the user completed this survey"""
+
+    __tablename__ = "service_requirements"
+
+    service = Column(String(50), primary_key=True)
+    survey_id = Column(Integer, nullable=False)
+    survey_title = Column(String(200))
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
 # Name of a service (as in SERVICES_UI) -> table with the accounts of the users
 SERVICE_MODELS = {
     "postgresql": PostgreSQLService,
@@ -154,6 +222,8 @@ SERVICE_MODELS = {
     "superset": SupersetService,
     "mariadb": MariaDBService,
     "wordpress": WordpressService,
+    "sqlmate": SqlmateService,
+    "surveylite": SurveyliteService,
 }
 
 # Services that run in an own Docker container per user: "<service>-<port>"

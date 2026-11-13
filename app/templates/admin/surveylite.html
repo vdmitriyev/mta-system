@@ -1,0 +1,157 @@
+{% extends "admin/base.html" %}
+{% block title %}SurveyLite{% endblock %}
+{% block admin %}
+{{ ui.page_head("SurveyLite surveys", "Each user has an anonymous participant in SurveyLite: only this app knows which participant belongs to which user. Give surveys to the users here, and choose the services that open only after a completed survey.") }}
+<div class="alert {{ 'success' if api.ok else 'danger' }} image-state" role="status">
+  <div>
+    {% if api.ok %}
+    <p>The API of SurveyLite answers: <strong><code>{{ api_url }}</code></strong> · {{ api.text }}</p>
+    {% else %}
+    <p>The API of SurveyLite does not answer: <strong><code>{{ api_url }}</code></strong></p>
+    <pre class="command"><code>{{ api.text }}</code></pre>
+    <p class="muted small">Check SURVEYLITE_API_URL and SURVEYLITE_API_KEY (one of SURVEYLITE_API_KEYS in SurveyLite).</p>
+    {% endif %}
+    <p>Address for the users: <a href="{{ public_url }}" target="_blank" rel="noopener">{{ public_url }} {{ ui.icon("external") }}</a> · build the surveys in the admin pages of SurveyLite: <a href="{{ public_url }}admin" target="_blank" rel="noopener">{{ public_url }}admin {{ ui.icon("external") }}</a></p>
+  </div>
+</div>
+
+<div class="block-list">
+  <section class="card flush">
+    <div class="card-head"><h2>Surveys</h2></div>
+    <div class="table-wrap">
+      <table class="table" id="surveys-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th title="Users with a personal link to the survey">Given</th>
+            <th>Completed</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for survey in surveys %}
+          {% set given, completed = counts.get(survey.id, (0, 0)) %}
+          <tr>
+            <td>{{ survey.id }}</td>
+            <td>{{ survey.title }}{% if survey.require_login %} <span class="badge" title="The survey link alone is not enough: the participant must be logged in. The links on the services page log in.">login needed</span>{% endif %}</td>
+            <td><span class="badge {{ 'success' if survey.status == 'active' else '' }}">{{ survey.status }}</span></td>
+            <td>{{ given }}</td>
+            <td>{{ completed }}</td>
+            <td class="nowrap">
+              <form method="post" action="/mtas-admin/services/surveylite/assign" class="inline-form"
+                    data-confirm="Give the survey “{{ survey.title }}” to all users?">
+                {{ ui.csrf(csrf_token) }}
+                <input type="hidden" name="survey_id" value="{{ survey.id }}">
+                <input type="hidden" name="user_id" value="all">
+                <button type="submit" class="btn sm">Give to all users</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not surveys %}<div class="empty">{{ "No surveys yet. Import or build them in SurveyLite." if api.ok else "The surveys are not available." }}</div>{% endif %}
+  </section>
+
+  <section class="card flush">
+    <div class="card-head"><h2>Services that need a survey</h2></div>
+    <div class="table-wrap">
+      <table class="table" id="requirements-table">
+        <thead><tr><th>Service</th><th>Opens after the survey</th></tr></thead>
+        <tbody>
+          {% for info in rule_services %}
+          {% set rule = rules.get(info.key) %}
+          <tr>
+            <td>{{ info.name }}</td>
+            <td>
+              <form method="post" action="/mtas-admin/services/surveylite/requirement" class="inline-form">
+                {{ ui.csrf(csrf_token) }}
+                <input type="hidden" name="service" value="{{ info.key }}">
+                <select name="survey_id" aria-label="Survey for {{ info.name }}"{% if not api.ok %} disabled{% endif %}>
+                  <option value="">no survey needed</option>
+                  {% for survey in surveys %}
+                  <option value="{{ survey.id }}"{% if rule and rule.survey_id == survey.id %} selected{% endif %}>{{ survey.title }}</option>
+                  {% endfor %}
+                  {% if rule and rule.survey_id not in surveys | map(attribute="id") | list %}
+                  <option value="{{ rule.survey_id }}" selected>{{ rule.survey_title or rule.survey_id }}</option>
+                  {% endif %}
+                </select>
+                <button type="submit" class="btn sm"{% if not api.ok %} disabled{% endif %}>Save</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div class="toolbar">
+  <form method="post" action="/mtas-admin/services/surveylite/refresh" class="inline-form">
+    {{ ui.csrf(csrf_token) }}
+    <button type="submit" class="btn sm"{% if not api.ok %} disabled{% endif %} title="Reads the status of the surveys of all users from SurveyLite">{{ ui.icon("refresh") }} Read the status</button>
+  </form>
+</div>
+{{ ui.table_filter("surveylite-table", rows | length) }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="surveylite-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          <th data-sort>Participant</th>
+          <th>Surveys</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set entry = row.entry %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td>{% if entry %}<code>{{ entry.surveylite_login }}</code>{% if not entry.surveylite_login_url %} <span class="badge" title="Read on the next visit of the services page, or with “Read the status”">no login link</span>{% endif %}{% else %}<span class="badge">none</span>{% endif %}</td>
+          <td>
+            {% for item in row.assignments %}
+            <span class="badge {{ 'success' if item.status == 'completed' else '' }}" title="{{ item.survey_title }}">{{ item.survey_title or item.survey_id }}: {{ status_text.get(item.status, item.status) }}</span>
+            {% else %}<span class="muted small">–</span>{% endfor %}
+          </td>
+          <td class="nowrap">
+            {% if not entry %}
+            <form method="post" action="/mtas-admin/services/surveylite/participant" class="inline-form">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm"{% if not api.ok %} disabled{% endif %}>Create participant</button>
+            </form>
+            {% else %}
+            {% if surveys %}
+            <form method="post" action="/mtas-admin/services/surveylite/assign" class="inline-form">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <select name="survey_id" aria-label="Survey for {{ row.user.email }}">
+                {% for survey in surveys %}<option value="{{ survey.id }}">{{ survey.title }}</option>{% endfor %}
+              </select>
+              <button type="submit" class="btn sm">Give</button>
+            </form>
+            {% endif %}
+            <form method="post" action="/mtas-admin/services/surveylite/login-link" class="inline-form"
+                  data-confirm="New login link for {{ row.user.email }}? The old login link and survey links stop working.">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm"{% if not api.ok %} disabled{% endif %} title="For a login link that others know">New login link</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+{% endblock %}

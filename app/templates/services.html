@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Services{% endblock %}
-{% set icons = {"postgresql": "database", "mariadb": "database", "pgadmin4": "database", "metabase": "chart", "superset": "chart"} %}
+{% set icons = {"postgresql": "database", "mariadb": "database", "pgadmin4": "database", "metabase": "chart", "superset": "chart", "sqlmate": "database", "surveylite": "edit"} %}
 {% block content %}
 {{ ui.page_head("Your services", "Addresses, logins and passwords of the services that are set up for you.") }}
 {{ ui.alert("Do not change the passwords inside the services: this page would still show the old ones.", "warning") }}
@@ -24,13 +24,26 @@
       {% if card.status is defined %}{{ ui.container_badge(card.status, card.name) }}{% endif %}
     </div>
 
+    {% if card.blocked %}
+    <div class="alert warning" role="status">
+      {% if card.blocked.url %}
+      <p>Complete the survey <a href="{{ card.blocked.url }}" target="_blank" rel="noopener"><strong>{{ card.blocked.title }}</strong> {{ ui.icon("external") }}</a> first{% if card.blocked.status_text %} (now: {{ card.blocked.status_text }}){% endif %}. Then this page shows your login for {{ card.title }}.</p>
+      {% else %}
+      <p>{{ card.title }} opens after the survey <strong>{{ card.blocked.title }}</strong>. The survey is not set up for you yet: ask your instructor.</p>
+      {% endif %}
+    </div>
+    {% endif %}
+    {% if card.note %}<p class="muted small">{{ card.note }}</p>{% endif %}
+
     <dl class="kv">
       {% for field in card.fields %}
       {% set field_id = card.name ~ "-" ~ loop.index %}
       <div>
         <dt>{{ field.label }}</dt>
         <dd>
-          {% if field.link %}
+          {% if field.link and field.link_text %}
+            <a class="btn sm primary" href="{{ field.value }}" target="_blank" rel="noopener">{{ field.link_text }} {{ ui.icon("external") }}</a>
+          {% elif field.link %}
             <a href="{{ field.value }}" target="_blank" rel="noopener">{{ field.value }} {{ ui.icon("external") }}</a>
           {% elif field.secret %}
             <span class="value" id="{{ field_id }}" data-secret="{{ field.value }}">••••••••</span>
@@ -47,6 +60,25 @@
       </div>
       {% endfor %}
     </dl>
+
+    {% if card.surveys is defined %}
+    <div class="card-foot survey-list">
+      {% if card.surveys %}
+      <table class="table">
+        <tbody>
+          {% for survey in card.surveys %}
+          <tr>
+            <td>{% if survey.url %}<a href="{{ survey.url }}" target="_blank" rel="noopener">{{ survey.title }} {{ ui.icon("external") }}</a>{% else %}{{ survey.title }}{% endif %}</td>
+            <td class="nowrap"><span class="badge {{ 'success' if survey.status == 'completed' else ('warning' if survey.status == 'declined' else '') }}">{{ survey.status_text }}</span></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <span class="muted small">No surveys for you at the moment.</span>
+      {% endif %}
+    </div>
+    {% endif %}
 
     {% if card.can_start %}
     <div class="card-foot">

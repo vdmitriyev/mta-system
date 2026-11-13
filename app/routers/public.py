@@ -71,6 +71,18 @@ ABOUT_SERVICES = [
         "wordpress-logo.svg",
         "Your own website with WordPress.",
     ),
+    (
+        "sqlmate",
+        "sqlmate",
+        None,
+        "SQL exercises with feedback at once.",
+    ),
+    (
+        "surveylite",
+        "SurveyLite",
+        None,
+        "Anonymous surveys of your course.",
+    ),
     ("nifi", "Apache NiFi", "nifi-screen.png", "Data flows between systems."),
     (
         "jupyterhub",
@@ -80,7 +92,12 @@ ABOUT_SERVICES = [
     ),
 ]
 
-ABOUT_ICONS = {"mariadb": "database", "wordpress": "edit"}
+ABOUT_ICONS = {
+    "mariadb": "database",
+    "wordpress": "edit",
+    "sqlmate": "database",
+    "surveylite": "edit",
+}
 
 
 def about_services() -> list[dict]:

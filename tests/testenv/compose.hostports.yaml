@@ -23,6 +23,10 @@ services:
       CONTAINER_PUBLISH_PORTS: "true"
       METABASE_BASE_URL: http://localhost
       MTAS_PGADMIN4_URL: http://127.0.0.1:35050
+      # no nginx in this variant: the checks request sqlmate and SurveyLite directly
+      MTAS_NGINX_URL: ""
+      SQLMATE_API_URL: http://127.0.0.1:35353/sqlmate/api/v1
+      SURVEYLITE_API_URL: http://127.0.0.1:35001/api/v1
 
   pgadmin4:
     ports:
@@ -31,3 +35,14 @@ services:
   mariadb:
     ports:
       - "127.0.0.1:33306:3306"
+
+  sqlmate-service:
+    ports:
+      - "127.0.0.1:35353:5353"
+
+  surveylite-service:
+    ports:
+      - "127.0.0.1:35001:5001"
+    environment:
+      # the checks reach SurveyLite over http (no nginx): send the session cookie there, too
+      SURVEYLITE_COOKIE_SECURE: "false"

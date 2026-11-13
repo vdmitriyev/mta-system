@@ -324,6 +324,19 @@ main {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
 }
 
+/* services page: the surveys of SurveyLite */
+.survey-list {
+  display: block;
+}
+
+.survey-list .table td {
+  padding-inline: 0;
+}
+
+.survey-list .table td + td {
+  text-align: right;
+}
+
 /* Settings: the values */
 .setting-value {
   color: var(--primary);

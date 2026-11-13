@@ -17,7 +17,9 @@ from app.models import (
     OpenRefineService,
     PGAdmin4Service,
     PostgreSQLService,
+    SqlmateService,
     SupersetService,
+    SurveyliteService,
     WordpressService,
 )
 from app.service_settings import creates_accounts
@@ -28,7 +30,9 @@ from app.services import (
     openrefine_api,
     pgadmin4_api,
     postgresql,
+    sqlmate_api,
     superset_api,
+    surveylite_api,
     wordpress_api,
 )
 
@@ -269,3 +273,65 @@ def superset_user(
         created=client.create_new_user(),
     )
     return _save(db, entry, "Superset")
+
+
+def sqlmate_user(
+    db: Session, user_id: int, login: str, force_create: bool = False
+) -> bool:
+    """Creates the account in sqlmate. The login is the internal e-mail of the user."""
+
+    if not force_create and not creates_accounts(db, "sqlmate"):
+        return _skip("sqlmate")
+
+    entry = SqlmateService(user_id=user_id, sqlmate_login=login, created=False)
+    try:
+        account = sqlmate_api.create_user(login)
+    except sqlmate_api.SqlmateError as error:
+        logger.error("sqlmate account of user %s: %s", user_id, error)
+    else:
+        entry.sqlmate_login = account.login
+        entry.sqlmate_pin = account.pin
+        entry.sqlmate_login_url = account.login_url
+        entry.created = True
+    return _save(db, entry, "sqlmate")
+
+
+def surveylite_participant(
+    db: Session, user_id: int, force_create: bool = False
+) -> bool:
+    """Creates an anonymous participant in surveylite.
+
+    The participant gets the surveys that a service needs (see app/surveys.py).
+    """
+
+    if not force_create and not creates_accounts(db, "surveylite"):
+        return _skip("surveylite")
+
+    entry = SurveyliteService(user_id=user_id, created=False)
+    try:
+        participant = surveylite_api.create_participant()
+    except surveylite_api.SurveyliteError as error:
+        logger.error("surveylite participant of user %s: %s", user_id, error)
+        return _save(db, entry, "surveylite")
+
+    entry.surveylite_participant_id = participant.id
+    entry.surveylite_login = participant.login
+    entry.surveylite_pin = participant.pin
+    entry.surveylite_login_url = participant.login_url
+    entry.created = True
+    _save(db, entry, "surveylite")
+
+    # imported here: app.surveys imports the models, as this module does
+    from app import surveys
+
+    for rule in surveys.requirements(db).values():
+        try:
+            survey = surveylite_api.Survey(
+                id=rule.survey_id, title=rule.survey_title or "", status=""
+            )
+            surveys.assign_survey(db, survey, [user_id])
+        except surveylite_api.SurveyliteError as error:
+            logger.error(
+                "Survey %s not given to user %s: %s", rule.survey_id, user_id, error
+            )
+    return True

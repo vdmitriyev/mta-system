@@ -30,6 +30,13 @@ SERVICES = [
     ServiceInfo("openrefine", "OpenRefine", OWN_CONTAINER),
     ServiceInfo("mariadb", "MariaDB", SHARED_SERVER),
     ServiceInfo("wordpress", "WordPress", OWN_CONTAINER, "Needs MariaDB"),
+    ServiceInfo("sqlmate", "sqlmate", SHARED_SERVICE, "SQL exercises"),
+    ServiceInfo(
+        "surveylite",
+        "SurveyLite",
+        SHARED_SERVICE,
+        "Anonymous surveys: only this app knows who a participant is",
+    ),
     ServiceInfo("nifi", "NiFi", OWN_CONTAINER, deprecated=True),
     ServiceInfo("superset", "Superset", SHARED_SERVICE, deprecated=True),
     ServiceInfo("jupyterhub", "JupyterHub", SHARED_SERVICE, deprecated=True),

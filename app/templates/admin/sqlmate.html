@@ -1,0 +1,64 @@
+{% extends "admin/base.html" %}
+{% block title %}sqlmate{% endblock %}
+{% block admin %}
+{{ ui.page_head("sqlmate accounts", "The app creates the account of each user through the API of sqlmate. The login is the internal e-mail of the user; the services page shows the login link and the PIN.") }}
+<div class="alert {{ 'success' if api.ok else 'danger' }} image-state" role="status">
+  <div>
+    {% if api.ok %}
+    <p>The API of sqlmate answers: <strong><code>{{ api_url }}</code></strong> · {{ api.text }}</p>
+    {% else %}
+    <p>The API of sqlmate does not answer: <strong><code>{{ api_url }}</code></strong></p>
+    <pre class="command"><code>{{ api.text }}</code></pre>
+    <p class="muted small">Check SQLMATE_API_URL and SQLMATE_API_KEY (the same value as API_KEY in envs/sqlmate-service.env), and that sqlmate runs with REGISTRATION_API=True. On the first start, run task prod:sqlmate-init.</p>
+    {% endif %}
+    <p>Address for the users: <a href="{{ public_url }}" target="_blank" rel="noopener">{{ public_url }} {{ ui.icon("external") }}</a></p>
+    {% if rule %}<p>Users get their login after the survey <strong>{{ rule.survey_title or rule.survey_id }}</strong> (page <a href="/mtas-admin/services/surveylite">SurveyLite</a>).</p>{% endif %}
+  </div>
+</div>
+{{ ui.table_filter("sqlmate-table", rows | length) }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="sqlmate-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          <th data-sort>Login</th>
+          <th data-sort>Account</th>
+          {% if rule %}<th data-sort title="The user sees the login after the survey">Survey</th>{% endif %}
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        {% set entry = row.entry %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td><code>{{ entry.sqlmate_login if entry else "–" }}</code></td>
+          <td>
+            {% if not entry %}<span class="badge">none</span>
+            {% elif entry.created %}<span class="badge success">created</span>
+            {% else %}<span class="badge warning">not created</span>{% endif %}
+          </td>
+          {% if rule %}
+          <td>{% if row.blocked %}<span class="badge warning">waits</span>{% else %}<span class="badge success">completed</span>{% endif %}</td>
+          {% endif %}
+          <td class="nowrap">
+            {% if not entry or not entry.created %}
+            <form method="post" action="/mtas-admin/services/sqlmate/create" class="inline-form">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm"{% if not api.ok %} disabled{% endif %}>{{ ui.icon("database") }} Create</button>
+            </form>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+<p class="page-note">sqlmate cannot switch off an account through its API. A user who once saw the login keeps the access in sqlmate.</p>
+{% endblock %}

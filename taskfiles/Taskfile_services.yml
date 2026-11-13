@@ -17,6 +17,8 @@ tasks:
       - echo "POSTGRESQL_VERSION=$POSTGRESQL_VERSION"
       - echo "PGADMIN4_VERSION=$PGADMIN4_VERSION"
       - echo "MARIADB_VERSION=$MARIADB_VERSION"
+      - echo "SQLMATE_VERSION=$SQLMATE_VERSION (from $SQLMATE_SOURCE)"
+      - echo "SURVEYLITE_VERSION=$SURVEYLITE_VERSION (from $SURVEYLITE_SOURCE)"
 
   update-all:
     desc: gets all service images in the versions of versions.env (pulls, builds OpenRefine)
@@ -28,6 +30,8 @@ tasks:
       - task: pull-postgresql
       - task: pull-pgadmin4
       - task: pull-mariadb
+      - task: build-sqlmate
+      - task: build-surveylite
 
   build-openrefine:
     desc: builds the OpenRefine image (openrefine:<OPENREFINE_VERSION>) from provision/openrefine
@@ -77,3 +81,23 @@ tasks:
         msg: "MARIADB_VERSION is not set: check versions.env"
     cmds:
       - docker pull mariadb:$MARIADB_VERSION
+
+  build-sqlmate:
+    desc: builds the sqlmate image (sqlmate:<SQLMATE_VERSION>) from its source folder (SQLMATE_SOURCE)
+    preconditions:
+      - sh: test -n "$SQLMATE_VERSION" && test -n "$SQLMATE_SOURCE"
+        msg: "SQLMATE_VERSION or SQLMATE_SOURCE is not set: check versions.env"
+      - sh: test -f "$SQLMATE_SOURCE/Dockerfile"
+        msg: "No sqlmate in SQLMATE_SOURCE: clone it there (git repository of sqlmate)"
+    cmds:
+      - docker build -t sqlmate:$SQLMATE_VERSION "$SQLMATE_SOURCE"
+
+  build-surveylite:
+    desc: builds the SurveyLite image (surveylite:<SURVEYLITE_VERSION>) from its source folder (SURVEYLITE_SOURCE)
+    preconditions:
+      - sh: test -n "$SURVEYLITE_VERSION" && test -n "$SURVEYLITE_SOURCE"
+        msg: "SURVEYLITE_VERSION or SURVEYLITE_SOURCE is not set: check versions.env"
+      - sh: test -f "$SURVEYLITE_SOURCE/Dockerfile"
+        msg: "No SurveyLite in SURVEYLITE_SOURCE: clone it there (git repository of SurveyLite)"
+    cmds:
+      - docker build -t surveylite:$SURVEYLITE_VERSION "$SURVEYLITE_SOURCE"

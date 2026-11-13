@@ -63,3 +63,13 @@ tasks:
     cmds:
       - "{{.PROD_COMPOSE}} run --rm certbot renew --webroot -w /var/www/certbot"
       - task: reload
+
+  sqlmate-init:
+    desc: sets up sqlmate once (tables, sandbox database, exercises from setup/sqlmate); also after an update of sqlmate
+    cmds:
+      - "{{.PROD_COMPOSE}} exec sqlmate-service flask db upgrade"
+      # each flask command also stores API_KEY: on the first start, the tables were missing
+      - "{{.PROD_COMPOSE}} exec sqlmate-service flask db-create-sandbox-db"
+      # needs setup/sqlmate/sql-exercises.yaml: without exercises, sqlmate runs, but is empty
+      - cmd: "{{.PROD_COMPOSE}} exec sqlmate-service flask sql-import-exercises-metadata"
+        ignore_error: true

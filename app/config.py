@@ -61,6 +61,8 @@ DEFAULT_SERVICES_UI = [
     "openrefine",
     "mariadb",
     "wordpress",
+    "sqlmate",
+    "surveylite",
     "nifi",
     "superset",
     "jupyterhub",
@@ -176,12 +178,26 @@ class Settings(BaseSettings):
     postgresql_version: ImageVersion
     pgadmin4_version: ImageVersion
     mariadb_version: ImageVersion
+    sqlmate_version: ImageVersion
+    surveylite_version: ImageVersion
     metabase_base_url: str = "http://localhost"
     metabase_try_count: PositiveInt = 3
     metabase_try_sleep_sec: NonNegativeInt = 30
     superset_base_url: str | None = None
     superset_login: str | None = None
     superset_password: SecretStr | None = None
+
+    # ---- sqlmate (SQL exercises) and surveylite (anonymous surveys) ----
+    # API addresses as the app reaches them (in Docker: by the names of the services)
+    sqlmate_api_url: str = "http://sqlmate-service:5353/sqlmate/api/v1"
+    sqlmate_api_key: SecretStr | None = None
+    # public address for the users (empty: https://<SERVER_FQDN>/sqlmate/)
+    sqlmate_url: str | None = None
+    surveylite_api_url: str = "http://surveylite-service:5001/api/v1"
+    surveylite_api_key: SecretStr | None = None
+    # public address for the users (empty: https://<SERVER_FQDN>/surveylite/)
+    surveylite_url: str | None = None
+    service_api_timeout_sec: PositiveInt = 10
 
     @field_validator("target_server", mode="before")
     @classmethod
@@ -287,6 +303,16 @@ class Settings(BaseSettings):
     def wordpress_base_url(self) -> str:
         return f"http://{self.server_fqdn}/wordpress/"
 
+    @property
+    def sqlmate_public_url(self) -> str:
+        return _with_slash(self.sqlmate_url or f"https://{self.server_fqdn}/sqlmate/")
+
+    @property
+    def surveylite_public_url(self) -> str:
+        return _with_slash(
+            self.surveylite_url or f"https://{self.server_fqdn}/surveylite/"
+        )
+
     def container_url(self, service: str, port: int) -> str:
         """URL of a user's container behind nginx, e.g. https://<server>/metabase/3001/"""
 
@@ -300,6 +326,10 @@ class Settings(BaseSettings):
             for name, field in type(self).model_fields.items()
             if not _is_secret(field.annotation)
         }
+
+
+def _with_slash(url: str) -> str:
+    return url if url.endswith("/") else url + "/"
 
 
 def _is_secret(annotation) -> bool:

@@ -1,0 +1,10 @@
+exercise: E00
+tasks:
+  - part: 1
+    order: 1
+    task: Select the names of all the products.
+    solution: SELECT name FROM demo_products;
+  - part: 1
+    order: 2
+    task: Select the names and the prices of the products that cost more than 20.
+    solution: SELECT name, price FROM demo_products WHERE price > 20;

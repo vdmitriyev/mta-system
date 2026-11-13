@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 
+from app import surveys
 from app.config import get_settings
 from app.exercises import (
     PART_BONUS,
@@ -28,14 +29,29 @@ logger = logging.getLogger(__name__)
 router = APIRouter(include_in_schema=False)
 
 
-def _field(label: str, value, copy: bool = True, secret: bool = False, link=False):
+def _field(
+    label: str,
+    value,
+    copy: bool = True,
+    secret: bool = False,
+    link=False,
+    link_text: str | None = None,
+):
     return {
         "label": label,
         "value": value,
         "can_copy": copy,
         "secret": secret,
         "link": link,
+        # text of the link instead of the address (e.g. for a personal login link)
+        "link_text": link_text,
     }
+
+
+def _filled(fields: list) -> list:
+    """The fields that have a value (e.g. no login link from an older SurveyLite)"""
+
+    return [field for field in fields if field["value"]]
 
 
 def service_cards(page: Page, user: Users) -> list:
@@ -52,6 +68,13 @@ def service_cards(page: Page, user: Users) -> list:
         ]
     )
     pg = services.get("postgresql")
+    # status of the surveys from surveylite: some services wait for a survey
+    assignments = (
+        surveys.refresh_user(page.db, user.itid)
+        if "surveylite" in services
+        else surveys.assignments_of(page.db, user.itid)
+    )
+    blocked = surveys.blocked_services(page.db, user.itid, assignments)
 
     def container_card(name: str, title: str, fields: list) -> dict:
         entry = services[name]
@@ -173,6 +196,70 @@ def service_cards(page: Page, user: Users) -> list:
                 ),
             ],
         },
+        "sqlmate": lambda entry: {
+            "name": "sqlmate",
+            "title": "sqlmate",
+            "fields": (
+                [
+                    _field("URL", settings.sqlmate_public_url, copy=False, link=True),
+                    _field(
+                        "Login link",
+                        entry.sqlmate_login_url,
+                        link=True,
+                        link_text="Log in to sqlmate",
+                    ),
+                    _field("Login", entry.sqlmate_login),
+                    _field("PIN", entry.sqlmate_pin, secret=True),
+                ]
+                if entry.created
+                else []
+            ),
+            "note": (
+                None
+                if entry.created
+                else "Your account in sqlmate is not set up yet. Ask your instructor."
+            ),
+        },
+        "surveylite": lambda entry: {
+            "name": "surveylite",
+            "title": "SurveyLite",
+            "fields": (
+                _filled(
+                    [
+                        _field(
+                            "Your surveys",
+                            settings.surveylite_public_url + "me",
+                            copy=False,
+                            link=True,
+                        ),
+                        _field(
+                            "Login link",
+                            entry.surveylite_login_url,
+                            link=True,
+                            link_text="Log in to SurveyLite",
+                        ),
+                        _field("Login", entry.surveylite_login),
+                        _field("PIN", entry.surveylite_pin, secret=True),
+                    ]
+                )
+                if entry.created
+                else []
+            ),
+            "note": (
+                "Your answers are anonymous: SurveyLite does not know who you are."
+                if entry.created
+                else "Your access to SurveyLite is not set up yet. Ask your instructor."
+            ),
+            "surveys": [
+                {
+                    "title": row.survey_title or f"Survey {row.survey_id}",
+                    "url": surveys.survey_link(row),
+                    "status": row.status,
+                    "status_text": surveys.STATUS_TEXT.get(row.status, row.status),
+                }
+                for row in assignments
+            ],
+        },
         "jupyterhub": lambda entry: {
             "name": "jupyterhub",
             "title": "JupyterHub",
@@ -187,8 +274,27 @@ def service_cards(page: Page, user: Users) -> list:
     cards = []
     for name in settings.services_ui:
         if name in builders and name in services and visibility.get(name):
-            cards.append(builders[name](services[name]))
+            if name in blocked:
+                cards.append(blocked_card(name, builders, services, blocked[name]))
+            else:
+                cards.append(builders[name](services[name]))
     return cards
+
+
+def blocked_card(name: str, builders: dict, services: dict, missing) -> dict:
+    """The card of a service that waits for a survey: no login, the survey instead"""
+
+    card = builders[name](services[name])
+    return {
+        "name": name,
+        "title": card["title"],
+        "fields": [],
+        "blocked": {
+            "title": missing.title,
+            "url": missing.url,
+            "status_text": surveys.STATUS_TEXT.get(missing.status, ""),
+        },
+    }
 
 
 def finished_imports(db: Session, user_id: int, limit: int = 3) -> list:

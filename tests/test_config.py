@@ -259,6 +259,10 @@ def test_versions_come_from_the_central_file():
         "PGADMIN4_VERSION",
         "MARIADB_VERSION",
         "WORDPRESS_CLI_VERSION",
+        "SQLMATE_VERSION",
+        "SQLMATE_SOURCE",
+        "SURVEYLITE_VERSION",
+        "SURVEYLITE_SOURCE",
     }
     settings = Settings.from_env(BASE_ENV)
     assert settings.openrefine_version == versions["OPENREFINE_VERSION"]
@@ -267,6 +271,8 @@ def test_versions_come_from_the_central_file():
     assert settings.pgadmin4_version == versions["PGADMIN4_VERSION"]
     assert settings.mariadb_version == versions["MARIADB_VERSION"]
     assert settings.wordpress_cli_version == versions["WORDPRESS_CLI_VERSION"]
+    assert settings.sqlmate_version == versions["SQLMATE_VERSION"]
+    assert settings.surveylite_version == versions["SURVEYLITE_VERSION"]
 
 
 def test_env_file_and_environment_win_over_the_versions_file(tmp_path, clean_env):
