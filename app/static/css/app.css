@@ -464,6 +464,11 @@ main {
   margin-inline: auto;
 }
 
+.login-hint {
+  margin: 1.5rem 0 0;
+  padding-top: 1rem;
+}
+
 .card-head {
   display: flex;
   flex-wrap: wrap;
@@ -1181,6 +1186,24 @@ progress {
   height: 1.25rem;
 }
 
+/* gear: link to the account page. The label shows only in the mobile menu. */
+.nav .nav-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem;
+  line-height: 1;
+}
+
+.nav-icon .icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.nav-icon-label {
+  display: none;
+}
+
 /* the icon shows the theme that a click switches to */
 .theme-icon-moon,
 :root[data-theme="dark"] .theme-icon-sun {
@@ -1254,12 +1277,13 @@ img.shot[src$=".svg"] {
     width: 100%;
     text-align: left;
   }
-}
 
-/* middle widths: the full menu without the e-mail address (it is in the title of "Log out") */
-@media (min-width: 961px) and (max-width: 1200px) {
-  .nav .user-email {
-    display: none;
+  .nav .nav-icon {
+    padding: 0.4rem 0.7rem;
+  }
+
+  .nav-icon-label {
+    display: inline;
   }
 }
 

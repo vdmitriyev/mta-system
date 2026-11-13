@@ -385,6 +385,11 @@ def import_dataset(
     return redirect("/services")
 
 
+@router.get("/account")
+def account_page(page: Page = Depends(), user: Users = Depends(require_user)):
+    return page.render("account.html")
+
+
 @router.get("/reviews")
 def reviews_page(page: Page = Depends(), user: Users = Depends(require_user)):
     exercises = get_exercises(page.db, part=PART_REVIEW, only_visible=True)

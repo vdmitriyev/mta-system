@@ -12,13 +12,12 @@
     </div>
     <div class="field">
       <label for="pin">PIN</label>
-      <input class="input short" type="password" id="pin" name="pin" inputmode="numeric" autocomplete="current-password" required>
+      <input class="input" type="password" id="pin" name="pin" inputmode="numeric" autocomplete="current-password" required>
     </div>
     <div class="row">
       <button type="submit" class="btn primary">Log in</button>
-      <a href="/register">No account? Register</a>
     </div>
   </form>
-  <p class="muted small">Lost your PIN? Register again with the same e-mail address: we send the login data again.</p>
+  <p class="muted small login-hint">Hint: Lost your PIN? Register again with the same e-mail address: we send the login data again.</p>
 </section>
 {% endblock %}

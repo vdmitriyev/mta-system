@@ -6,6 +6,7 @@ History
 -------------------
 
 * pgAdmin 4: fixed 502 at `/pgadmin4/`. On servers where Docker uses `no-new-privileges`, pgAdmin 9.x listens on port `8080` instead of `80`. pgAdmin now always uses `8080`, and nginx connects to it there. To apply it, run `task prod:up`.
+* New page **Account** (`/account`): shows the registration e-mail of the user and has a gear icon.
 * Test copy: pgAdmin 4 runs with `no-new-privileges`, as on such servers.
 * nginx image: has `ping` (package `iputils-ping`), to check the connection to other containers.
 * Docs: `docs/deployment.md` names the port of pgAdmin 4. 

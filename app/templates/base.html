@@ -34,8 +34,11 @@
           <svg class="icon theme-icon-moon" aria-hidden="true"><use href="/static/img/icons.svg#moon"></use></svg>
         </button>
         {% if user %}
+          <a class="nav-icon" href="/account" title="Account: {{ user.email }}"{% if path == "/account" %} aria-current="page"{% endif %}>
+            <svg class="icon" aria-hidden="true"><use href="/static/img/icons.svg#gear"></use></svg>
+            <span class="nav-icon-label">Account</span>
+          </a>
           {% if is_admin %}{{ nav_link("/mtas-admin/", "Admin") }}{% endif %}
-          <span class="muted small nowrap user-email">{{ user.email }}</span>
           <form method="post" action="/logout">
             {{ ui.csrf(csrf_token) }}
             <button type="submit" title="Log out {{ user.email }}">Log out</button>

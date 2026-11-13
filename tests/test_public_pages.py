@@ -190,12 +190,45 @@ def test_index_cards_are_centred(student_client):
     assert text.index('<div class="welcome">') < text.index("Welcome back")
 
 
-def test_header_hides_the_email_at_middle_widths(student_client):
-    from app.config import BASE_DIR
-
+def test_header_shows_a_gear_instead_of_the_email(student_client):
     text = student_client.get("/").text
-    assert 'class="muted small nowrap user-email"' in text
-    assert 'title="Log out sam.student@uni.example"' in text
-    css = (BASE_DIR / "app/static/css/app.css").read_text()
-    assert "@media (max-width: 960px)" in css
-    assert "@media (min-width: 961px) and (max-width: 1200px)" in css
+    header = text[text.index('<header class="site-header">') : text.index("</header>")]
+    assert "user-email" not in header
+    assert 'href="/account"' in header
+    assert "icons.svg#gear" in header
+    assert 'title="Log out sam.student@uni.example"' in header
+    # order: theme, gear, (admin), log out
+    assert header.index("data-theme-toggle") < header.index('href="/account"')
+    assert header.index('href="/account"') < header.index('action="/logout"')
+
+
+def test_header_order_for_admins(admin_client):
+    text = admin_client.get("/").text
+    header = text[text.index('<header class="site-header">') : text.index("</header>")]
+    positions = [
+        header.index("data-theme-toggle"),
+        header.index('href="/account"'),
+        header.index('href="/mtas-admin/"'),
+        header.index('action="/logout"'),
+    ]
+    assert positions == sorted(positions)
+
+
+def test_account_page_shows_the_registration_email(student_client):
+    response = student_client.get("/account")
+    assert response.status_code == 200
+    assert "Registration e-mail" in response.text
+    assert "<dd>sam.student@uni.example</dd>" in response.text
+
+
+def test_account_page_needs_a_login(client):
+    response = client.get("/account", follow_redirects=False)
+    assert response.status_code in (302, 303)
+    assert "/login" in response.headers["location"]
+
+
+def test_login_page_layout(client):
+    text = client.get("/login").text
+    assert "No account? Register" not in text
+    assert '<input class="input" type="password" id="pin"' in text
+    assert '<p class="muted small login-hint">Hint: Lost your PIN?' in text
