@@ -22,6 +22,7 @@ task prod:cert -- mtas.example.org     # Let's Encrypt certificate
 task prod:logs
 task prod:nginx-reload                 # check the nginx configuration and reload it
 task prod:nginx-recreate               # build nginx again and recreate only its container
+task prod:app-recreate                 # build the app again and recreate only its container
 ```
 
 `task prod:up` starts the app, nginx, PostgreSQL (port `5432` on all interfaces) and pgAdmin 4 (at `https://<SERVER_FQDN>/pgadmin4/`). PostgreSQL and pgAdmin 4 restart with the server.
@@ -37,6 +38,7 @@ task prod:nginx-recreate               # build nginx again and recreate only its
 | `task prod:cert -- <host>` | Gets a Let's Encrypt certificate for the host |
 | `task prod:cert-renew` | Renews the certificates and reloads nginx |
 | `task prod:nginx-reload` | Checks the nginx configuration and reloads it. Use it after a new certificate or after `task app:nginx-config`. The old name `prod:reload` still works. |
+| `task prod:app-recreate` | Builds the app image again and recreates only the app container, for example after an update of the code. nginx, PostgreSQL and pgAdmin 4 keep running. At the end, it reloads nginx, so nginx finds the new container. |
 | `task prod:nginx-recreate` | Builds the nginx image again and recreates only the nginx container. The app and the databases keep running. Use it after a change in `provision/nginx/nginx-docker.conf`: this file is part of the image, so a reload does not read it. |
 
 Before you go live:

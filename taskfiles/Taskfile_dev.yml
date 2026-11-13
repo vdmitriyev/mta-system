@@ -53,3 +53,28 @@ tasks:
       - "{{.DEV_COMPOSE}} exec webapp python -m app.cli db-upgrade"
       - "{{.DEV_COMPOSE}} exec webapp python -m app.cli import-data-exercises"
       - "{{.DEV_COMPOSE}} exec webapp python -m app.cli create-demo-db"
+
+  nginx-reload:
+    desc: checks and reloads the nginx config
+    cmds:
+      - "{{.DEV_COMPOSE}} exec nginx nginx -t"
+      - "{{.DEV_COMPOSE}} exec nginx nginx -s reload"
+
+  nginx-recreate:
+    desc: rebuilds and recreates only nginx
+    preconditions:
+      - sh: test -f {{.DEV_ENV_FILE}}
+        msg: "{{.DEV_ENV_FILE}} is missing. Run 'task app:init-env' first"
+    cmds:
+      - mkdir -p .logs/nginx .htpasswd_nginx certbot/www certbot/conf
+      - "{{.DEV_COMPOSE}} up -d --build --force-recreate --no-deps nginx"
+
+  app-recreate:
+    desc: rebuilds and recreates only the app
+    preconditions:
+      - sh: test -f {{.DEV_ENV_FILE}}
+        msg: "{{.DEV_ENV_FILE}} is missing. Run 'task app:init-env' first"
+    cmds:
+      - "{{.DEV_COMPOSE}} up -d --build --force-recreate --no-deps webapp"
+      # nginx looks up the address of the app only at start or reload
+      - task: nginx-reload

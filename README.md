@@ -87,8 +87,8 @@ The project uses [Task](https://taskfile.dev/). `task` lists all tasks. The main
 | Group | Main tasks | Guide |
 | --- | --- | --- |
 | `app:` | `app:serve`, `app:test`, `app:config`, `app:cli -- <command>` | [development](docs/development.md) |
-| `dev:` | `dev:up`, `dev:init`, `dev:logs`, `dev:down` (Docker for development) | [development](docs/development.md#run-in-docker-for-development) |
-| `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate` | [deployment](docs/deployment.md#production) |
+| `dev:` | `dev:up`, `dev:init`, `dev:logs`, `dev:down`, `dev:app-recreate`, `dev:nginx-recreate` (Docker for development) | [development](docs/development.md#run-in-docker-for-development) |
+| `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate`, `prod:app-recreate` (build the app again and recreate only its container) | [deployment](docs/deployment.md#production) |
 | `prod:` nginx | `prod:cert -- <host>`, `prod:cert-renew`, `prod:nginx-reload` (check and reload the config), `prod:nginx-recreate` (build nginx again and recreate only its container) | [deployment](docs/deployment.md#https-certificate-lets-encrypt) |
 | `sqlmate:` | `sqlmate:up`, `sqlmate:init`, `sqlmate:logs`, `sqlmate:down` | [deployment](docs/deployment.md#sqlmate-optional) |
 | `surveylite:` | `surveylite:up`, `surveylite:logs`, `surveylite:down` | [deployment](docs/deployment.md#surveylite-optional) |

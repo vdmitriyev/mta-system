@@ -2,6 +2,13 @@
 History
 =======
 
+2.4.2 (2026-11-13)
+-------------------
+
+* New task `prod:app-recreate`: builds the app image again and recreates only the app container. nginx, PostgreSQL and pgAdmin 4 keep running. At the end, it reloads nginx, so nginx finds the new container (it looks up the address of the app only at start or reload).
+* New tasks for development, like the ones of production: `dev:app-recreate`, `dev:nginx-recreate` and `dev:nginx-reload`.
+* Docs: the README, `docs/deployment.md` and `docs/development.md` list the new tasks and say when to use them.
+
 2.4.1 (2026-11-13)
 -------------------
 

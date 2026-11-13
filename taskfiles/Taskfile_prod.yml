@@ -52,6 +52,14 @@ tasks:
       - mkdir -p .logs/nginx .htpasswd_nginx certbot/www certbot/conf
       - "{{.PROD_COMPOSE}} up -d --build --force-recreate --no-deps nginx"
 
+  app-recreate:
+    desc: rebuilds and recreates only the app
+    cmds:
+      - mkdir -p data .logs .htpasswd_nginx
+      - "{{.PROD_COMPOSE}} up -d --build --force-recreate --no-deps webapp"
+      # nginx looks up the address of the app only at start or reload
+      - task: nginx-reload
+
   migrate:
     desc: applies the migrations to the production database
     cmds:
