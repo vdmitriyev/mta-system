@@ -80,7 +80,7 @@ def test_adventureworks_reports_the_first_error(target, tmp_path, monkeypatch):
         "TABLES",
         [("Missing.csv", "missing", ","), ("DimCurrency.csv", "dim_currency", ",")],
     )
-    with pytest.raises(Exception, match="Missing.csv"):
+    with pytest.raises(FileNotFoundError, match="Missing.csv"):
         aw.run_import(target, data_dir=data_dir)
     assert tables(target) == {"dim_currency": 1}
 
@@ -186,6 +186,39 @@ def test_import_task_shows_the_first_line_of_the_error(db, student, monkeypatch)
     assert (
         str(error.value) == "Flights was not imported: Table 'flights' already exists."
     )
+
+
+def test_import_task_shows_only_the_name_of_a_missing_file(
+    db, student, monkeypatch, tmp_path
+):
+    add_postgresql(db, student)
+    missing = tmp_path / "secret" / "folder" / "tutorial_flights.zip"
+    monkeypatch.setattr(flights, "DATA_FILE", missing)
+    with pytest.raises(TaskError) as error:
+        import_dataset_task(db, student.itid, "flights")
+    assert (
+        str(error.value)
+        == "Flights was not imported: file not found: tutorial_flights.zip"
+    )
+
+
+def test_adventureworks_missing_file_shows_only_its_name(
+    db, student, monkeypatch, tmp_path
+):
+    add_postgresql(db, student)
+    data_dir = tmp_path / "aw"
+    data_dir.mkdir()
+    monkeypatch.setattr(aw, "TABLES", [("DimDate.csv", "dim_date", ",")])
+    real_run_import = aw.run_import
+    monkeypatch.setattr(
+        aw, "run_import", lambda uri: real_run_import(uri, data_dir=data_dir)
+    )
+    with pytest.raises(TaskError) as error:
+        import_dataset_task(db, student.itid, "adventureworks")
+    assert str(error.value) == (
+        "AdventureWorks was not imported: file not found: DimDate.csv"
+    )
+    assert str(tmp_path) not in str(error.value)
 
 
 def test_all_importer_modules_exist():

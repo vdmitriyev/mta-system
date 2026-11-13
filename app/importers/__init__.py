@@ -2,6 +2,7 @@
 
 import importlib
 import logging
+from pathlib import Path
 
 from sqlalchemy.orm import Session
 
@@ -27,6 +28,14 @@ def import_kind(dataset: str) -> str:
     return f"import:{dataset}"
 
 
+def error_message(error: Exception) -> str:
+    """First line of the error for the user. A missing file shows its name, not its path."""
+
+    if isinstance(error, FileNotFoundError) and error.filename:
+        return f"file not found: {Path(error.filename).name}"
+    return str(error).splitlines()[0][:200]
+
+
 def import_dataset_task(db: Session, user_id: int, dataset: str) -> str:
     """Background task: imports a dataset into the PostgreSQL database of the user"""
 
@@ -49,5 +58,5 @@ def import_dataset_task(db: Session, user_id: int, dataset: str) -> str:
     except Exception as error:
         logger.exception("Import of %s failed for user %s", dataset, user_id)
         # e.g. "table already exists": the user can act on the first line
-        raise TaskError(f"{title} was not imported: {str(error).splitlines()[0][:200]}")
+        raise TaskError(f"{title} was not imported: {error_message(error)}")
     return f"{title} was imported into your PostgreSQL database"

@@ -68,4 +68,4 @@ def run_import(db_connect_uri: str, data_dir: Path = None) -> None:
         engine.dispose()
 
     if errors:
-        raise Exception(errors[0])
+        raise errors[0]

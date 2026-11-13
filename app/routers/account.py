@@ -234,7 +234,7 @@ def service_cards(page: Page, user: Users) -> list:
                         ),
                         _field(
                             "Login link",
-                            entry.surveylite_login_url,
+                            surveys.public_link(entry.surveylite_login_url),
                             link=True,
                             link_text="Log in to SurveyLite",
                         ),

@@ -11,9 +11,11 @@ participant is the table SurveyliteService of this app.
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from urllib.parse import urlsplit
 
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.models import ServiceRequirement, SurveyAssignment, SurveyliteService
 from app.services import surveylite_api
 from app.services.surveylite_api import COMPLETED, SurveyliteError
@@ -53,10 +55,28 @@ def assignments_of(db: Session, user_id: int) -> list[SurveyAssignment]:
     )
 
 
+def public_link(url: str | None) -> str | None:
+    """The link of SurveyLite with its public address (SURVEYLITE_URL).
+
+    SurveyLite builds its links from its own SURVEYLITE_BASE_URL. Without the
+    prefix /surveylite there, https://<host>/me?auth=... opens the page /me of this
+    app. The app keeps only the path in SurveyLite and the query of the link.
+    """
+
+    if not url:
+        return url
+    public = get_settings().surveylite_public_url
+    prefix = urlsplit(public).path or "/"
+    parts = urlsplit(url)
+    path = parts.path
+    path = path[len(prefix) :] if path.startswith(prefix) else path.lstrip("/")
+    return public + path + (f"?{parts.query}" if parts.query else "")
+
+
 def survey_link(row: SurveyAssignment) -> str | None:
     """The link for the user: the one that also logs in, else the plain survey link"""
 
-    return row.survey_auth_url or row.survey_url
+    return public_link(row.survey_auth_url or row.survey_url)
 
 
 def _store_link(db: Session, user_id: int, title: str, link) -> SurveyAssignment:

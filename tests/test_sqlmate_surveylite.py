@@ -221,6 +221,36 @@ def test_services_page_shows_sqlmate_and_surveylite(
     assert "Entry survey" in survey_card and "not started" in survey_card
 
 
+@pytest.mark.parametrize(
+    "link",
+    [
+        "https://mtas.example.org/me?auth=key-1",
+        "http://surveylite-service:5001/me?auth=key-1",
+        "https://mtas.example.org/surveylite/me?auth=key-1",
+    ],
+)
+def test_links_of_surveylite_use_its_public_address(settings, link):
+    assert surveys.public_link(link) == f"{BASE}/me?auth=key-1"
+
+
+def test_public_link_keeps_the_survey_path(settings):
+    assert surveys.public_link("https://mtas.example.org/s/p1-7") == f"{BASE}/s/p1-7"
+    assert surveys.public_link(None) is None
+
+
+def test_services_page_fixes_a_login_link_without_the_prefix(
+    student_client, db, student, surveylite
+):
+    provisioning.surveylite_participant(db, student.itid, force_create=True)
+    entry = surveys.participant_of(db, student.itid)
+    entry.surveylite_login_url = "https://mtas.example.org/me?auth=key-p1-1"
+    db.commit()
+
+    text = student_client.get("/services").text
+    assert f'href="{BASE}/me?auth=key-p1-1"' in text
+    assert 'href="https://mtas.example.org/me?auth=' not in text
+
+
 def test_sqlmate_waits_for_the_survey(student_client, db, student, surveylite):
     add_sqlmate(db, student)
     provisioning.surveylite_participant(db, student.itid, force_create=True)
