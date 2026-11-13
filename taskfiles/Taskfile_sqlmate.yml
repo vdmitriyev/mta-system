@@ -1,0 +1,57 @@
+version: '3'
+
+# sqlmate next to mta-system: provision/sqlmate/compose.yml, settings in
+# envs/sqlmate-service.env. The image sqlmate:<SQLMATE_VERSION> must exist on the server.
+# SQLMATE_NETWORK: the network of mta-system (default: production, mta-system-prod_mtas-network).
+
+vars:
+  SQLMATE_COMPOSE: docker compose -f provision/sqlmate/compose.yml
+  SQLMATE_NETWORK: '{{.SQLMATE_NETWORK | default "mta-system-prod_mtas-network"}}'
+
+env:
+  SQLMATE_NETWORK: '{{.SQLMATE_NETWORK}}'
+
+tasks:
+
+  up:
+    desc: starts sqlmate and its database on the network of mta-system
+    preconditions:
+      - sh: docker image inspect "sqlmate:$SQLMATE_VERSION" >/dev/null 2>&1
+        msg: "The image sqlmate:{{.SQLMATE_VERSION}} is missing (SQLMATE_VERSION in versions.env). Load it, or build it: task services:build-sqlmate"
+      - sh: test -f envs/sqlmate-service.env
+        msg: "envs/sqlmate-service.env is missing: task app:init-env, then change every <CHANGE-ME>"
+      - sh: docker network inspect "{{.SQLMATE_NETWORK}}" >/dev/null 2>&1
+        msg: "The network {{.SQLMATE_NETWORK}} is missing: start mta-system first (task prod:up), or set SQLMATE_NETWORK"
+    cmds:
+      - mkdir -p .logs/sqlmate setup/sqlmate
+      - "{{.SQLMATE_COMPOSE}} up -d"
+
+  down:
+    desc: stops sqlmate and its database (the data stays)
+    cmds:
+      - "{{.SQLMATE_COMPOSE}} down"
+
+  restart:
+    desc: restarts sqlmate and its database
+    cmds:
+      - "{{.SQLMATE_COMPOSE}} restart"
+
+  ps:
+    desc: shows the state of the sqlmate containers
+    cmds:
+      - "{{.SQLMATE_COMPOSE}} ps"
+
+  logs:
+    desc: shows the logs of sqlmate as they come in
+    cmds:
+      - "{{.SQLMATE_COMPOSE}} logs -f {{.CLI_ARGS}}"
+
+  init:
+    desc: sets up sqlmate once (tables, sandbox database, exercises from setup/sqlmate); also after an update of sqlmate
+    cmds:
+      - "{{.SQLMATE_COMPOSE}} exec sqlmate-service flask db upgrade"
+      # each flask command also stores API_KEY: on the first start, the tables were missing
+      - "{{.SQLMATE_COMPOSE}} exec sqlmate-service flask db-create-sandbox-db"
+      # needs setup/sqlmate/sql-exercises.yaml: without exercises, sqlmate runs, but is empty
+      - cmd: "{{.SQLMATE_COMPOSE}} exec sqlmate-service flask sql-import-exercises-metadata"
+        ignore_error: true

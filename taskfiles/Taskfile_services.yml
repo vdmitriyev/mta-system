@@ -32,8 +32,6 @@ tasks:
       - task: pull-pgadmin4
       - task: pull-mariadb
       # optional services: only if their profile is in COMPOSE_PROFILES
-      - task: build-sqlmate
-        if: echo ",$COMPOSE_PROFILES," | grep -q ",sqlmate,"
       - task: build-surveylite
         if: echo ",$COMPOSE_PROFILES," | grep -q ",surveylite,"
 

@@ -5,6 +5,8 @@ History
 2.4.1 (2026-11-13)
 -------------------
 
+* sqlmate runs with its own compose file `provision/sqlmate/compose.yml` (like WordPress), not in `compose.services.yml`. It uses the image `sqlmate:<SQLMATE_VERSION>` on the server and its settings in `envs/sqlmate-service.env`, joins the network of mta-system (`SQLMATE_NETWORK`) and keeps the database volume of before (`SQLMATE_DB_VOLUME`). New tasks `sqlmate:up`, `sqlmate:down`, `sqlmate:restart`, `sqlmate:ps`, `sqlmate:logs` and `sqlmate:init` (before: `prod:sqlmate-init`). `services:update-all` no longer builds sqlmate.
+* Renamed `provision/wordpress/docker-compose.yml` to `provision/wordpress/compose.yml`.
 * nginx: fixed pgAdmin 4 at `/pgadmin4/`, which failed with 502 after pgAdmin was created again (new address). nginx now looks up the address at each request and also starts without pgAdmin. It passes HTTPS and the port of the user on to pgAdmin, and `/pgadmin4` goes to `/pgadmin4/`.
 * SurveyLite: the login link and the survey links use the public address of SurveyLite (`SURVEYLITE_URL`). Before, a link without the prefix `/surveylite` (`https://<host>/me?auth=...`) opened the page `/me` of mta-system instead of SurveyLite.
 * Dataset import into PostgreSQL: if a file is missing, the user sees only its name ("file not found: tutorial_flights.zip"), not its path on the server.

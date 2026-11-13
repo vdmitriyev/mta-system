@@ -2,7 +2,7 @@ version: '3'
 
 # Versions of the service images (METABASE_VERSION, OPENREFINE_VERSION, WORDPRESS_VERSION)
 # for all tasks, e.g. the docker compose calls. A variable in the shell wins.
-# .env (optional, not in git): COMPOSE_PROFILES, the optional services sqlmate and surveylite.
+# .env (optional, not in git): COMPOSE_PROFILES, the optional services (e.g. surveylite).
 dotenv: ['versions.env', '.env']
 
 vars:
@@ -21,6 +21,7 @@ includes:
   prod: ./taskfiles/Taskfile_prod.yml
   sandbox: ./taskfiles/Taskfile_sandbox.yml
   services: ./taskfiles/Taskfile_services.yml
+  sqlmate: ./taskfiles/Taskfile_sqlmate.yml
   testenv: ./taskfiles/Taskfile_testenv.yaml
 
 tasks:

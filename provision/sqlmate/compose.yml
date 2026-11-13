@@ -1,0 +1,67 @@
+# sqlmate (SQL exercises) and its own PostgreSQL database, next to mta-system.
+# The image sqlmate:<SQLMATE_VERSION> must exist on the server (versions.env).
+# Settings: envs/sqlmate-service.env (sample: samples/sqlmate-service.env).
+#
+#   task sqlmate:up      (docker compose --env-file versions.env -f provision/sqlmate/compose.yml up -d)
+#   task sqlmate:init    once, and after an update of sqlmate
+#
+# sqlmate publishes no port: nginx (https://<SERVER_FQDN>/sqlmate/) and the app reach it
+# by its name on the network of mta-system (SQLMATE_NETWORK).
+name: mta-system-sqlmate
+
+services:
+
+  sqlmate-service:
+    image: sqlmate:${SQLMATE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
+    pull_policy: never
+    command: gunicorn --config gunicorn.config.docker.prod.py run:app
+    restart: unless-stopped
+    env_file:
+      - ../../envs/sqlmate-service.env
+    environment:
+      FLASK_APP: run.py
+      TARGET_SERVER: prod
+      SM_URL_PREFIX: sqlmate/
+      POSTGRES_DB_HOST: sqlmate-database
+      # users come from the app only (API), not from the registration form of sqlmate
+      REGISTRATION_API: "True"
+      REGISTRATION_WEB: "False"
+      TZ: Europe/Berlin
+    volumes:
+      - ../../.logs/sqlmate:/app/.logs
+      # the exercises: sql-exercises.yaml and the files that it names
+      - ../../setup/sqlmate:/app/data:ro
+    depends_on:
+      sqlmate-database:
+        condition: service_healthy
+    networks:
+      - mtas-network
+
+  sqlmate-database:
+    image: "postgres:${POSTGRESQL_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}"
+    restart: unless-stopped
+    env_file:
+      - ../../envs/sqlmate-service.env
+    environment:
+      PGDATA: /pgdata
+    volumes:
+      - sqlmate-pgdata:/pgdata
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - mtas-network
+
+networks:
+  # the network of mta-system: production (task prod:up) or development (task dev:up)
+  mtas-network:
+    external: true
+    name: ${SQLMATE_NETWORK:-mta-system-prod_mtas-network}
+
+volumes:
+  # the same volume as before, when sqlmate was part of compose.services.yml
+  sqlmate-pgdata:
+    name: ${SQLMATE_DB_VOLUME:-mta-system-prod_sqlmate-pgdata}

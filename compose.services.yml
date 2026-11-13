@@ -48,56 +48,7 @@ services:
     networks:
       - mtas-network
 
-  # sqlmate: SQL exercises, at https://<SERVER_FQDN>/sqlmate/ (nginx). Optional:
-  # starts only with the profile "sqlmate", e.g. COMPOSE_PROFILES=sqlmate,surveylite in .env.
-  # Built from SQLMATE_SOURCE (versions.env). Set up once: task prod:sqlmate-init.
-  # The API key of the app is API_KEY in envs/sqlmate-service.env: sqlmate stores it at start.
-  sqlmate-service:
-    profiles: [sqlmate]
-    build: ${SQLMATE_SOURCE:?set it in versions.env and use task, or docker compose --env-file versions.env}
-    image: sqlmate:${SQLMATE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
-    command: gunicorn --config gunicorn.config.docker.prod.py run:app
-    restart: unless-stopped
-    env_file:
-      - envs/sqlmate-service.env
-    environment:
-      FLASK_APP: run.py
-      TARGET_SERVER: prod
-      SM_URL_PREFIX: sqlmate/
-      POSTGRES_DB_HOST: sqlmate-database
-      # users come from the app only (API), not from the registration form of sqlmate
-      REGISTRATION_API: "True"
-      REGISTRATION_WEB: "False"
-      TZ: Europe/Berlin
-    volumes:
-      # the logs on the host
-      - ./.logs/sqlmate:/app/.logs
-      # the exercises: sql-exercises.yaml and the files that it names (sqlmate also starts without them)
-      - ./setup/sqlmate:/app/data:ro
-    depends_on:
-      sqlmate-database:
-        condition: service_healthy
-    networks:
-      - mtas-network
-
-  sqlmate-database:
-    profiles: [sqlmate]
-    image: "postgres:${POSTGRESQL_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}"
-    restart: unless-stopped
-    env_file:
-      - envs/sqlmate-service.env
-    environment:
-      PGDATA: /pgdata
-    volumes:
-      - sqlmate-pgdata:/pgdata
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      - mtas-network
+  # sqlmate runs with its own compose file: provision/sqlmate/compose.yml (task sqlmate:up)
 
   # SurveyLite: anonymous surveys, at https://<SERVER_FQDN>/surveylite/ (nginx). Optional:
   # starts only with the profile "surveylite".
@@ -131,5 +82,4 @@ networks:
 volumes:
   pg15volume-service:
   pga4volume-service:
-  sqlmate-pgdata:
   surveylite-data:

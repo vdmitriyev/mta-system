@@ -68,9 +68,10 @@ All services are switched off at the start. The app then runs on its own, withou
 
 ### sqlmate and SurveyLite
 
-[sqlmate](https://github.com/vdmitriyev/sqlmate) (SQL exercises) and [SurveyLite](https://github.com/vdmitriyev/surveylite) (anonymous surveys) run as shared services in Docker (`compose.services.yml`). The app creates the accounts through their APIs.
+[sqlmate](https://github.com/vdmitriyev/sqlmate) (SQL exercises) and [SurveyLite](https://github.com/vdmitriyev/surveylite) (anonymous surveys) run as shared services in Docker. The app creates the accounts through their APIs. Both are optional.
 
-Both are optional. Docker starts them only with their Compose profile: put `COMPOSE_PROFILES=sqlmate,surveylite` into the file `.env` in the project folder (not in git). Then `task dev:up` and `task prod:up` also build them from the source folders `SQLMATE_SOURCE` and `SURVEYLITE_SOURCE` of `versions.env`. Without the profiles, no source code of sqlmate or SurveyLite is needed.
+* sqlmate has its own compose file, `provision/sqlmate/compose.yml`, with the settings in `envs/sqlmate-service.env`. It needs the image `sqlmate:<SQLMATE_VERSION>` (`task services:build-sqlmate` builds it from `SQLMATE_SOURCE`). With `task dev:up` running: `SQLMATE_NETWORK=mta-system_mtas-network task sqlmate:up`, then `task sqlmate:init`.
+* SurveyLite is in `compose.services.yml` and starts only with its Compose profile: put `COMPOSE_PROFILES=surveylite` into the file `.env` in the project folder (not in git). Then `task dev:up` and `task prod:up` also build it from `SURVEYLITE_SOURCE` of `versions.env`.
 
 * **sqlmate**: each user gets an account with the internal e-mail of the user. The services page shows the address, a personal login link, the login and the PIN. Admin page: **Services → sqlmate**.
 * **SurveyLite** (version 0.21.0 or newer): each user gets an anonymous participant. SurveyLite does not know who the participant is: only the table `surveylite_service` of the app links them. The services page shows the link to `/me` of SurveyLite, a personal login link (`/me?auth=…`), the login, the PIN and the survey links of the user. The survey links also log the user in, so they open surveys that need a login (`require_login`). If a login link becomes known to others, **New login link** on the admin page makes a new one: the old links stop working.
