@@ -1,13 +1,20 @@
 services:
 
+  # Not needed: the app starts one Metabase container for each user.
+  # Starts only with the profile "metabase".
   metabase-service:
+   profiles: [metabase]
    image: metabase/metabase:${METABASE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
    ports:
        - "127.0.0.1:3000:3000"
    networks:
        - mtas-network
 
+  # Not started: the app starts one OpenRefine container for each user. Build the
+  # image openrefine:<OPENREFINE_VERSION> with task services:build-openrefine.
+  # Starts only with the profile "openrefine".
   openrefine-service:
+   profiles: [openrefine]
    # versions come from versions.env, the same file that the web app reads
    build:
      context: ./provision/openrefine
@@ -21,8 +28,7 @@ services:
     image: "postgres:${POSTGRESQL_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}"
     env_file:
       - envs/postgresql-service.env # configure postgres service
-    ports:
-      - "127.0.0.1:5432:5432"
+    # the port is published in compose.yml (development) and compose.prod.yaml (production)
     volumes:
       - pg15volume-service:/pgdata
     networks:

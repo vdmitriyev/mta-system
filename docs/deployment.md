@@ -17,17 +17,19 @@ task app:build-image   # builds mta-system:latest
 
 ```bash
 cp samples/webapp.env envs/.env        # then set TARGET_SERVER=production and your values
-task prod:up                           # app, nginx and the services
+task prod:up                           # app, nginx, PostgreSQL and pgAdmin 4
 task prod:cert -- mtas.example.org     # Let's Encrypt certificate
 task prod:logs
 ```
+
+`task prod:up` starts the app, nginx, PostgreSQL (port `5432` on all interfaces) and pgAdmin 4 (at `https://<SERVER_FQDN>/pgadmin4/`). PostgreSQL and pgAdmin 4 restart with the server. It does not start the shared Metabase and OpenRefine containers: the app starts one container of each for each user. If you still want them, add `metabase` or `openrefine` to `COMPOSE_PROFILES` (see below). `task prod:up` also no longer builds the OpenRefine image: run `task services:build-openrefine` once, and after a change of `OPENREFINE_VERSION`.
 
 Before you go live:
 
 1. Set `TARGET_SERVER=production`. This switches off the debug pages and the API docs, and makes the session cookie HTTPS-only.
 2. Use new random values for `SECRET_KEY`, `HASH_KEY_LINKS` and `HASH_KEY_HIDDEN`, and for all passwords in `envs/`.
 3. Set `SERVER_FQDN`, `SYSTEM_ADMINS`, `ALLOWED_FQDN_FOR_EMAILS` and the `MAIL_*` settings.
-4. Keep the app behind nginx. Only nginx publishes ports to all interfaces (`80`, `443`). All other ports are bound to `127.0.0.1`.
+4. Keep the app behind nginx. Only nginx (`80`, `443`) and PostgreSQL (`5432`, or `POSTGRESQL_PUBLIC_PORT`) publish ports to all interfaces. All other ports are bound to `127.0.0.1`. Users log in to PostgreSQL with a password: use a strong `POSTGRES_PASSWORD` in `envs/postgresql-service.env`, and open the port in the firewall only for the networks that need it.
 5. Back up the folder `data/` (SQLite database) and `.htpasswd_nginx/`.
 
 ### sqlmate and SurveyLite in production (optional)

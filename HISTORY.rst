@@ -13,6 +13,9 @@ History
 * SurveyLite 0.21.0: the services page shows the personal login link of `/me` ("Log in to SurveyLite"), and the survey links also log the user in, so surveys with `require_login` open with one click. The admin page makes a new login link on request ("New login link"). Participants from before get their login link on the next visit of the services page. SurveyLite trusts the forwarded address of nginx (`FORWARDED_ALLOW_IPS`), so its login limits count per user address.
 * The test copy also runs sqlmate, SurveyLite and the nginx of production, and checks them.
 * sqlmate and SurveyLite are optional: Docker starts them only with their Compose profile (`COMPOSE_PROFILES=sqlmate,surveylite` in the file `.env` of the project folder). Without it, `task prod:up` and `task dev:up` need no source code of them. `services:update-all` builds them only if their profile is on, `prod:sqlmate-init` stops with a message if it is off, and `services:versions` shows `COMPOSE_PROFILES`.
+* `task prod:up` and `task dev:up` no longer start the shared Metabase and OpenRefine containers (the app starts one of each for each user). They start only with the profiles `metabase` and `openrefine`. The OpenRefine image comes from `task services:build-openrefine`.
+* `samples/webapp.env`: separate blocks for the settings of sqlmate and of SurveyLite.
+* Production: PostgreSQL is reachable from outside (port `5432` on all interfaces, other port with `POSTGRESQL_PUBLIC_PORT`). PostgreSQL and pgAdmin 4 restart with the server (`restart: unless-stopped`). In development, PostgreSQL stays on `127.0.0.1`.
 * The README is shorter: the setup, tests and API moved to `docs/development.md`, the Docker image, production and the versions of the services to `docs/deployment.md`. The README lists the supported versions of the services in a table.
 
 2.3.0 (2026-11-11)

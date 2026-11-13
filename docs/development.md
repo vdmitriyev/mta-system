@@ -98,7 +98,7 @@ task app:serve    # runs the app on http://127.0.0.1:5353 and reloads on code ch
 
 ### Run in Docker for development
 
-The app (with reload) runs behind nginx, together with PostgreSQL, pgAdmin 4, Metabase and OpenRefine. The settings come from `envs/webapp-dev-docker.env`.
+The app (with reload) runs behind nginx, together with PostgreSQL and pgAdmin 4. The Metabase and OpenRefine containers of the users need their images: `task services:pull-metabase` and `task services:build-openrefine`. The settings come from `envs/webapp-dev-docker.env`.
 
 ```bash
 task dev:up                   # builds and starts, app on http://127.0.0.1:5252

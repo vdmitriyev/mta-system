@@ -5,7 +5,7 @@
 # sqlmate and SurveyLite are optional (profiles in compose.services.yml). To start them,
 # put COMPOSE_PROFILES=sqlmate,surveylite into the file .env of the project folder.
 #
-# Only nginx publishes ports to all interfaces. The app is reachable from nginx only.
+# nginx and PostgreSQL publish ports to all interfaces. The app is reachable from nginx only.
 name: mta-system-prod
 
 services:
@@ -74,6 +74,18 @@ services:
       options:
         max-size: "10m"
         max-file: "3"
+
+  # PostgreSQL of the students: reachable from outside, e.g. from their SQL clients.
+  # The login of each user needs a password. Use a strong POSTGRES_PASSWORD in
+  # envs/postgresql-service.env and allow the port in the firewall only if needed.
+  postgresql-service:
+    restart: unless-stopped
+    ports:
+      - "${POSTGRESQL_PUBLIC_PORT:-5432}:5432"
+
+  # pgAdmin 4 at https://<SERVER_FQDN>/pgadmin4/ (nginx)
+  pgadmin4-service:
+    restart: unless-stopped
 
   # Gets and renews Let's Encrypt certificates. Runs only on demand:
   #   task prod:cert -- mtas.example.org
