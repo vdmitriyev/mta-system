@@ -2,27 +2,39 @@
 History
 =======
 
+2.4.3 (2026-11-13)
+-------------------
+
+* pgAdmin 4: new version 9.19 (was 8.12). pgAdmin 9.x accepts the user name from nginx only from a trusted proxy. `provision/pgadmin4/config_local.py` now trusts the private networks of Docker. Without this, users see the login page of pgAdmin.
+* pgAdmin 4: nginx and pgAdmin now share a secret. nginx sends it with each request. pgAdmin accepts the user name only with it. Before, every container in the network could log in to pgAdmin as any user.
+* The secret is in the new file `envs/pgadmin4-proxy.env`. `task app:init-env` creates it from `samples/pgadmin4-proxy.env` with a random value. `task prod:up` and `task prod:nginx-recreate` stop if the file is missing. In development, the file is optional.
+* To update a server: back up the volume `pga4volume-service`, then run `task app:init-env`, `task services:pull-pgadmin4` and `task prod:up`.
+* Test copy: checks the pgAdmin 4 login with and without the secret, and through nginx.
+* `versions.env` is shorter. sqlmate and SurveyLite each have their own block. `SQLMATE_SOURCE` and `SURVEYLITE_SOURCE` are gone: the images must be on the server. `task services:build-sqlmate` and `task services:build-surveylite` build them from `temp/sqlmate` and `temp/surveylite`. The test copy also builds them from there. `task services:versions` shows only the versions.
+* Docs: the README, `docs/deployment.md` and `docs/development.md` are shorter and in plain language. `docs/deployment.md` has a new section **pgAdmin 4** and a table with the task that gets each image. All three link to this file.
+
 2.4.2 (2026-11-13)
 -------------------
 
-* New task `prod:app-recreate`: builds the app image again and recreates only the app container. nginx, PostgreSQL and pgAdmin 4 keep running. At the end, it reloads nginx, so nginx finds the new container (it looks up the address of the app only at start or reload). The app then needs a few seconds to start (migrations, exercises, workers). Until then, nginx answers with 502. `prod:migrate` is not needed: the app applies the migrations on each start.
-* New tasks for development, like the ones of production: `dev:app-recreate`, `dev:nginx-recreate` and `dev:nginx-reload`.
-* Docs: the README, `docs/deployment.md` and `docs/development.md` list the new tasks and say when to use them. The README, `docs/deployment.md` and `docs/development.md` also say that the app needs a few seconds to start after `prod:app-recreate` or `dev:app-recreate`, and that no migration task is needed.
+* New task `prod:app-recreate`: builds the app again and recreates only the app. Then it reloads nginx, so nginx finds the new container.
+* After `prod:app-recreate`, the app needs a few seconds to start. Until then, nginx answers with 502. You do not need `prod:migrate`: the app applies the migrations on each start.
+* New tasks for development: `dev:app-recreate`, `dev:nginx-recreate` and `dev:nginx-reload`.
+* Docs: the README and both guides list the new tasks.
 
 2.4.1 (2026-11-13)
 -------------------
 
-* Admins can delete a user on the page **Users**. The user is not removed from the database, but marked as deleted and can no longer log in. The e-mail gets the prefix `deleted-<date>-<4 random characters>-`, for example `deleted-20261113-a1b2-sam@uni.example`, so the address can register again as a new user. Its containers (Metabase, OpenRefine, WordPress, ...) are stopped, but not removed. The databases and accounts of the user in the services stay. Admins cannot delete their own account.
-* sqlmate runs with its own compose file `provision/sqlmate/compose.yml` (like WordPress), not in `compose.services.yml`. It uses the image `sqlmate:<SQLMATE_VERSION>` on the server and its settings in `envs/sqlmate-service.env`, joins the network of mta-system (`SQLMATE_NETWORK`) and keeps the database volume of before (`SQLMATE_DB_VOLUME`). New tasks `sqlmate:up`, `sqlmate:down`, `sqlmate:restart`, `sqlmate:ps`, `sqlmate:logs` and `sqlmate:init` (before: `prod:sqlmate-init`). `services:update-all` no longer builds sqlmate.
-* SurveyLite also runs with its own compose file `provision/surveylite/compose.yml`, not in `compose.services.yml`. It uses the image `surveylite:<SURVEYLITE_VERSION>` on the server and its settings in `envs/surveylite-service.env`, joins the network of mta-system (`SURVEYLITE_NETWORK`) and keeps the data volume of before (`SURVEYLITE_DATA_VOLUME`). New tasks `surveylite:up`, `surveylite:down`, `surveylite:restart`, `surveylite:ps` and `surveylite:logs`. The profile `surveylite` is gone, and `services:update-all` no longer builds SurveyLite.
+* Admins can delete a user on the page **Users**. The user can no longer log in. The e-mail gets a prefix, for example `deleted-20261113-a1b2-sam@uni.example`, so the address can register again. The containers of the user stop. The databases and accounts stay. Admins cannot delete their own account.
+* sqlmate has its own compose file `provision/sqlmate/compose.yml` and its own tasks (`sqlmate:up`, `sqlmate:init`, `sqlmate:logs`, ...). It uses the image `sqlmate:<SQLMATE_VERSION>` and keeps its data. `prod:sqlmate-init` is now `sqlmate:init`.
+* SurveyLite has its own compose file `provision/surveylite/compose.yml` and its own tasks (`surveylite:up`, `surveylite:logs`, ...). It uses the image `surveylite:<SURVEYLITE_VERSION>` and keeps its data.
 * Renamed `provision/wordpress/docker-compose.yml` to `provision/wordpress/compose.yml`.
-* nginx: fixed `task prod:cert`. Port `80` answered all requests with 404, also the challenge files of Let's Encrypt (`/.well-known/acme-challenge/`), because a `return` at server level runs before the locations. Now nginx serves the challenge files and redirects all other requests to HTTPS. `docs/deployment.md` describes the steps for the certificate.
-* New task `prod:nginx-recreate`: builds the nginx image again and recreates only the nginx container, for example after a change in `provision/nginx`. `prod:reload` is now `prod:nginx-reload`; the old name still works.
-* nginx: fixed pgAdmin 4 at `/pgadmin4/`, which failed with 502 after pgAdmin was created again (new address). nginx now looks up the address at each request and also starts without pgAdmin. It passes HTTPS and the port of the user on to pgAdmin, and `/pgadmin4` goes to `/pgadmin4/`.
-* SurveyLite: the login link and the survey links use the public address of SurveyLite (`SURVEYLITE_URL`). Before, a link without the prefix `/surveylite` (`https://<host>/me?auth=...`) opened the page `/me` of mta-system instead of SurveyLite.
-* Dataset import into PostgreSQL: if a file is missing, the user sees only its name ("file not found: tutorial_flights.zip"), not its path on the server.
-* Shorter descriptions of all tasks in `task --list`: what the task does, plus a usage hint where a task needs input. All start with a lowercase verb.
-* Docs: the README lists the main task groups (new section **Tasks**). `docs/deployment.md` has a table of all `prod:` tasks and the section **Delete a user**. `docs/development.md` explains how to register again with the same address and how to rebuild nginx after a change of its config.
+* nginx: fixed `task prod:cert`. Port `80` answered all requests with 404, also the requests of Let's Encrypt. Now nginx serves `/.well-known/acme-challenge/` and redirects all other requests to HTTPS.
+* New task `prod:nginx-recreate`: builds nginx again and recreates only nginx. `prod:reload` is now `prod:nginx-reload`. The old name still works.
+* nginx: fixed pgAdmin 4 at `/pgadmin4/`. It answered with 502 after pgAdmin got a new address. nginx now looks up the address at each request.
+* SurveyLite: the login link and the survey links now use `SURVEYLITE_URL`. Before, some links opened a page of mta-system instead of SurveyLite.
+* Dataset import: if a file is missing, the user sees only its name, for example "file not found: tutorial_flights.zip". The path on the server stays hidden.
+* `task --list` shows shorter descriptions.
+* Docs: the README lists the main tasks. `docs/deployment.md` lists all `prod:` tasks and explains how to delete a user.
 
 2.4.0 (2026-11-12)
 -------------------

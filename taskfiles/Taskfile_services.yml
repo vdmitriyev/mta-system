@@ -3,6 +3,11 @@ version: '3'
 # Images of the services that the app starts for each user.
 # The versions come from versions.env (loaded by Taskfile.yaml).
 
+vars:
+  # source folders of sqlmate and SurveyLite (git repositories of their own)
+  SQLMATE_SOURCE: temp/sqlmate
+  SURVEYLITE_SOURCE: temp/surveylite
+
 tasks:
 
   versions:
@@ -17,8 +22,8 @@ tasks:
       - echo "POSTGRESQL_VERSION=$POSTGRESQL_VERSION"
       - echo "PGADMIN4_VERSION=$PGADMIN4_VERSION"
       - echo "MARIADB_VERSION=$MARIADB_VERSION"
-      - echo "SQLMATE_VERSION=$SQLMATE_VERSION (from $SQLMATE_SOURCE)"
-      - echo "SURVEYLITE_VERSION=$SURVEYLITE_VERSION (from $SURVEYLITE_SOURCE)"
+      - echo "SQLMATE_VERSION=$SQLMATE_VERSION"
+      - echo "SURVEYLITE_VERSION=$SURVEYLITE_VERSION"
       - echo "COMPOSE_PROFILES=$COMPOSE_PROFILES (optional services that start)"
 
   update-all:
@@ -83,21 +88,21 @@ tasks:
       - docker pull mariadb:$MARIADB_VERSION
 
   build-sqlmate:
-    desc: builds the sqlmate image from SQLMATE_SOURCE
+    desc: builds the sqlmate image from temp/sqlmate
     preconditions:
-      - sh: test -n "$SQLMATE_VERSION" && test -n "$SQLMATE_SOURCE"
-        msg: "SQLMATE_VERSION or SQLMATE_SOURCE is not set: check versions.env"
-      - sh: test -f "$SQLMATE_SOURCE/Dockerfile"
-        msg: "No sqlmate in SQLMATE_SOURCE: clone it there (git repository of sqlmate)"
+      - sh: test -n "$SQLMATE_VERSION"
+        msg: "SQLMATE_VERSION is not set: check versions.env"
+      - sh: test -f "{{.SQLMATE_SOURCE}}/Dockerfile"
+        msg: "No sqlmate in {{.SQLMATE_SOURCE}}: clone the git repository of sqlmate there"
     cmds:
-      - docker build -t sqlmate:$SQLMATE_VERSION "$SQLMATE_SOURCE"
+      - docker build -t sqlmate:$SQLMATE_VERSION "{{.SQLMATE_SOURCE}}"
 
   build-surveylite:
-    desc: builds the SurveyLite image from SURVEYLITE_SOURCE
+    desc: builds the SurveyLite image from temp/surveylite
     preconditions:
-      - sh: test -n "$SURVEYLITE_VERSION" && test -n "$SURVEYLITE_SOURCE"
-        msg: "SURVEYLITE_VERSION or SURVEYLITE_SOURCE is not set: check versions.env"
-      - sh: test -f "$SURVEYLITE_SOURCE/Dockerfile"
-        msg: "No SurveyLite in SURVEYLITE_SOURCE: clone it there (git repository of SurveyLite)"
+      - sh: test -n "$SURVEYLITE_VERSION"
+        msg: "SURVEYLITE_VERSION is not set: check versions.env"
+      - sh: test -f "{{.SURVEYLITE_SOURCE}}/Dockerfile"
+        msg: "No SurveyLite in {{.SURVEYLITE_SOURCE}}: clone the git repository of SurveyLite there"
     cmds:
-      - docker build -t surveylite:$SURVEYLITE_VERSION "$SURVEYLITE_SOURCE"
+      - docker build -t surveylite:$SURVEYLITE_VERSION "{{.SURVEYLITE_SOURCE}}"

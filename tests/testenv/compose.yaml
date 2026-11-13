@@ -37,6 +37,7 @@ services:
       METABASE_TRY_SLEEP_SEC: "15"
       # for tests/testenv/services_check.py
       MTAS_PGADMIN4_URL: http://pgadmin4
+      MTAS_PGADMIN4_SECRET: testenv-pgadmin-secret # sandbox only, same as in "pgadmin4" and "nginx"
       MTAS_NGINX_URL: https://nginx
       # sqlmate and SurveyLite
       SQLMATE_API_URL: http://sqlmate-service:5353/sqlmate/api/v1
@@ -47,6 +48,7 @@ services:
       SURVEYLITE_URL: https://localhost/surveylite/
     volumes:
       - app-data:/mta-system/data # own SQLite database
+      - htpasswd:/mta-system/.htpasswd_nginx # logins for nginx (basic auth), as in production
       - /var/run/docker.sock:/var/run/docker.sock # starts the containers of the users
       - ${MTAS_HOST_DIR:-.}/.logs/testenv:/mta-system/.logs
       - ${MTAS_HOST_DIR:-.}/setup:/mta-system/setup:ro
@@ -74,6 +76,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@mtas-testenv.org
       PGADMIN_DEFAULT_PASSWORD: testenv-pgadmin # sandbox only
       PGADMIN_CONFIG_CHECK_EMAIL_DELIVERABILITY: "False"
+      PGADMIN_WEBSERVER_SECRET: testenv-pgadmin-secret # sandbox only (envs/pgadmin4-proxy.env)
     volumes:
       # nginx logs the users in (basic auth) and passes the name on: X-Forwarded-User
       - ${MTAS_HOST_DIR:-.}/provision/pgadmin4/config_local.py:/pgadmin4/config_local.py:ro
@@ -85,8 +88,11 @@ services:
   nginx:
     build: ./provision/nginx
     image: mtas-testenv-nginx:latest
+    environment:
+      PGADMIN_WEBSERVER_SECRET: testenv-pgadmin-secret # sandbox only, same as in "pgadmin4"
     volumes:
       - ${MTAS_HOST_DIR:-.}/provision/nginx/nginx_part_openrefine.config:/etc/nginx/conf.d/nginx_part_openrefine.config:ro
+      - htpasswd:/.htpasswd_nginx:ro
     ports:
       - "127.0.0.1:${MTAS_NGINX_PORT:-38443}:443"
     depends_on:
@@ -95,9 +101,9 @@ services:
     networks:
       - mtas-network
 
-  # sqlmate and its database, as in compose.services.yml (sources: versions.env)
+  # sqlmate and its database, as in provision/sqlmate/compose.yml
   sqlmate-service:
-    build: ${SQLMATE_SOURCE:?set it in versions.env and use task}
+    build: ./temp/sqlmate # source of sqlmate, as in task services:build-sqlmate
     image: sqlmate:${SQLMATE_VERSION:?set it in versions.env and use task}
     command: gunicorn --config gunicorn.config.docker.prod.py run:app
     environment:
@@ -149,7 +155,7 @@ services:
       - mtas-network
 
   surveylite-service:
-    build: ${SURVEYLITE_SOURCE:?set it in versions.env and use task}
+    build: ./temp/surveylite # source of SurveyLite, as in task services:build-surveylite
     image: surveylite:${SURVEYLITE_VERSION:?set it in versions.env and use task}
     environment:
       SURVEYLITE_BASE_URL: https://localhost
@@ -206,6 +212,7 @@ networks:
 
 volumes:
   app-data:
+  htpasswd:
   pg15volume-database:
   mariadb-data:
   sqlmate-pgdata:

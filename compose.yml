@@ -30,6 +30,10 @@ services:
   nginx:
     build: ./provision/nginx
     image: mta-system-nginx:dev
+    env_file:
+      # shared secret with pgAdmin 4 (task app:init-env creates the file)
+      - path: envs/pgadmin4-proxy.env
+        required: false
     volumes:
       - ./provision/nginx/nginx_part_openrefine.config:/etc/nginx/conf.d/nginx_part_openrefine.config:ro
       - ./certbot/www:/var/www/certbot/:ro

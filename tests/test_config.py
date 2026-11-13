@@ -260,9 +260,7 @@ def test_versions_come_from_the_central_file():
         "MARIADB_VERSION",
         "WORDPRESS_CLI_VERSION",
         "SQLMATE_VERSION",
-        "SQLMATE_SOURCE",
         "SURVEYLITE_VERSION",
-        "SURVEYLITE_SOURCE",
     }
     settings = Settings.from_env(BASE_ENV)
     assert settings.openrefine_version == versions["OPENREFINE_VERSION"]

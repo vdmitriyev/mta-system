@@ -13,6 +13,9 @@ tasks:
   up:
     desc: starts mta-system behind nginx
     aliases: [u]
+    preconditions:
+      - sh: test -f envs/pgadmin4-proxy.env
+        msg: "envs/pgadmin4-proxy.env is missing (secret of nginx and pgAdmin 4). Run 'task app:init-env': it creates the file and keeps the others"
     cmds:
       - mkdir -p data .logs/nginx .htpasswd_nginx certbot/www certbot/conf
       - "{{.PROD_COMPOSE}} up -d --build"
@@ -48,6 +51,9 @@ tasks:
 
   nginx-recreate:
     desc: rebuilds and recreates only nginx
+    preconditions:
+      - sh: test -f envs/pgadmin4-proxy.env
+        msg: "envs/pgadmin4-proxy.env is missing (secret of nginx and pgAdmin 4). Run 'task app:init-env': it creates the file and keeps the others"
     cmds:
       - mkdir -p .logs/nginx .htpasswd_nginx certbot/www certbot/conf
       - "{{.PROD_COMPOSE}} up -d --build --force-recreate --no-deps nginx"

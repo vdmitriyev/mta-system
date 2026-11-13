@@ -212,7 +212,7 @@ def test_versions_of_the_own_containers(admin_client, use_settings):
         assert f"<code>{image}</code>" in row and "setting " not in row
     for name, image, setting in (
         ("PostgreSQL", "postgres:17.11", "POSTGRESQL_VERSION"),
-        ("pgAdmin 4", "dpage/pgadmin4:8.12", "PGADMIN4_VERSION"),
+        ("pgAdmin 4", "dpage/pgadmin4:9.19", "PGADMIN4_VERSION"),
     ):
         start = text.index(f"<strong>{name}</strong>")
         row = text[start : text.index("</tr>", start)]

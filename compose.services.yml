@@ -38,6 +38,9 @@ services:
     image: "dpage/pgadmin4:${PGADMIN4_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}"
     env_file:
       - envs/pgadmin4-service.env # configures pgadmin4 service
+      # shared secret with nginx (task app:init-env creates the file)
+      - path: envs/pgadmin4-proxy.env
+        required: false
     ports:
       - "127.0.0.1:5050:80"
     volumes:

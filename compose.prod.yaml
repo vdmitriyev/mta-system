@@ -49,6 +49,10 @@ services:
   nginx:
     build: ./provision/nginx
     image: mta-system-nginx:latest
+    env_file:
+      # shared secret with pgAdmin 4 (task app:init-env creates the file)
+      - path: envs/pgadmin4-proxy.env
+        required: false
     container_name: mta-system-nginx
     restart: unless-stopped
     depends_on:

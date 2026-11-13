@@ -109,29 +109,60 @@ else:
     status, body = wait_for(
         f"{base}/misc/ping", lambda s, b: s == 200 and "PING" in b, 120
     )
-    # nginx passes the login on like this. pgAdmin logs the user in on /login and
-    # keeps the session in a cookie: follow the redirects with cookies, as a browser does.
-    pgadmin = urllib.request.build_opener(
-        urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+
+    def pgadmin_browser(headers: dict) -> int:
+        """Status of /browser/: 401 if pgAdmin shows its login page"""
+
+        # nginx passes the login on like this. pgAdmin logs the user in on /login and
+        # keeps the session in a cookie: follow the redirects with cookies, as a browser does.
+        pgadmin = urllib.request.build_opener(
+            urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar())
+        )
+        request = urllib.request.Request(f"{base}/browser/", headers=headers)
+        try:
+            with pgadmin.open(request, timeout=30) as response:
+                code, final_url = response.status, response.geturl()
+        except urllib.error.HTTPError as error:
+            code, final_url = error.code, url_of(error)
+        except OSError:
+            code, final_url = 0, ""
+        return code if "/login" not in final_url else 401
+
+    user_header = {"X-Forwarded-User": entry["pgadmin4_user"]}
+    secret = os.environ.get("MTAS_PGADMIN4_SECRET", "")
+    browser = pgadmin_browser(
+        {**user_header, "X-Pgadmin-Webserver-Secret": secret} if secret else user_header
     )
-    request = urllib.request.Request(
-        f"{base}/browser/", headers={"X-Forwarded-User": entry["pgadmin4_user"]}
+    # without the secret of nginx, the header alone must not log anyone in
+    without_secret = pgadmin_browser(user_header) if secret else 401
+    ok = (
+        login == basic_auth.LOGIN_OK
+        and status == 200
+        and browser == 200
+        and without_secret == 401
     )
-    try:
-        with pgadmin.open(request, timeout=30) as response:
-            browser, page = response.status, response.read().decode(errors="replace")
-            final_url = response.geturl()
-    except urllib.error.HTTPError as error:
-        browser, page, final_url = error.code, "", url_of(error)
-    except OSError as error:
-        browser, page, final_url = 0, str(error), ""
-    browser = browser if "/login" not in final_url else 401
-    ok = login == basic_auth.LOGIN_OK and status == 200 and browser == 200
     report(
         "pgadmin4",
         ok,
-        f"login file {login}, ping {status}, browser as {entry['pgadmin4_user']}: {browser}",
+        f"login file {login}, ping {status}, browser as {entry['pgadmin4_user']}: "
+        f"{browser}, without secret: {without_secret}",
     )
+
+    # as a browser of the user: basic auth at nginx, which sends the name and the secret
+    nginx_url = os.environ.get("MTAS_NGINX_URL", "").rstrip("/")
+    if nginx_url:
+        with requests.Session() as session:
+            session.auth = (entry["pgadmin4_user"], entry["pgadmin4_password"])
+            try:
+                response = session.get(
+                    f"{nginx_url}/pgadmin4/browser/",
+                    verify=False,  # nosec B501: self-signed certificate of the test copy
+                    timeout=30,
+                )
+                via_nginx = 401 if "/login" in response.url else response.status_code
+            except requests.RequestException:
+                via_nginx = 0
+        report("pgadmin4-nginx", via_nginx == 200, f"/pgadmin4/browser/: {via_nginx}")
 
 # ---- Metabase ----
 entry = accounts.get("metabase")

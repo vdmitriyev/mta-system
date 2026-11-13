@@ -32,6 +32,8 @@ tasks:
       - cp -n samples/webapp.env envs/webapp-dev-docker.env
       - cp -n samples/postgresql-service.env envs/postgresql-service.env
       - cp -n samples/pgadmin4-service.env envs/pgadmin4-service.env
+      # shared secret of nginx and pgAdmin 4: a random value, kept if the file exists
+      - test -f envs/pgadmin4-proxy.env || sed "s/<CHANGE-ME>/$(python3 -c 'import secrets; print(secrets.token_hex(32))')/" samples/pgadmin4-proxy.env > envs/pgadmin4-proxy.env
       - cp -n samples/sqlmate-service.env envs/sqlmate-service.env
       - cp -n samples/surveylite-service.env envs/surveylite-service.env
       - mkdir -p setup/sqlmate setup/surveylite

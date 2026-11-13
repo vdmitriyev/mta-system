@@ -15,8 +15,10 @@ WORKDIR /etc/nginx/conf.d/
 RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout local-key.pem -out local-cert.pem -sha256 -days 365 -subj "/C=DE/ST=City/L=City/O=Oldenburg/OU=Oldenburg/CN=localhost"
 
 # On start, the nginx image turns templates into config files in conf.d and
-# fills in the environment variables, here HTTPS_PORT (set in compose.prod.yaml).
+# fills in the environment variables: HTTPS_PORT (compose.prod.yaml) and PGADMIN_WEBSERVER_SECRET.
 ENV HTTPS_PORT=443
+# Shared secret of nginx and pgAdmin 4, from envs/pgadmin4-proxy.env at runtime (not in the image)
+ENV PGADMIN_WEBSERVER_SECRET=""
 RUN rm /etc/nginx/conf.d/default.conf
 COPY nginx-docker.conf /etc/nginx/templates/nginx-docker.conf.template
 
