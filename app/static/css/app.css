@@ -1186,12 +1186,13 @@ progress {
   height: 1.25rem;
 }
 
-/* gear: link to the account page. The label shows only in the mobile menu. */
-.nav .nav-icon {
+/* gear: link to the account page, same look as the theme button.
+   The label shows only in the mobile menu. */
+.nav-icon {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-  padding: 0.35rem;
   line-height: 1;
 }
 
@@ -1278,8 +1279,8 @@ img.shot[src$=".svg"] {
     text-align: left;
   }
 
-  .nav .nav-icon {
-    padding: 0.4rem 0.7rem;
+  .nav-icon {
+    justify-content: flex-start;
   }
 
   .nav-icon-label {

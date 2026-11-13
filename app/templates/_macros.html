@@ -1,7 +1,7 @@
 {# Building blocks of the pages. Import with: {% import "_macros.html" as ui %} #}
 
 {% macro icon(name) -%}
-<svg class="icon" aria-hidden="true"><use href="/static/img/icons.svg#{{ name }}"></use></svg>
+<svg class="icon" aria-hidden="true"><use href="{{ static_url("img/icons.svg") }}#{{ name }}"></use></svg>
 {%- endmacro %}
 
 {% macro csrf(token) -%}

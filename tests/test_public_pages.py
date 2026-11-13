@@ -116,7 +116,8 @@ def test_theme_is_set_before_the_page_is_drawn(client):
             "</button>", text.index("data-theme-toggle")
         )
     ]
-    assert "icons.svg#sun" in toggle and "icons.svg#moon" in toggle
+    assert re.search(r"icons\.svg\?v=\w+#sun", toggle)
+    assert re.search(r"icons\.svg\?v=\w+#moon", toggle)
     assert "Theme" not in toggle
     assert client.get("/static/js/theme.js").status_code == 200
 
@@ -195,7 +196,8 @@ def test_header_shows_a_gear_instead_of_the_email(student_client):
     header = text[text.index('<header class="site-header">') : text.index("</header>")]
     assert "user-email" not in header
     assert 'href="/account"' in header
-    assert "icons.svg#gear" in header
+    # versioned address: browsers do not use an old icons.svg without the gear
+    assert re.search(r'icons\.svg\?v=\w+#gear"', header)
     assert 'title="Log out sam.student@uni.example"' in header
     # order: theme, gear, (admin), log out
     assert header.index("data-theme-toggle") < header.index('href="/account"')
