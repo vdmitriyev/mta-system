@@ -5,9 +5,9 @@ History
 2.4.2 (2026-11-13)
 -------------------
 
-* New task `prod:app-recreate`: builds the app image again and recreates only the app container. nginx, PostgreSQL and pgAdmin 4 keep running. At the end, it reloads nginx, so nginx finds the new container (it looks up the address of the app only at start or reload).
+* New task `prod:app-recreate`: builds the app image again and recreates only the app container. nginx, PostgreSQL and pgAdmin 4 keep running. At the end, it reloads nginx, so nginx finds the new container (it looks up the address of the app only at start or reload). The app then needs a few seconds to start (migrations, exercises, workers). Until then, nginx answers with 502. `prod:migrate` is not needed: the app applies the migrations on each start.
 * New tasks for development, like the ones of production: `dev:app-recreate`, `dev:nginx-recreate` and `dev:nginx-reload`.
-* Docs: the README, `docs/deployment.md` and `docs/development.md` list the new tasks and say when to use them.
+* Docs: the README, `docs/deployment.md` and `docs/development.md` list the new tasks and say when to use them. The README, `docs/deployment.md` and `docs/development.md` also say that the app needs a few seconds to start after `prod:app-recreate` or `dev:app-recreate`, and that no migration task is needed.
 
 2.4.1 (2026-11-13)
 -------------------

@@ -95,6 +95,8 @@ The project uses [Task](https://taskfile.dev/). `task` lists all tasks. The main
 | `services:` | `services:versions`, `services:update-all`, `services:build-sqlmate`, `services:build-surveylite` | [deployment](docs/deployment.md#versions-of-the-services) |
 | `testenv:` | `testenv:deploy`, `testenv:down` (Docker test copy) | [development](docs/development.md#tests) |
 
+After `prod:app-recreate` or `dev:app-recreate`, the app needs a few seconds to start. Until then, nginx answers with 502. No migration task is needed: the app applies the migrations on each start.
+
 ## Citing - BibTeX
 
 ```bibtex

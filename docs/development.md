@@ -146,7 +146,7 @@ task dev:nginx-reload         # checks the nginx config and reloads it
 
 * Register with an e-mail address from `SYSTEM_ADMINS` to get the admin pages. To try a registration again with the same address, delete the user on the admin page **Users**.
 * `provision/nginx/nginx-docker.conf` is part of the nginx image. After a change, run `task dev:nginx-recreate`: it builds the image again and recreates only nginx.
-* The app reloads on code changes. After a change of the dependencies or the `Dockerfile`, run `task dev:app-recreate`: it builds the app again, recreates only its container and reloads nginx, so nginx finds the new container.
+* The app reloads on code changes. After a change of the dependencies or the `Dockerfile`, run `task dev:app-recreate`: it builds the app again, recreates only its container and reloads nginx, so nginx finds the new container. The app then needs a few seconds to start: until then, nginx answers with 502. `task dev:init` is not needed again, because the app applies the migrations on each start.
 * In development mode, the app writes the login link of a registration to the log. You do not need a mail server to try the app.
 * `setup/initial_exercises.csv` lists the exercises of the course. Each exercise has a review part (`has_review`) and/or a bonus part (`has_bonus`, `bonus_max_points`).
 * After a change in `app/models.py`, run `task db:migrate -- -m "what changed"` to create and apply a migration.
