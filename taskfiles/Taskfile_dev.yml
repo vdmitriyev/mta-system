@@ -10,7 +10,7 @@ vars:
 tasks:
 
   up:
-    desc: builds and starts the app, nginx and the services (app on http://127.0.0.1:5252)
+    desc: "builds and starts the dev setup (app on http://127.0.0.1:5252)"
     aliases: [u]
     preconditions:
       - sh: test -f {{.DEV_ENV_FILE}}
@@ -20,34 +20,34 @@ tasks:
       - "{{.DEV_COMPOSE}} up -d --build"
 
   down:
-    desc: stops and removes the containers (the volumes are kept)
+    desc: stops the dev containers (volumes stay)
     aliases: [d]
     cmds:
       - "{{.DEV_COMPOSE}} down"
 
   restart:
-    desc: restarts the containers
+    desc: restarts the dev containers
     cmds:
       - "{{.DEV_COMPOSE}} restart {{.CLI_ARGS}}"
 
   ps:
-    desc: shows the state of the containers
+    desc: shows the state of the dev containers
     cmds:
       - "{{.DEV_COMPOSE}} ps"
 
   logs:
-    desc: shows the logs as they come in (one service after --, e.g. '-- webapp')
+    desc: shows the logs (one service after --)
     aliases: [l]
     cmds:
       - "{{.DEV_COMPOSE}} logs -f {{.CLI_ARGS}}"
 
   cli:
-    desc: runs a command of the app in its container (e.g. 'task dev:cli -- db-upgrade')
+    desc: runs a command of the app in its container
     cmds:
       - "{{.DEV_COMPOSE}} exec webapp python -m app.cli {{.CLI_ARGS}}"
 
   init:
-    desc: creates the SQLite database, imports the exercises and creates the demo database
+    desc: creates the database, exercises and demo database
     aliases: [i]
     cmds:
       - "{{.DEV_COMPOSE}} exec webapp python -m app.cli db-upgrade"

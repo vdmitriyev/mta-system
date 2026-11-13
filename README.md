@@ -1,11 +1,11 @@
 ## About
 
-**mta-system** (**m**odular **t**eaching **a**ssistance **system**) helps students to get hands-on experience with software. A lecturer hosts it for a course. Students register and get their own access to services such as PostgreSQL, pgAdmin 4, Metabase and OpenRefine.
+**mta-system** (**m**odular **t**eaching **a**ssistance **system**) helps students to get hands-on experience with software. A lecturer hosts it for a course. Students register and get their own access to services such as PostgreSQL, pgAdmin 4, Metabase and OpenRefine, and optionally to SQL exercises ([sqlmate](https://github.com/vdmitriyev/sqlmate)) and anonymous surveys ([SurveyLite](https://github.com/vdmitriyev/surveylite)).
 
 What the web app does:
 
 * **Students** register with their e-mail address and a course code. They see the address, login and password of each of their services, start their containers, import sample datasets, and read reviews and bonus points for their exercises.
-* **Admins** write reviews and bonus points, manage the databases, logins and containers of the users (menu **Services**: PostgreSQL, pgAdmin 4, Metabase, OpenRefine), check the OpenRefine logins, prepare accounts in advance, choose which parts of the UI are visible, and watch the server (CPU, memory, containers, logs).
+* **Admins** write reviews and bonus points, manage the databases, logins and containers of the users (menu **Services**: PostgreSQL, pgAdmin 4, Metabase, OpenRefine), check the OpenRefine logins, prepare accounts in advance, delete users (the e-mail address can then register again), choose which parts of the UI are visible, and watch the server (CPU, memory, containers, logs).
 
 The pages have a light and a dark theme. The button in the header switches between them. The browser stores the choice. Without a choice, the system setting decides.
 
@@ -14,7 +14,7 @@ Documentation is available [here](https://vdmitriyev.github.io/mta-system/).
 | Guide | Content |
 | --- | --- |
 | [docs/development.md](docs/development.md) | Install, settings, run the app, Docker for development, commands, API, tests |
-| [docs/deployment.md](docs/deployment.md) | Docker image, production server, sqlmate and SurveyLite in production, change the versions of the services |
+| [docs/deployment.md](docs/deployment.md) | Docker image, production server, HTTPS certificate and nginx, delete users, sqlmate and SurveyLite, change the versions of the services |
 
 ## Architecture
 
@@ -79,6 +79,21 @@ task app:serve              # app on http://127.0.0.1:5353
 ```
 
 Before `task app:serve`, change the secrets in `envs/webapp-dev-local.env`. See [docs/development.md](docs/development.md#configure).
+
+## Tasks
+
+The project uses [Task](https://taskfile.dev/). `task` lists all tasks. The main groups:
+
+| Group | Main tasks | Guide |
+| --- | --- | --- |
+| `app:` | `app:serve`, `app:test`, `app:config`, `app:cli -- <command>` | [development](docs/development.md) |
+| `dev:` | `dev:up`, `dev:init`, `dev:logs`, `dev:down` (Docker for development) | [development](docs/development.md#run-in-docker-for-development) |
+| `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate` | [deployment](docs/deployment.md#production) |
+| `prod:` nginx | `prod:cert -- <host>`, `prod:cert-renew`, `prod:nginx-reload` (check and reload the config), `prod:nginx-recreate` (build nginx again and recreate only its container) | [deployment](docs/deployment.md#https-certificate-lets-encrypt) |
+| `sqlmate:` | `sqlmate:up`, `sqlmate:init`, `sqlmate:logs`, `sqlmate:down` | [deployment](docs/deployment.md#sqlmate-optional) |
+| `surveylite:` | `surveylite:up`, `surveylite:logs`, `surveylite:down` | [deployment](docs/deployment.md#surveylite-optional) |
+| `services:` | `services:versions`, `services:update-all`, `services:build-sqlmate`, `services:build-surveylite` | [deployment](docs/deployment.md#versions-of-the-services) |
+| `testenv:` | `testenv:deploy`, `testenv:down` (Docker test copy) | [development](docs/development.md#tests) |
 
 ## Citing - BibTeX
 

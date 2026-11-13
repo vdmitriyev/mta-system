@@ -5,13 +5,17 @@ History
 2.4.1 (2026-11-13)
 -------------------
 
+* Admins can delete a user on the page **Users**. The user is not removed from the database, but marked as deleted and can no longer log in. The e-mail gets the prefix `deleted-<date>-<4 random characters>-`, for example `deleted-20261113-a1b2-sam@uni.example`, so the address can register again as a new user. Its containers (Metabase, OpenRefine, WordPress, ...) are stopped, but not removed. The databases and accounts of the user in the services stay. Admins cannot delete their own account.
 * sqlmate runs with its own compose file `provision/sqlmate/compose.yml` (like WordPress), not in `compose.services.yml`. It uses the image `sqlmate:<SQLMATE_VERSION>` on the server and its settings in `envs/sqlmate-service.env`, joins the network of mta-system (`SQLMATE_NETWORK`) and keeps the database volume of before (`SQLMATE_DB_VOLUME`). New tasks `sqlmate:up`, `sqlmate:down`, `sqlmate:restart`, `sqlmate:ps`, `sqlmate:logs` and `sqlmate:init` (before: `prod:sqlmate-init`). `services:update-all` no longer builds sqlmate.
 * SurveyLite also runs with its own compose file `provision/surveylite/compose.yml`, not in `compose.services.yml`. It uses the image `surveylite:<SURVEYLITE_VERSION>` on the server and its settings in `envs/surveylite-service.env`, joins the network of mta-system (`SURVEYLITE_NETWORK`) and keeps the data volume of before (`SURVEYLITE_DATA_VOLUME`). New tasks `surveylite:up`, `surveylite:down`, `surveylite:restart`, `surveylite:ps` and `surveylite:logs`. The profile `surveylite` is gone, and `services:update-all` no longer builds SurveyLite.
 * Renamed `provision/wordpress/docker-compose.yml` to `provision/wordpress/compose.yml`.
 * nginx: fixed `task prod:cert`. Port `80` answered all requests with 404, also the challenge files of Let's Encrypt (`/.well-known/acme-challenge/`), because a `return` at server level runs before the locations. Now nginx serves the challenge files and redirects all other requests to HTTPS. `docs/deployment.md` describes the steps for the certificate.
+* New task `prod:nginx-recreate`: builds the nginx image again and recreates only the nginx container, for example after a change in `provision/nginx`. `prod:reload` is now `prod:nginx-reload`; the old name still works.
 * nginx: fixed pgAdmin 4 at `/pgadmin4/`, which failed with 502 after pgAdmin was created again (new address). nginx now looks up the address at each request and also starts without pgAdmin. It passes HTTPS and the port of the user on to pgAdmin, and `/pgadmin4` goes to `/pgadmin4/`.
 * SurveyLite: the login link and the survey links use the public address of SurveyLite (`SURVEYLITE_URL`). Before, a link without the prefix `/surveylite` (`https://<host>/me?auth=...`) opened the page `/me` of mta-system instead of SurveyLite.
 * Dataset import into PostgreSQL: if a file is missing, the user sees only its name ("file not found: tutorial_flights.zip"), not its path on the server.
+* Shorter descriptions of all tasks in `task --list`: what the task does, plus a usage hint where a task needs input. All start with a lowercase verb.
+* Docs: the README lists the main task groups (new section **Tasks**). `docs/deployment.md` has a table of all `prod:` tasks and the section **Delete a user**. `docs/development.md` explains how to register again with the same address and how to rebuild nginx after a change of its config.
 
 2.4.0 (2026-11-12)
 -------------------

@@ -14,14 +14,14 @@ tasks:
       - python -m app.cli import-data-exercises
 
   upgrade:
-    desc: applies the database migrations (migrations/versions)
+    desc: applies the migrations
     aliases: [u]
     deps: [":app:check-virtualenv"]
     cmds:
       - python -m app.cli db-upgrade
 
   migrate:
-    desc: creates a new migration from the models and applies it (name after --, e.g. '-- -m "add column"')
+    desc: 'creates and applies a migration (task db:migrate -- -m "what changed")'
     aliases: [m]
     deps: [":app:check-virtualenv"]
     cmds:
@@ -31,14 +31,14 @@ tasks:
       - python -m app.cli db-upgrade
 
   create-demo:
-    desc: creates the demo database and its read-only user in the PostgreSQL service
+    desc: creates the demo database in PostgreSQL
     aliases: [cd]
     deps: [":app:check-virtualenv"]
     cmds:
       - python -m app.cli create-demo-db
 
   create-custom:
-    desc: creates a custom database and user in the PostgreSQL service
+    desc: creates a custom database and user in PostgreSQL
     aliases: [cc]
     deps: [":app:check-virtualenv"]
     interactive: true

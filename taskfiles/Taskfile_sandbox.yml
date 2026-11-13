@@ -3,21 +3,21 @@ version: '3'
 tasks:
 
   up:
-    desc: Start the Claude Code sandbox container
+    desc: starts the sandbox container
     silent: true
     aliases: [u]
     cmds:
       - docker compose -f compose-claude.yaml up -d
 
   down:
-    desc: Stop the Claude Code sandbox container
+    desc: stops the sandbox container
     silent: true
     aliases: [d]
     cmds:
       - docker compose -f compose-claude.yaml down
 
   shell:
-    desc: Open a shell in the sandbox container
+    desc: opens a shell in the sandbox container
     silent: true
     aliases: [s]
     cmds:

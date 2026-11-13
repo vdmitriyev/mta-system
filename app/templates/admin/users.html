@@ -16,6 +16,7 @@
           <th>Services</th>
           <th data-sort>Created (UTC)</th>
           <th>Login link</th>
+          <th></th>
         </tr>
       </thead>
       <tbody>
@@ -29,6 +30,16 @@
           <td class="small">{{ row.services | join(", ") or "–" }}</td>
           <td class="nowrap">{{ row.user.created_at.strftime("%Y-%m-%d %H:%M") if row.user.created_at else "" }}</td>
           <td>{{ ui.copy_button(row.access_url) }}</td>
+          <td>
+            {% if row.user.itid != user.itid %}
+            <form method="post" action="/mtas-admin/users/delete" class="inline-form"
+                  data-confirm="Delete {{ row.user.email }}? The user can no longer log in. The e-mail address can register again. Its containers are stopped. The databases and containers of the user are not removed.">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="user_id" value="{{ row.user.itid }}">
+              <button type="submit" class="btn sm danger">{{ ui.icon("trash") }} Delete</button>
+            </form>
+            {% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

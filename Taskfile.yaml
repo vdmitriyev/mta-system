@@ -36,7 +36,7 @@ tasks:
       - echo "Example usage-> 'task app:serve'"
 
   setup:
-    desc: first setup for local development (dependencies, env files, SQLite database)
+    desc: "first local setup: dependencies, env files, database"
     cmds:
       - task: app:install-dev
       - task: app:init-env

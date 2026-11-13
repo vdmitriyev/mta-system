@@ -6,7 +6,7 @@ version: '3'
 tasks:
 
   versions:
-    desc: shows the versions of the service images (from versions.env)
+    desc: shows the versions from versions.env
     aliases: [v]
     silent: true
     cmds:
@@ -22,7 +22,7 @@ tasks:
       - echo "COMPOSE_PROFILES=$COMPOSE_PROFILES (optional services that start)"
 
   update-all:
-    desc: gets all service images in the versions of versions.env (pulls, builds OpenRefine)
+    desc: gets all service images (pulls, builds OpenRefine)
     aliases: [u]
     cmds:
       - task: pull-metabase
@@ -34,7 +34,7 @@ tasks:
       # optional services: only if their profile is in COMPOSE_PROFILES
 
   build-openrefine:
-    desc: builds the OpenRefine image (openrefine:<OPENREFINE_VERSION>) from provision/openrefine
+    desc: builds the OpenRefine image
     preconditions:
       - sh: test -n "$OPENREFINE_VERSION"
         msg: "OPENREFINE_VERSION is not set: check versions.env"
@@ -42,7 +42,7 @@ tasks:
       - docker build --build-arg OPENREFINE_VERSION=$OPENREFINE_VERSION -t openrefine:$OPENREFINE_VERSION provision/openrefine
 
   pull-metabase:
-    desc: downloads the Metabase image (metabase/metabase:<METABASE_VERSION>)
+    desc: downloads the Metabase image
     preconditions:
       - sh: test -n "$METABASE_VERSION"
         msg: "METABASE_VERSION is not set: check versions.env"
@@ -50,7 +50,7 @@ tasks:
       - docker pull metabase/metabase:$METABASE_VERSION
 
   pull-wordpress:
-    desc: downloads the WordPress images (wordpress:<WORDPRESS_VERSION>, and the installer wordpress:<WORDPRESS_CLI_VERSION>)
+    desc: downloads the WordPress images
     preconditions:
       - sh: test -n "$WORDPRESS_VERSION" && test -n "$WORDPRESS_CLI_VERSION"
         msg: "WORDPRESS_VERSION or WORDPRESS_CLI_VERSION is not set: check versions.env"
@@ -59,7 +59,7 @@ tasks:
       - docker pull wordpress:$WORDPRESS_CLI_VERSION
 
   pull-postgresql:
-    desc: downloads the PostgreSQL image (postgres:<POSTGRESQL_VERSION>)
+    desc: downloads the PostgreSQL image
     preconditions:
       - sh: test -n "$POSTGRESQL_VERSION"
         msg: "POSTGRESQL_VERSION is not set: check versions.env"
@@ -67,7 +67,7 @@ tasks:
       - docker pull postgres:$POSTGRESQL_VERSION
 
   pull-pgadmin4:
-    desc: downloads the pgAdmin 4 image (dpage/pgadmin4:<PGADMIN4_VERSION>)
+    desc: downloads the pgAdmin 4 image
     preconditions:
       - sh: test -n "$PGADMIN4_VERSION"
         msg: "PGADMIN4_VERSION is not set: check versions.env"
@@ -75,7 +75,7 @@ tasks:
       - docker pull dpage/pgadmin4:$PGADMIN4_VERSION
 
   pull-mariadb:
-    desc: downloads the MariaDB image (mariadb:<MARIADB_VERSION>)
+    desc: downloads the MariaDB image
     preconditions:
       - sh: test -n "$MARIADB_VERSION"
         msg: "MARIADB_VERSION is not set: check versions.env"
@@ -83,7 +83,7 @@ tasks:
       - docker pull mariadb:$MARIADB_VERSION
 
   build-sqlmate:
-    desc: builds the sqlmate image (sqlmate:<SQLMATE_VERSION>) from its source folder (SQLMATE_SOURCE)
+    desc: builds the sqlmate image from SQLMATE_SOURCE
     preconditions:
       - sh: test -n "$SQLMATE_VERSION" && test -n "$SQLMATE_SOURCE"
         msg: "SQLMATE_VERSION or SQLMATE_SOURCE is not set: check versions.env"
@@ -93,7 +93,7 @@ tasks:
       - docker build -t sqlmate:$SQLMATE_VERSION "$SQLMATE_SOURCE"
 
   build-surveylite:
-    desc: builds the SurveyLite image (surveylite:<SURVEYLITE_VERSION>) from its source folder (SURVEYLITE_SOURCE)
+    desc: builds the SurveyLite image from SURVEYLITE_SOURCE
     preconditions:
       - sh: test -n "$SURVEYLITE_VERSION" && test -n "$SURVEYLITE_SOURCE"
         msg: "SURVEYLITE_VERSION or SURVEYLITE_SOURCE is not set: check versions.env"

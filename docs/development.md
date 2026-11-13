@@ -120,7 +120,7 @@ task db:init      # creates the SQLite database and imports setup/initial_exerci
 task app:serve    # runs the app on http://127.0.0.1:5353 and reloads on code changes
 ```
 
-`task setup` does the install, the env files and the database in one step.
+`task setup` does the install, the env files and the database in one step. Run `task` to see all tasks; the [README](../README.md#tasks) lists the main groups.
 
 | Task | What it does |
 | --- | --- |
@@ -141,11 +141,11 @@ task dev:cli -- show-config   # a command of the app in its container
 task dev:down
 ```
 
-* Register with an e-mail address from `SYSTEM_ADMINS` to get the admin pages.
+* Register with an e-mail address from `SYSTEM_ADMINS` to get the admin pages. To try a registration again with the same address, delete the user on the admin page **Users**.
+* `provision/nginx/nginx-docker.conf` is part of the nginx image. After a change, run `task dev:up` again: it builds the image again.
 * In development mode, the app writes the login link of a registration to the log. You do not need a mail server to try the app.
 * `setup/initial_exercises.csv` lists the exercises of the course. Each exercise has a review part (`has_review`) and/or a bonus part (`has_bonus`, `bonus_max_points`).
 * After a change in `app/models.py`, run `task db:migrate -- -m "what changed"` to create and apply a migration.
-* Run `task` to see all tasks.
 
 ### Commands
 

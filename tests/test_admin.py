@@ -1,4 +1,5 @@
 import os
+import re
 
 import pytest
 import requests
@@ -19,6 +20,12 @@ from app.routers.admin import (
     grouped_settings,
 )
 from app.tasks import TaskError
+from app.users import (
+    delete_user,
+    deleted_email,
+    find_user_by_email,
+    register_user_task,
+)
 from app.visibility import ui_visibility_settings
 from tests.conftest import STUDENT_EMAIL, add_exercise, add_postgresql, add_user, post
 
@@ -56,6 +63,7 @@ def test_admin_actions_are_forbidden_for_users(student_client, db):
         "/mtas-admin/accounts/generate",
         "/mtas-admin/visibility",
         "/mtas-admin/services/metabase/start",
+        "/mtas-admin/users/delete",
     ]:
         assert (
             post(
@@ -734,4 +742,74 @@ def test_settings_values_are_marked(admin_client):
     assert (
         '<code>CONTAINER_NAME_PREFIX</code></td>\n            <td class="setting-value">–</td>'
         in text
+    )
+
+
+# ----- delete users -----
+
+
+def test_delete_user_frees_the_email(admin_client, db, admin, student, no_docker):
+    old_hash = student.url_hash
+    response = post(admin_client, "/mtas-admin/users/delete", {"user_id": student.itid})
+    assert response.status_code == 303
+    db.refresh(student)
+    assert student.deleted is True and student.active is False
+    assert re.fullmatch(
+        rf"deleted-\d{{8}}-[0-9a-f]{{4}}-{re.escape(STUDENT_EMAIL)}", student.email
+    )
+    assert student.url_hash != old_hash
+    assert find_user_by_email(db, STUDENT_EMAIL) is None
+    text = admin_client.get("/mtas-admin/users").text
+    assert f"{STUDENT_EMAIL} was deleted" in text
+    assert f"<td>{STUDENT_EMAIL}</td>" not in text
+
+
+def test_deleted_email_can_register_again(db, student, monkeypatch, no_docker):
+    monkeypatch.setattr("app.users.send_access_email", lambda user: True)
+    delete_user(db, student)
+    message = register_user_task(db, STUDENT_EMAIL)
+    assert "already registered" not in message
+    new_user = find_user_by_email(db, STUDENT_EMAIL)
+    assert new_user is not None and new_user.itid != student.itid
+
+
+def test_deleted_email_keeps_the_column_length():
+    email = "a" * 95 + "@x.de"
+    assert len(deleted_email(email)) == Users.email.type.length
+
+
+def test_admin_cannot_delete_own_account(admin_client, db, admin):
+    response = post(admin_client, "/mtas-admin/users/delete", {"user_id": admin.itid})
+    assert response.status_code == 303
+    db.refresh(admin)
+    assert admin.deleted is False
+
+
+def test_delete_unknown_or_deleted_user_is_404(
+    admin_client, db, admin, student, no_docker
+):
+    assert (
+        post(admin_client, "/mtas-admin/users/delete", {"user_id": 999}).status_code
+        == 404
+    )
+    delete_user(db, student)
+    assert (
+        post(
+            admin_client, "/mtas-admin/users/delete", {"user_id": student.itid}
+        ).status_code
+        == 404
+    )
+
+
+def test_delete_user_stops_the_containers(admin_client, db, admin, student, docker):
+    add_metabase(db, student)
+    mine = docker.containers.add("metabase-3001", "running")
+    other = docker.containers.add("metabase-3002", "running")
+
+    post(admin_client, "/mtas-admin/users/delete", {"user_id": student.itid})
+    assert mine.status == "exited"
+    assert other.status == "running"
+    assert (
+        "Stopped containers: metabase-3001"
+        in admin_client.get("/mtas-admin/users").text
     )

@@ -20,9 +20,24 @@ cp samples/webapp.env envs/.env        # then set TARGET_SERVER=production and y
 task prod:up                           # app, nginx, PostgreSQL and pgAdmin 4
 task prod:cert -- mtas.example.org     # Let's Encrypt certificate
 task prod:logs
+task prod:nginx-reload                 # check the nginx configuration and reload it
+task prod:nginx-recreate               # build nginx again and recreate only its container
 ```
 
 `task prod:up` starts the app, nginx, PostgreSQL (port `5432` on all interfaces) and pgAdmin 4 (at `https://<SERVER_FQDN>/pgadmin4/`). PostgreSQL and pgAdmin 4 restart with the server.
+
+| Task | What it does |
+| --- | --- |
+| `task prod:up` | Builds the images and starts all production containers |
+| `task prod:down` | Stops and removes the production containers (the volumes stay) |
+| `task prod:restart`, `task prod:ps` | Restarts the containers, shows their state |
+| `task prod:logs -- <service>` | Shows the logs as they come in (all services without `-- <service>`) |
+| `task prod:build` | Builds the images of the app and nginx without starting them |
+| `task prod:migrate` | Applies the migrations to the database of the app |
+| `task prod:cert -- <host>` | Gets a Let's Encrypt certificate for the host |
+| `task prod:cert-renew` | Renews the certificates and reloads nginx |
+| `task prod:nginx-reload` | Checks the nginx configuration and reloads it. Use it after a new certificate or after `task app:nginx-config`. The old name `prod:reload` still works. |
+| `task prod:nginx-recreate` | Builds the nginx image again and recreates only the nginx container. The app and the databases keep running. Use it after a change in `provision/nginx/nginx-docker.conf`: this file is part of the image, so a reload does not read it. |
 
 Before you go live:
 
@@ -39,14 +54,23 @@ nginx starts with a self-signed certificate. To get a certificate from Let's Enc
 1. The DNS entry of your host points to the server, and port `80` is open in the firewall. Let's Encrypt downloads a file from `http://<host>/.well-known/acme-challenge/` to check the host.
 2. `task prod:up`, then `task prod:cert -- mtas.example.org`. certbot puts the file into `certbot/www`, nginx serves it from there, and certbot stores the certificate in `certbot/conf`.
 3. In `provision/nginx/nginx-docker.conf`, use the two `ssl_certificate` lines with your host instead of the self-signed certificate.
-4. `task prod:up`: this builds the nginx image with the changed file and starts it.
-5. Renew the certificate before it expires (after 90 days): `task prod:cert-renew`, for example once a week with cron.
+4. `task prod:nginx-recreate`: this builds the nginx image with the changed file and recreates only the nginx container.
+5. Renew the certificate before it expires (after 90 days): `task prod:cert-renew`, for example once a week with cron. It reloads nginx with `task prod:nginx-reload`.
 
 nginx redirects all other requests on port `80` to HTTPS.
 
 ### Containers of the users
 
 The app starts one Metabase and one OpenRefine container for each user. Their images must be on the server: `task services:pull-metabase` and `task services:build-openrefine`. Run them once, and again after a change in `versions.env`.
+
+### Delete a user
+
+On the admin page **Users**, **Delete** removes a user from the course:
+
+* The user is marked as deleted and can no longer log in. The row stays in the database.
+* The e-mail gets the prefix `deleted-<date>-<4 random characters>-`, for example `deleted-20261113-a1b2-sam@uni.example`. The address can then register again and gets a new account.
+* The containers of the user (Metabase, OpenRefine, ...) are stopped, but not removed. The database of the user in PostgreSQL and the accounts in the other services stay.
+* Admins cannot delete their own account.
 
 ### Optional services
 

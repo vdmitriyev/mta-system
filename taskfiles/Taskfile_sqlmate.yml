@@ -14,7 +14,7 @@ env:
 tasks:
 
   up:
-    desc: starts sqlmate and its database on the network of mta-system
+    desc: starts sqlmate and its database
     preconditions:
       - sh: docker image inspect "sqlmate:$SQLMATE_VERSION" >/dev/null 2>&1
         msg: "The image sqlmate:{{.SQLMATE_VERSION}} is missing (SQLMATE_VERSION in versions.env). Load it, or build it: task services:build-sqlmate"
@@ -27,27 +27,27 @@ tasks:
       - "{{.SQLMATE_COMPOSE}} up -d"
 
   down:
-    desc: stops sqlmate and its database (the data stays)
+    desc: stops sqlmate (data stays)
     cmds:
       - "{{.SQLMATE_COMPOSE}} down"
 
   restart:
-    desc: restarts sqlmate and its database
+    desc: restarts sqlmate
     cmds:
       - "{{.SQLMATE_COMPOSE}} restart"
 
   ps:
-    desc: shows the state of the sqlmate containers
+    desc: shows the state of sqlmate
     cmds:
       - "{{.SQLMATE_COMPOSE}} ps"
 
   logs:
-    desc: shows the logs of sqlmate as they come in
+    desc: shows the logs of sqlmate
     cmds:
       - "{{.SQLMATE_COMPOSE}} logs -f {{.CLI_ARGS}}"
 
   init:
-    desc: sets up sqlmate once (tables, sandbox database, exercises from setup/sqlmate); also after an update of sqlmate
+    desc: sets up sqlmate (once and after updates)
     cmds:
       - "{{.SQLMATE_COMPOSE}} exec sqlmate-service flask db upgrade"
       # each flask command also stores API_KEY: on the first start, the tables were missing

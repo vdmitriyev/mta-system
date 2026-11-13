@@ -49,6 +49,7 @@ from app.users import (
     access_url,
     container_name,
     course_users,
+    delete_user,
     email_to_name,
     generate_accounts_task,
     get_user_services,
@@ -134,6 +135,22 @@ def users_page(page: Page = Depends()):
     for row in rows:
         row["services"] = sorted(get_user_services(page.db, row["user"].itid))
     return page.render("admin/users.html", rows=rows)
+
+
+@router.post("/users/delete", dependencies=[Depends(csrf_protect)])
+def user_delete(page: Page = Depends(), user_id: int = Form(...)):
+    student = get_course_user(page.db, user_id)
+    if student.deleted:
+        raise HTTPException(status_code=404)
+    if student.itid == page.user.itid:
+        flash(page.request, "You cannot delete your own account.", "danger")
+        return redirect("/mtas-admin/users")
+    email, stopped = delete_user(page.db, student)
+    message = f"{email} was deleted. The e-mail address can register again."
+    if stopped:
+        message += f" Stopped containers: {', '.join(stopped)}."
+    flash(page.request, message, "success")
+    return redirect("/mtas-admin/users")
 
 
 @router.get("/reviews")

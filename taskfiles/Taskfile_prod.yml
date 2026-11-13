@@ -6,52 +6,59 @@ vars:
 tasks:
 
   build:
-    desc: Build the production images (mta-system and nginx)
+    desc: builds the app and nginx images
     cmds:
       - "{{.PROD_COMPOSE}} build"
 
   up:
-    desc: Start mta-system behind nginx (HTTPS)
+    desc: starts mta-system behind nginx
     aliases: [u]
     cmds:
       - mkdir -p data .logs/nginx .htpasswd_nginx certbot/www certbot/conf
       - "{{.PROD_COMPOSE}} up -d --build"
 
   down:
-    desc: Stop the production containers
+    desc: stops the production containers
     aliases: [d]
     cmds:
       - "{{.PROD_COMPOSE}} down"
 
   restart:
-    desc: Restart the production containers
+    desc: restarts the production containers
     cmds:
       - "{{.PROD_COMPOSE}} restart"
 
   ps:
-    desc: Show the state of the production containers
+    desc: shows the state of the production containers
     cmds:
       - "{{.PROD_COMPOSE}} ps"
 
   logs:
-    desc: Show the logs of the production containers as they come in
+    desc: shows the logs (one service after --)
     aliases: [l]
     cmds:
       - "{{.PROD_COMPOSE}} logs -f {{.CLI_ARGS}}"
 
-  reload:
-    desc: Check the nginx configuration and reload it (for example after a new certificate)
+  nginx-reload:
+    desc: checks and reloads the nginx config
+    aliases: [reload]
     cmds:
       - "{{.PROD_COMPOSE}} exec nginx nginx -t"
       - "{{.PROD_COMPOSE}} exec nginx nginx -s reload"
 
+  nginx-recreate:
+    desc: rebuilds and recreates only nginx
+    cmds:
+      - mkdir -p .logs/nginx .htpasswd_nginx certbot/www certbot/conf
+      - "{{.PROD_COMPOSE}} up -d --build --force-recreate --no-deps nginx"
+
   migrate:
-    desc: Migrate the production database to the newest revision
+    desc: applies the migrations to the production database
     cmds:
       - "{{.PROD_COMPOSE}} exec webapp python -m app.cli db-upgrade"
 
   cert:
-    desc: "Get a Let's Encrypt certificate (task prod:cert -- mtas.example.org)"
+    desc: "gets a Let's Encrypt certificate (task prod:cert -- <host>)"
     preconditions:
       - sh: test -n "{{.CLI_ARGS}}"
         msg: "Give the host name: task prod:cert -- mtas.example.org"
@@ -59,7 +66,7 @@ tasks:
       - "{{.PROD_COMPOSE}} run --rm certbot certonly --webroot -w /var/www/certbot -d {{.CLI_ARGS}}"
 
   cert-renew:
-    desc: Renew the Let's Encrypt certificates and reload nginx
+    desc: renews the certificates and reloads nginx
     cmds:
       - "{{.PROD_COMPOSE}} run --rm certbot renew --webroot -w /var/www/certbot"
-      - task: reload
+      - task: nginx-reload

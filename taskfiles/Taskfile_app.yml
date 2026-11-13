@@ -3,19 +3,19 @@ version: '3'
 tasks:
 
   install:
-    desc: installs the dependencies from pyproject.toml (into the active virtual environment, else {{.VENV_DIR}})
+    desc: installs the app dependencies
     aliases: [i]
     cmds:
       - uv sync --active
 
   install-dev:
-    desc: installs the dependencies and the development tools from pyproject.toml
+    desc: installs the dependencies and dev tools
     aliases: [id]
     cmds:
       - uv sync --active --group dev
 
   check-virtualenv:
-    desc: checks that a Python virtual environment is active
+    desc: checks that a virtual environment is active
     aliases: [cv]
     silent: true
     run: once
@@ -25,7 +25,7 @@ tasks:
       - python --version
 
   init-env:
-    desc: copies the sample env files and exercises to envs/ and setup/ (keeps existing files)
+    desc: copies the samples to envs/ and setup/ (keeps existing files)
     cmds:
       - mkdir -p envs setup
       - cp -n samples/webapp.env envs/webapp-dev-local.env
@@ -41,7 +41,7 @@ tasks:
       - echo "Change the secrets in envs/ before you use them"
 
   serve:
-    desc: runs the app for development and reloads on code changes (other port, e.g. 'PORT=8000 task app:serve')
+    desc: runs the app with reload (PORT=8000 for another port)
     aliases: [r]
     deps: [check-virtualenv]
     silent: true
@@ -55,7 +55,7 @@ tasks:
       - uvicorn run:app --reload --host={{.HOST}} --port={{.PORT}}
 
   start:
-    desc: runs the app like in production, without reload (e.g. 'WORKERS=4 task app:start')
+    desc: runs the app without reload (WORKERS=4 for more workers)
     deps: [check-virtualenv]
     silent: true
     vars:
@@ -67,14 +67,14 @@ tasks:
       - uvicorn run:app --host={{.HOST}} --port={{.PORT}} --workers={{.WORKERS}}
 
   cli:
-    desc: runs a command of the app (e.g. 'task app:cli -- --help' or '-- create-custom-db')
+    desc: "runs a command of the app (task app:cli -- --help)"
     deps: [check-virtualenv]
     interactive: true
     cmds:
       - python -m app.cli {{.CLI_ARGS}}
 
   config:
-    desc: checks the settings and shows them without secrets
+    desc: checks and shows the settings
     aliases: [c]
     deps: [check-virtualenv]
     silent: true
@@ -82,32 +82,32 @@ tasks:
       - python -m app.cli show-config
 
   test:
-    desc: runs the tests (pytest options after --, e.g. 'task app:test -- -v -s' or '-- -k login')
+    desc: runs the tests (pytest options after --)
     aliases: [t]
     deps: [check-virtualenv]
     cmds:
       - python -m pytest {{.CLI_ARGS}}
 
   coverage:
-    desc: runs the tests and shows the lines of app/ that no test runs
+    desc: shows the test coverage of app/
     deps: [check-virtualenv]
     cmds:
       - python -m pytest --cov=app --cov-report=term-missing {{.CLI_ARGS}}
 
   nginx-config:
-    desc: creates the nginx config parts for OpenRefine and NiFi (options after --, e.g. '-- -n 50')
+    desc: creates the nginx config parts for OpenRefine and NiFi
     deps: [check-virtualenv]
     cmds:
       - python -m app.cli nginx-config {{.CLI_ARGS}}
 
   bandit:
-    desc: runs bandit (static code analysis)
+    desc: runs bandit (security check)
     deps: [check-virtualenv]
     cmds:
       - bandit -r app
 
   build-image:
-    desc: builds the Docker image of the app (mta-system:latest)
+    desc: "builds the app image (mta-system:latest)"
     aliases: [b]
     cmds:
       - docker build -t mta-system:latest .

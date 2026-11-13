@@ -3,6 +3,7 @@
 import logging
 import time
 import uuid
+from datetime import UTC, datetime
 
 from sqlalchemy import func
 from sqlalchemy.orm import Session
@@ -99,6 +100,43 @@ def validate_credentials(db: Session, u_hash: str, p_hash: str) -> Users | None:
         )
         .first()
     )
+
+
+def deleted_email(email: str) -> str:
+    """E-mail of a deleted user: date and 4 random characters in front, e.g.
+    deleted-20261113-a1b2-sam@uni.example. The address is free for a new registration.
+    """
+
+    stamp = datetime.now(UTC).strftime("%Y%m%d")
+    prefix = f"deleted-{stamp}-{uuid.uuid4().hex[:4]}-"
+    return (prefix + email)[: Users.email.type.length]
+
+
+def stop_user_containers(db: Session, user_id: int) -> list[str]:
+    """Stops the Docker containers of the user. Returns the stopped containers."""
+
+    names = [
+        container_name(service, entry)
+        for service, entry in sorted(get_user_services(db, user_id).items())
+    ]
+    return [name for name in names if name and docker_ctl.run_action(name, "stop")]
+
+
+def delete_user(db: Session, user: Users) -> tuple[str, list[str]]:
+    """Marks the user as deleted, frees the e-mail and stops the containers.
+    Returns the old e-mail and the stopped containers.
+
+    The row, the service accounts and the containers stay."""
+
+    stopped = stop_user_containers(db, user.itid)
+    old_email = user.email
+    user.email = deleted_email(old_email)
+    user.url_hash = email_hash(user.email)
+    user.deleted = True
+    user.active = False
+    db.commit()
+    logger.info("User %s (%s) was deleted", user.itid, old_email)
+    return old_email, stopped
 
 
 def is_admin(user: Users | None) -> bool:

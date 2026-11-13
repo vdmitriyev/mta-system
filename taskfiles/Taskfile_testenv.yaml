@@ -47,7 +47,7 @@ vars:
 tasks:
 
   tools:
-    desc: downloads docker and docker compose into .tools (only if missing)
+    desc: downloads docker and docker compose into .tools
     silent: true
     status:
       - command -v docker >/dev/null || test -x {{.TOOLS_DIR}}/docker
@@ -60,7 +60,7 @@ tasks:
       - chmod +x {{.TOOLS_DIR}}/docker {{.TOOLS_DIR}}/docker-compose
 
   buildx:
-    desc: downloads the buildx plugin (BuildKit) into .tools (only if missing)
+    desc: downloads the buildx plugin into .tools
     silent: true
     status:
       - docker buildx version >/dev/null 2>&1 || test -x {{.BUILDX_PLUGIN}}
@@ -71,7 +71,7 @@ tasks:
       - chmod +x {{.BUILDX_PLUGIN}}
 
   deploy:
-    desc: builds, starts, initialises and checks the test copy, then removes it (TESTENV_KEEP=true keeps it)
+    desc: builds, starts and checks the test copy, then removes it (TESTENV_KEEP=true keeps it)
     aliases: [d]
     cmds:
       # runs at the end, also when a step fails (in reverse order: logs first, then removal)
@@ -82,7 +82,7 @@ tasks:
       - task: check
 
   up:
-    desc: builds and starts app and database of the test copy
+    desc: builds and starts the test copy
     aliases: [u]
     deps: [tools, buildx]
     cmds:
@@ -91,7 +91,7 @@ tasks:
       - '{{.TESTENV_COMPOSE}} up -d --build --wait {{.TESTENV_SERVICES}}'
 
   init:
-    desc: applies the migrations, imports the exercises, switches on the services and creates the demo database
+    desc: initialises the test copy (migrations, exercises, services, demo database)
     aliases: [i]
     deps: [tools]
     cmds:
@@ -108,7 +108,7 @@ tasks:
       - '{{.TESTENV_COMPOSE}} up -d --wait app{{if ne .TESTENV_VARIANT "hostports"}} nginx{{end}}'
 
   check:
-    desc: checks the pages, the main flow (register, log in, import) and the demo database of the test copy
+    desc: checks the pages and the main flow of the test copy
     aliases: [c]
     deps: [tools]
     cmds:
@@ -129,7 +129,7 @@ tasks:
         if: '[ "{{.TESTENV_KEEP}}" != "true" ]'
 
   logs:
-    desc: shows containers and latest logs of the test copy
+    desc: shows the containers and logs of the test copy
     aliases: [l]
     deps: [tools]
     cmds:
@@ -138,7 +138,7 @@ tasks:
       - tail -n 30 .logs/testenv/app-server.log
 
   down:
-    desc: removes the test copy (containers, volumes, app image, containers of the users)
+    desc: removes the test copy
     aliases: [rm]
     deps: [tools]
     cmds:

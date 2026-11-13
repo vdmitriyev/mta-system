@@ -14,7 +14,7 @@ env:
 tasks:
 
   up:
-    desc: starts SurveyLite on the network of mta-system
+    desc: starts SurveyLite
     preconditions:
       - sh: docker image inspect "surveylite:$SURVEYLITE_VERSION" >/dev/null 2>&1
         msg: "The image surveylite:{{.SURVEYLITE_VERSION}} is missing (SURVEYLITE_VERSION in versions.env). Load it, or build it: task services:build-surveylite"
@@ -27,21 +27,21 @@ tasks:
       - "{{.SURVEYLITE_COMPOSE}} up -d"
 
   down:
-    desc: stops SurveyLite (the data stays)
+    desc: stops SurveyLite (data stays)
     cmds:
       - "{{.SURVEYLITE_COMPOSE}} down"
 
   restart:
-    desc: restarts SurveyLite (and imports the YAML files of setup/surveylite again)
+    desc: restarts SurveyLite and imports the surveys again
     cmds:
       - "{{.SURVEYLITE_COMPOSE}} restart"
 
   ps:
-    desc: shows the state of the SurveyLite container
+    desc: shows the state of SurveyLite
     cmds:
       - "{{.SURVEYLITE_COMPOSE}} ps"
 
   logs:
-    desc: shows the logs of SurveyLite as they come in
+    desc: shows the logs of SurveyLite
     cmds:
       - "{{.SURVEYLITE_COMPOSE}} logs -f {{.CLI_ARGS}}"
