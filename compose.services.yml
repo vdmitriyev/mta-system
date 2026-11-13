@@ -50,31 +50,7 @@ services:
 
   # sqlmate runs with its own compose file: provision/sqlmate/compose.yml (task sqlmate:up)
 
-  # SurveyLite: anonymous surveys, at https://<SERVER_FQDN>/surveylite/ (nginx). Optional:
-  # starts only with the profile "surveylite".
-  # Built from SURVEYLITE_SOURCE (versions.env). It imports the YAML files of
-  # setup/surveylite at start.
-  surveylite-service:
-    profiles: [surveylite]
-    build: ${SURVEYLITE_SOURCE:?set it in versions.env and use task, or docker compose --env-file versions.env}
-    image: surveylite:${SURVEYLITE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
-    restart: unless-stopped
-    env_file:
-      - envs/surveylite-service.env
-    environment:
-      # the path of SurveyLite in nginx (location /surveylite/)
-      SURVEYLITE_URL_PREFIX: /surveylite
-      # trust X-Forwarded-For of nginx: login limits per user address, not per nginx
-      # (only nginx reaches SurveyLite: it publishes no port)
-      FORWARDED_ALLOW_IPS: "*"
-      SURVEYLITE_API_DOCS: "false"
-      SURVEYLITE_DB_PATH: ""
-    volumes:
-      - surveylite-data:/app/data
-      - ./.logs/surveylite:/app/logs
-      - ./setup/surveylite:/app/surveys
-    networks:
-      - mtas-network
+  # SurveyLite runs with its own compose file: provision/surveylite/compose.yml (task surveylite:up)
 
 networks:
     mtas-network:
@@ -82,4 +58,3 @@ networks:
 volumes:
   pg15volume-service:
   pga4volume-service:
-  surveylite-data:

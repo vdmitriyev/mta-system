@@ -2,9 +2,8 @@
 #   task prod:up
 #   (docker compose --env-file versions.env -f compose.prod.yaml -f compose.services.yml up -d --build)
 #
-# SurveyLite is optional (profile in compose.services.yml). To start it, put
-# COMPOSE_PROFILES=surveylite into the file .env of the project folder.
-# sqlmate has its own compose file: provision/sqlmate/compose.yml (task sqlmate:up).
+# sqlmate and SurveyLite have their own compose files in provision/ (task sqlmate:up,
+# task surveylite:up). Start them after mta-system: they join its network.
 #
 # nginx and PostgreSQL publish ports to all interfaces. The app is reachable from nginx only.
 name: mta-system-prod

@@ -1,0 +1,47 @@
+version: '3'
+
+# SurveyLite next to mta-system: provision/surveylite/compose.yml, settings in
+# envs/surveylite-service.env. The image surveylite:<SURVEYLITE_VERSION> must exist on the server.
+# SURVEYLITE_NETWORK: the network of mta-system (default: production, mta-system-prod_mtas-network).
+
+vars:
+  SURVEYLITE_COMPOSE: docker compose -f provision/surveylite/compose.yml
+  SURVEYLITE_NETWORK: '{{.SURVEYLITE_NETWORK | default "mta-system-prod_mtas-network"}}'
+
+env:
+  SURVEYLITE_NETWORK: '{{.SURVEYLITE_NETWORK}}'
+
+tasks:
+
+  up:
+    desc: starts SurveyLite on the network of mta-system
+    preconditions:
+      - sh: docker image inspect "surveylite:$SURVEYLITE_VERSION" >/dev/null 2>&1
+        msg: "The image surveylite:{{.SURVEYLITE_VERSION}} is missing (SURVEYLITE_VERSION in versions.env). Load it, or build it: task services:build-surveylite"
+      - sh: test -f envs/surveylite-service.env
+        msg: "envs/surveylite-service.env is missing: task app:init-env, then change every <CHANGE-ME>"
+      - sh: docker network inspect "{{.SURVEYLITE_NETWORK}}" >/dev/null 2>&1
+        msg: "The network {{.SURVEYLITE_NETWORK}} is missing: start mta-system first (task prod:up), or set SURVEYLITE_NETWORK"
+    cmds:
+      - mkdir -p .logs/surveylite setup/surveylite
+      - "{{.SURVEYLITE_COMPOSE}} up -d"
+
+  down:
+    desc: stops SurveyLite (the data stays)
+    cmds:
+      - "{{.SURVEYLITE_COMPOSE}} down"
+
+  restart:
+    desc: restarts SurveyLite (and imports the YAML files of setup/surveylite again)
+    cmds:
+      - "{{.SURVEYLITE_COMPOSE}} restart"
+
+  ps:
+    desc: shows the state of the SurveyLite container
+    cmds:
+      - "{{.SURVEYLITE_COMPOSE}} ps"
+
+  logs:
+    desc: shows the logs of SurveyLite as they come in
+    cmds:
+      - "{{.SURVEYLITE_COMPOSE}} logs -f {{.CLI_ARGS}}"

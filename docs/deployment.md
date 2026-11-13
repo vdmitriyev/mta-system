@@ -22,7 +22,7 @@ task prod:cert -- mtas.example.org     # Let's Encrypt certificate
 task prod:logs
 ```
 
-`task prod:up` starts the app, nginx, PostgreSQL (port `5432` on all interfaces) and pgAdmin 4 (at `https://<SERVER_FQDN>/pgadmin4/`). PostgreSQL and pgAdmin 4 restart with the server. It does not start the shared Metabase and OpenRefine containers: the app starts one container of each for each user. If you still want them, add `metabase` or `openrefine` to `COMPOSE_PROFILES` (see below). `task prod:up` also no longer builds the OpenRefine image: run `task services:build-openrefine` once, and after a change of `OPENREFINE_VERSION`.
+`task prod:up` starts the app, nginx, PostgreSQL (port `5432` on all interfaces) and pgAdmin 4 (at `https://<SERVER_FQDN>/pgadmin4/`). PostgreSQL and pgAdmin 4 restart with the server.
 
 Before you go live:
 
@@ -32,15 +32,43 @@ Before you go live:
 4. Keep the app behind nginx. Only nginx (`80`, `443`) and PostgreSQL (`5432`, or `POSTGRESQL_PUBLIC_PORT`) publish ports to all interfaces. All other ports are bound to `127.0.0.1`. Users log in to PostgreSQL with a password: use a strong `POSTGRES_PASSWORD` in `envs/postgresql-service.env`, and open the port in the firewall only for the networks that need it.
 5. Back up the folder `data/` (SQLite database) and `.htpasswd_nginx/`.
 
-### sqlmate in production (optional)
+### HTTPS certificate (Let's Encrypt)
 
-sqlmate runs next to mta-system with its own compose file, `provision/sqlmate/compose.yml`, like WordPress in `provision/wordpress`. It uses the image `sqlmate:<SQLMATE_VERSION>` that is already on the server, and its own settings in `envs/sqlmate-service.env`. `task prod:up` does not start it.
+nginx starts with a self-signed certificate. To get a certificate from Let's Encrypt:
+
+1. The DNS entry of your host points to the server, and port `80` is open in the firewall. Let's Encrypt downloads a file from `http://<host>/.well-known/acme-challenge/` to check the host.
+2. `task prod:up`, then `task prod:cert -- mtas.example.org`. certbot puts the file into `certbot/www`, nginx serves it from there, and certbot stores the certificate in `certbot/conf`.
+3. In `provision/nginx/nginx-docker.conf`, use the two `ssl_certificate` lines with your host instead of the self-signed certificate.
+4. `task prod:up`: this builds the nginx image with the changed file and starts it.
+5. Renew the certificate before it expires (after 90 days): `task prod:cert-renew`, for example once a week with cron.
+
+nginx redirects all other requests on port `80` to HTTPS.
+
+### Containers of the users
+
+The app starts one Metabase and one OpenRefine container for each user. Their images must be on the server: `task services:pull-metabase` and `task services:build-openrefine`. Run them once, and again after a change in `versions.env`.
+
+### Optional services
+
+| Service | How it starts | Details |
+| --- | --- | --- |
+| sqlmate | own compose file: `task sqlmate:up` | [sqlmate](#sqlmate-optional) |
+| SurveyLite | own compose file: `task surveylite:up` | [SurveyLite](#surveylite-optional) |
+| shared Metabase container | with `task prod:up`, if `metabase` is in `COMPOSE_PROFILES` | not needed: the app starts one for each user |
+| shared OpenRefine container | with `task prod:up`, if `openrefine` is in `COMPOSE_PROFILES` | not needed: the app starts one for each user |
+
+`COMPOSE_PROFILES` goes into the file `.env` in the project folder (not in git), for example `COMPOSE_PROFILES=metabase`. All `task` commands and docker compose read it.
+
+## sqlmate (optional)
+
+[sqlmate](https://github.com/vdmitriyev/sqlmate) gives SQL exercises to the students. It runs next to mta-system with its own compose file, `provision/sqlmate/compose.yml`, like SurveyLite and WordPress in `provision/`. It uses the image `sqlmate:<SQLMATE_VERSION>` on the server and its own settings in `envs/sqlmate-service.env`. `task prod:up` does not start it.
 
 1. The image `sqlmate:<SQLMATE_VERSION>` (see `versions.env`) must be on the server. Check with `docker image ls sqlmate`. Without it, build it from the source in `SQLMATE_SOURCE`: `task services:build-sqlmate`.
-2. `task app:init-env` copies `samples/sqlmate-service.env` to `envs/`. Change every `<CHANGE-ME>`. `SERVER_FQDN` of sqlmate is the one of the app. `API_KEY` of sqlmate (starts with `smk_`, the sample shows how to make one) goes into the env file of the app as `SQLMATE_API_KEY`.
-3. Exercises: `setup/sqlmate/sql-exercises.yaml` and its files (see the README of sqlmate). `task app:init-env` puts a demo exercise there.
-4. Start mta-system first (`task prod:up`): sqlmate joins its network `mta-system-prod_mtas-network`, so nginx (`https://<SERVER_FQDN>/sqlmate/`) and the app reach it by its name. sqlmate publishes no port.
-5. Start sqlmate:
+2. `task app:init-env` copies `samples/sqlmate-service.env` to `envs/`. Change every `<CHANGE-ME>`. `SERVER_FQDN` of sqlmate is the one of the app.
+3. In the env file of the app, set `SQLMATE_API_KEY` to the value of `API_KEY` in `envs/sqlmate-service.env` (starts with `smk_`, the sample shows how to make one). `SQLMATE_API_URL` and `SQLMATE_URL` work with their defaults.
+4. Exercises: `setup/sqlmate/sql-exercises.yaml` and its files (see the README of sqlmate). `task app:init-env` puts a demo exercise there.
+5. Start mta-system first (`task prod:up`). sqlmate joins its network, so nginx (`https://<SERVER_FQDN>/sqlmate/`) and the app reach it by its name. sqlmate publishes no port.
+6. Start sqlmate:
 
    ```bash
    task sqlmate:up      # sqlmate and its database
@@ -49,31 +77,43 @@ sqlmate runs next to mta-system with its own compose file, `provision/sqlmate/co
    ```
 
    Run `task sqlmate:init` again after an update of sqlmate (database migrations).
-6. Switch on sqlmate on the page **Services → Auto creation**.
+7. Switch on sqlmate on the page **Services → Auto creation**.
 
 | Setting (shell or `.env`) | Default | Meaning |
 | --- | --- | --- |
 | `SQLMATE_NETWORK` | `mta-system-prod_mtas-network` | Network of mta-system. For development: `mta-system_mtas-network`. |
 | `SQLMATE_DB_VOLUME` | `mta-system-prod_sqlmate-pgdata` | Volume of the sqlmate database. It is the volume of the earlier setup in `compose.services.yml`, so the data stays. |
 
-If sqlmate ran before as part of `task prod:up` (profile `sqlmate`), remove its old containers once before `task sqlmate:up`. The data stays in the volume: `docker rm -f mta-system-prod-sqlmate-service-1 mta-system-prod-sqlmate-database-1`.
+Other tasks: `task sqlmate:ps`, `task sqlmate:restart`, `task sqlmate:down` (the data stays).
 
-### SurveyLite in production (optional)
+If sqlmate ran before as part of `task prod:up` (profile `sqlmate`, up to version 2.4.0), remove its old containers once before `task sqlmate:up`. The data stays in the volume: `docker rm -f mta-system-prod-sqlmate-service-1 mta-system-prod-sqlmate-database-1`.
 
-SurveyLite is optional. By default, `task prod:up` does not start it and does not need its source code. To use it:
+## SurveyLite (optional)
 
-1. Switch it on with a Compose profile. Put this line into the file `.env` in the project folder (not in git):
+[SurveyLite](https://github.com/vdmitriyev/surveylite) (version 0.21.0 or newer) runs anonymous surveys. It runs next to mta-system with its own compose file, `provision/surveylite/compose.yml`. It uses the image `surveylite:<SURVEYLITE_VERSION>` on the server and its own settings in `envs/surveylite-service.env`. `task prod:up` does not start it.
 
-   ```ini
-   COMPOSE_PROFILES=surveylite
+1. The image `surveylite:<SURVEYLITE_VERSION>` (see `versions.env`) must be on the server. Check with `docker image ls surveylite`. Without it, build it from the source in `SURVEYLITE_SOURCE`: `task services:build-surveylite`. The Dockerfile of SurveyLite needs BuildKit (`docker buildx`), which recent Docker versions include.
+2. `task app:init-env` copies `samples/surveylite-service.env` to `envs/`. Change every `<CHANGE-ME>`. Set `SURVEYLITE_BASE_URL=https://<SERVER_FQDN>`.
+3. In the env file of the app, set `SURVEYLITE_API_KEY` to one of `SURVEYLITE_API_KEYS` in `envs/surveylite-service.env`. `SURVEYLITE_API_URL` and `SURVEYLITE_URL` work with their defaults.
+4. Surveys: YAML files in `setup/surveylite` (imported at each start), or build them in the admin pages of SurveyLite (`https://<SERVER_FQDN>/surveylite/admin`).
+5. Start mta-system first (`task prod:up`). SurveyLite joins its network, so nginx and the app reach it by its name. It runs at `https://<SERVER_FQDN>/surveylite/` (`SURVEYLITE_URL_PREFIX=/surveylite` in the compose file, `location /surveylite/` in nginx). No DNS entry or certificate of its own is needed, and SurveyLite publishes no port.
+6. Start SurveyLite:
+
+   ```bash
+   task surveylite:up
+   task surveylite:logs
    ```
 
-   All `task prod:*` and `task services:*` commands read it. Without the line, the steps below are not needed.
-2. Put the source code of SurveyLite into the folder `SURVEYLITE_SOURCE` of `versions.env` (default: `temp/surveylite`). compose builds the image from there. The Dockerfile of SurveyLite needs BuildKit (`docker buildx`), which recent Docker versions include.
-3. `task app:init-env` copies `samples/surveylite-service.env` to `envs/`. Change every `<CHANGE-ME>`. One of `SURVEYLITE_API_KEYS` goes into the env file of the app as `SURVEYLITE_API_KEY`.
-4. SurveyLite runs at `https://<SERVER_FQDN>/surveylite/` (`SURVEYLITE_URL_PREFIX=/surveylite` in `compose.services.yml`, `location /surveylite/` in nginx). Set `SURVEYLITE_BASE_URL=https://<SERVER_FQDN>` in `envs/surveylite-service.env`. No DNS entry or certificate of its own is needed.
-5. Surveys: YAML files in `setup/surveylite`, or build them in the admin pages of SurveyLite (`https://<SERVER_FQDN>/surveylite/admin`).
-6. Switch on SurveyLite on the page **Services → Auto creation**.
+7. Switch on SurveyLite on the page **Services → Auto creation**.
+
+| Setting (shell or `.env`) | Default | Meaning |
+| --- | --- | --- |
+| `SURVEYLITE_NETWORK` | `mta-system-prod_mtas-network` | Network of mta-system. For development: `mta-system_mtas-network`. |
+| `SURVEYLITE_DATA_VOLUME` | `mta-system-prod_surveylite-data` | Volume of the SurveyLite data. It is the volume of the earlier setup in `compose.services.yml`, so the data stays. |
+
+Other tasks: `task surveylite:ps`, `task surveylite:restart`, `task surveylite:down` (the data stays).
+
+If SurveyLite ran before as part of `task prod:up` (profile `surveylite`, up to version 2.4.0), remove its old container once before `task surveylite:up`. The data stays in the volume: `docker rm -f mta-system-prod-surveylite-service-1`.
 
 ## Versions of the services
 

@@ -66,20 +66,52 @@ JupyterHub, NiFi and Superset are deprecated: the app creates no new accounts in
 
 All services are switched off at the start. The app then runs on its own, without Docker and without PostgreSQL. WordPress needs MariaDB: switch on MariaDB first. A change affects only new users.
 
-### sqlmate and SurveyLite
-
-[sqlmate](https://github.com/vdmitriyev/sqlmate) (SQL exercises) and [SurveyLite](https://github.com/vdmitriyev/surveylite) (anonymous surveys) run as shared services in Docker. The app creates the accounts through their APIs. Both are optional.
-
-* sqlmate has its own compose file, `provision/sqlmate/compose.yml`, with the settings in `envs/sqlmate-service.env`. It needs the image `sqlmate:<SQLMATE_VERSION>` (`task services:build-sqlmate` builds it from `SQLMATE_SOURCE`). With `task dev:up` running: `SQLMATE_NETWORK=mta-system_mtas-network task sqlmate:up`, then `task sqlmate:init`.
-* SurveyLite is in `compose.services.yml` and starts only with its Compose profile: put `COMPOSE_PROFILES=surveylite` into the file `.env` in the project folder (not in git). Then `task dev:up` and `task prod:up` also build it from `SURVEYLITE_SOURCE` of `versions.env`.
-
-* **sqlmate**: each user gets an account with the internal e-mail of the user. The services page shows the address, a personal login link, the login and the PIN. Admin page: **Services → sqlmate**.
-* **SurveyLite** (version 0.21.0 or newer): each user gets an anonymous participant. SurveyLite does not know who the participant is: only the table `surveylite_service` of the app links them. The services page shows the link to `/me` of SurveyLite, a personal login link (`/me?auth=…`), the login, the PIN and the survey links of the user. The survey links also log the user in, so they open surveys that need a login (`require_login`). If a login link becomes known to others, **New login link** on the admin page makes a new one: the old links stop working.
-* On the admin page **Services → SurveyLite**, an admin gives surveys to the users and chooses services that open only after a completed survey (for example sqlmate). Until then, the services page shows the survey instead of the login of the service. A new user gets these surveys at once.
-* Settings of the app: `SQLMATE_API_URL`, `SQLMATE_API_KEY`, `SQLMATE_URL`, `SURVEYLITE_API_URL`, `SURVEYLITE_API_KEY` and `SURVEYLITE_URL` (see `samples/webapp.env`).
-* If `SERVICES_UI` is set in your env file, add `sqlmate` and `surveylite` to it.
-
 Before version 2.0.0, the env file had the settings `CREATE_<NAME>_SERVICE`. `task db:upgrade` copies their values into the database once. After that, the app ignores them and you can delete them from the env file.
+
+If `SERVICES_UI` is set in your env file, it lists the services that the services page shows, in this order and separated by `;`. Add `sqlmate` and `surveylite` to it to show them.
+
+### sqlmate (optional)
+
+[sqlmate](https://github.com/vdmitriyev/sqlmate) gives SQL exercises to the students. It runs next to the app in Docker. The app creates the accounts through its API.
+
+* Each user gets an account with the internal e-mail of the user. The services page shows the address, a personal login link, the login and the PIN.
+* Admin page: **Services → sqlmate**.
+* Settings of the app (see `samples/webapp.env`): `SQLMATE_API_URL`, `SQLMATE_API_KEY` (the same value as `API_KEY` in `envs/sqlmate-service.env`) and `SQLMATE_URL`.
+
+To run it with `task dev:up`:
+
+1. Get the image `sqlmate:<SQLMATE_VERSION>`: `task services:build-sqlmate` builds it from the source in `SQLMATE_SOURCE` (default: `temp/sqlmate`).
+2. Change the values in `envs/sqlmate-service.env` (from `task app:init-env`).
+3. Start it on the network of the development setup:
+
+   ```bash
+   SQLMATE_NETWORK=mta-system_mtas-network task sqlmate:up
+   task sqlmate:init     # once: tables, sandbox database, API key, exercises
+   ```
+
+The compose file is `provision/sqlmate/compose.yml`. See [deployment.md](deployment.md#sqlmate-optional) for all steps.
+
+### SurveyLite (optional)
+
+[SurveyLite](https://github.com/vdmitriyev/surveylite) (version 0.21.0 or newer) runs anonymous surveys. It runs next to the app in Docker. The app creates the participants through its API.
+
+* Each user gets an anonymous participant. SurveyLite does not know who the participant is: only the table `surveylite_service` of the app links them.
+* The services page shows the link to `/me` of SurveyLite, a personal login link (`/me?auth=…`), the login, the PIN and the survey links of the user. The survey links also log the user in, so they open surveys that need a login (`require_login`).
+* On the admin page **Services → SurveyLite**, an admin gives surveys to the users and chooses services that open only after a completed survey (for example sqlmate). Until then, the services page shows the survey instead of the login of the service. A new user gets these surveys at once.
+* If a login link becomes known to others, **New login link** on the admin page makes a new one. The old links stop working.
+* Settings of the app (see `samples/webapp.env`): `SURVEYLITE_API_URL`, `SURVEYLITE_API_KEY` (one of `SURVEYLITE_API_KEYS` in `envs/surveylite-service.env`) and `SURVEYLITE_URL`. The app builds all links for the users from `SURVEYLITE_URL`.
+
+To run it with `task dev:up`:
+
+1. Get the image `surveylite:<SURVEYLITE_VERSION>`: `task services:build-surveylite` builds it from the source in `SURVEYLITE_SOURCE` (default: `temp/surveylite`).
+2. Change the values in `envs/surveylite-service.env` (from `task app:init-env`).
+3. Start it on the network of the development setup:
+
+   ```bash
+   SURVEYLITE_NETWORK=mta-system_mtas-network task surveylite:up
+   ```
+
+The compose file is `provision/surveylite/compose.yml`. See [deployment.md](deployment.md#surveylite-optional) for all steps.
 
 ### Create the database and run the app
 

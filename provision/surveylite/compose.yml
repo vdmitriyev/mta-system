@@ -1,0 +1,44 @@
+# SurveyLite (anonymous surveys), next to mta-system.
+# The image surveylite:<SURVEYLITE_VERSION> must exist on the server (versions.env).
+# Settings: envs/surveylite-service.env (sample: samples/surveylite-service.env).
+#
+#   task surveylite:up   (docker compose --env-file versions.env -f provision/surveylite/compose.yml up -d)
+#
+# SurveyLite publishes no port: nginx (https://<SERVER_FQDN>/surveylite/) and the app reach
+# it by its name on the network of mta-system (SURVEYLITE_NETWORK).
+# It imports the YAML files of setup/surveylite at start.
+name: mta-system-surveylite
+
+services:
+
+  surveylite-service:
+    image: surveylite:${SURVEYLITE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
+    pull_policy: never
+    restart: unless-stopped
+    env_file:
+      - ../../envs/surveylite-service.env
+    environment:
+      # the path of SurveyLite in nginx (location /surveylite/)
+      SURVEYLITE_URL_PREFIX: /surveylite
+      # trust X-Forwarded-For of nginx: login limits per user address, not per nginx
+      # (only nginx reaches SurveyLite: it publishes no port)
+      FORWARDED_ALLOW_IPS: "*"
+      SURVEYLITE_API_DOCS: "false"
+      SURVEYLITE_DB_PATH: ""
+    volumes:
+      - surveylite-data:/app/data
+      - ../../.logs/surveylite:/app/logs
+      - ../../setup/surveylite:/app/surveys
+    networks:
+      - mtas-network
+
+networks:
+  # the network of mta-system: production (task prod:up) or development (task dev:up)
+  mtas-network:
+    external: true
+    name: ${SURVEYLITE_NETWORK:-mta-system-prod_mtas-network}
+
+volumes:
+  # the same volume as before, when SurveyLite was part of compose.services.yml
+  surveylite-data:
+    name: ${SURVEYLITE_DATA_VOLUME:-mta-system-prod_surveylite-data}

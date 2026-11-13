@@ -32,8 +32,6 @@ tasks:
       - task: pull-pgadmin4
       - task: pull-mariadb
       # optional services: only if their profile is in COMPOSE_PROFILES
-      - task: build-surveylite
-        if: echo ",$COMPOSE_PROFILES," | grep -q ",surveylite,"
 
   build-openrefine:
     desc: builds the OpenRefine image (openrefine:<OPENREFINE_VERSION>) from provision/openrefine
