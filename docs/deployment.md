@@ -36,7 +36,7 @@ Before you go live:
 | `task prod:logs -- <service>` | Shows the logs. Without `-- <service>`: all services. |
 | `task prod:build` | Builds the images of the app and nginx. |
 | `task prod:migrate` | Applies the migrations to the database of the app. |
-| `task prod:cert -- <host>` | Gets a Let's Encrypt certificate. |
+| `task prod:cert -- <host>` | Gets a Let's Encrypt certificate and restarts nginx. |
 | `task prod:cert-renew` | Renews the certificates and reloads nginx. |
 | `task prod:nginx-reload` | Checks the nginx configuration and reloads it. Old name: `prod:reload`. |
 | `task prod:nginx-recreate` | Builds nginx again and recreates only nginx. Use it after a change in `provision/nginx/nginx-docker.conf`: the file is part of the image. |
@@ -50,11 +50,17 @@ nginx starts with a self-signed certificate. To get one from Let's Encrypt:
 
 1. Point the DNS entry of your host to the server. Open port `80` in the firewall.
 2. Run `task prod:up`, then `task prod:cert -- mtas.example.org`.
-3. In `provision/nginx/nginx-docker.conf`, switch to the two `ssl_certificate` lines with your host.
-4. Run `task prod:nginx-recreate`.
-5. Renew the certificate before 90 days pass: `task prod:cert-renew`, for example weekly with cron.
+3. Renew the certificate before 90 days pass: `task prod:cert-renew`, for example weekly with cron.
+
+You do not change `provision/nginx/nginx-docker.conf`. On each start, nginx uses the certificate in `certbot/conf/live/mtas-system/` if it exists. Else it uses the self-signed one.
 
 Let's Encrypt checks the host at `http://<host>/.well-known/acme-challenge/`. nginx redirects all other requests on port `80` to HTTPS.
+
+Up to version 2.4.2, you edited `nginx-docker.conf` on the server. The certificate there has the name of the host. To update such a server:
+
+1. Drop the local change: `git checkout provision/nginx/nginx-docker.conf`. Then run `git pull`.
+2. In the file `.env` in the project folder, add `SSL_CERT_NAME=<host>`. Or get a new certificate with `task prod:cert -- <host>`.
+3. Run `task prod:nginx-recreate`.
 
 ### Containers of the users
 

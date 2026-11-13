@@ -77,7 +77,9 @@ tasks:
       - sh: test -n "{{.CLI_ARGS}}"
         msg: "Give the host name: task prod:cert -- mtas.example.org"
     cmds:
-      - "{{.PROD_COMPOSE}} run --rm certbot certonly --webroot -w /var/www/certbot -d {{.CLI_ARGS}}"
+      - "{{.PROD_COMPOSE}} run --rm certbot certonly --webroot -w /var/www/certbot --cert-name ${SSL_CERT_NAME:-mtas-system} -d {{.CLI_ARGS}}"
+      # nginx picks the certificate on start
+      - "{{.PROD_COMPOSE}} restart nginx"
 
   cert-renew:
     desc: renews the certificates and reloads nginx
