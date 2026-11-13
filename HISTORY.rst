@@ -8,7 +8,8 @@ History
 * pgAdmin 4: fixed 502 at `/pgadmin4/`. On servers where Docker uses `no-new-privileges`, pgAdmin 9.x listens on port `8080` instead of `80`. pgAdmin now always uses `8080`, and nginx connects to it there. To apply it, run `task prod:up`.
 * Test copy: pgAdmin 4 runs with `no-new-privileges`, as on such servers.
 * nginx image: has `ping` (package `iputils-ping`), to check the connection to other containers.
-* Docs: `docs/deployment.md` names the port of pgAdmin 4.
+* Docs: `docs/deployment.md` names the port of pgAdmin 4. 
+* Docs: also explains that the `prod:` tasks use the env file in `ENV_FILE_NAME`. Without it, they use `envs/webapp-dev-local.env`, not `envs/.env`.
 
 2.4.3 (2026-11-13)
 -------------------
@@ -19,7 +20,9 @@ History
 * To update a server: back up the volume `pga4volume-service`, then run `task app:init-env`, `task services:pull-pgadmin4` and `task prod:up`.
 * `versions.env` is shorter. sqlmate and SurveyLite each have their own block. `SQLMATE_SOURCE` and `SURVEYLITE_SOURCE` are gone: the images must be on the server. 
     - `task services:build-sqlmate` and `task services:build-surveylite` build them from `temp/sqlmate` and `temp/surveylite`.
-* nginx picks the HTTPS certificate by itself. You no longer edit `provision/nginx/nginx-docker.conf`, so `git pull` on the server has no conflict. On each start, nginx uses `certbot/conf/live/<SSL_CERT_NAME>/` if it exists, else the self-signed certificate.
+* nginx picks the HTTPS certificate by itself. On each start, nginx uses `certbot/conf/live/<SERVER_FQDN>/` if it exists, else the self-signed certificate. 
+  - The `prod:` tasks read `SERVER_FQDN` from the env file of the app (`ENV_FILE_NAME`). 
+`task prod:cert` needs no host name anymore: it gets the certificate for `SERVER_FQDN` and restarts nginx.
 * Docs: the README, `docs/deployment.md` and `docs/development.md` are shorter and in plain language. `docs/deployment.md` has a new section **pgAdmin 4** and a table with the task that gets each image. All three link to this file.
 
 2.4.2 (2026-11-13)

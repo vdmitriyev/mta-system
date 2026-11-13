@@ -20,8 +20,8 @@ RUN openssl req -x509 -nodes -newkey rsa:2048 -keyout local-key.pem -out local-c
 ENV HTTPS_PORT=443
 # Shared secret of nginx and pgAdmin 4, from envs/pgadmin4-proxy.env at runtime (not in the image)
 ENV PGADMIN_WEBSERVER_SECRET=""
-# Name of the Let's Encrypt certificate (task prod:cert)
-ENV SSL_CERT_NAME=mtas-system
+# Name of the Let's Encrypt certificate: SERVER_FQDN (task prod:*). Empty: self-signed.
+ENV SSL_CERT_NAME=""
 RUN rm /etc/nginx/conf.d/default.conf
 COPY ssl-cert.sh /docker-entrypoint.d/40-ssl-cert.sh
 RUN chmod 755 /docker-entrypoint.d/40-ssl-cert.sh

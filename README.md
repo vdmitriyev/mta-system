@@ -87,11 +87,13 @@ Before `task app:serve`, change the secrets in `envs/webapp-dev-local.env`. See 
 | `app:` | `app:serve`, `app:test`, `app:config`, `app:init-env`, `app:cli -- <command>` | [development](docs/development.md) |
 | `dev:` | `dev:up`, `dev:init`, `dev:logs`, `dev:down`, `dev:app-recreate`, `dev:nginx-recreate` | [development](docs/development.md#run-in-docker-for-development) |
 | `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate`, `prod:app-recreate` | [deployment](docs/deployment.md#production) |
-| `prod:` nginx | `prod:cert -- <host>`, `prod:cert-renew`, `prod:nginx-reload`, `prod:nginx-recreate` | [deployment](docs/deployment.md#https-certificate-lets-encrypt) |
+| `prod:` nginx | `prod:cert`, `prod:cert-renew`, `prod:nginx-reload`, `prod:nginx-recreate` | [deployment](docs/deployment.md#https-certificate-lets-encrypt) |
 | `sqlmate:` | `sqlmate:up`, `sqlmate:init`, `sqlmate:logs`, `sqlmate:down` | [deployment](docs/deployment.md#sqlmate-optional) |
 | `surveylite:` | `surveylite:up`, `surveylite:logs`, `surveylite:down` | [deployment](docs/deployment.md#surveylite-optional) |
 | `services:` | `services:versions`, `services:update-all`, `services:build-sqlmate`, `services:build-surveylite` | [deployment](docs/deployment.md#versions-of-the-services) |
 | `testenv:` | `testenv:deploy`, `testenv:down` | [development](docs/development.md#tests) |
+
+On a server, set `export ENV_FILE_NAME=envs/.env` before the `prod:` tasks. Without it, they use `envs/webapp-dev-local.env`. See [Production](docs/deployment.md#production).
 
 After `prod:app-recreate` or `dev:app-recreate`, the app needs a few seconds to start. Until then, nginx answers with 502. You do not need a migration task: the app applies the migrations on each start.
 

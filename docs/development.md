@@ -45,7 +45,7 @@ Then change the values in `envs/webapp-dev-local.env`:
 `samples/webapp.env` lists all settings. The app takes each setting from the first of these places:
 
 1. an environment variable
-2. the env file in `ENV_FILE_NAME` (default: `envs/webapp-dev-local.env`)
+2. the env file in `ENV_FILE_NAME` (default: `envs/webapp-dev-local.env`, also for the `prod:` tasks)
 3. the default in `app/config.py`
 
 An empty value counts as "not set". A wrong value, for example `MAIL_PORT=abc`, stops the app with a message. To check your settings:
@@ -145,7 +145,7 @@ task dev:nginx-reload         # checks the nginx configuration and reloads it
 * Register with an address from `SYSTEM_ADMINS` to see the admin pages. To register the same address again, delete the user on the admin page **Users**.
 * In development, the app writes the login link to the log. You do not need a mail server.
 * The containers of the users need their images: `task services:pull-metabase` and `task services:build-openrefine`. After a change in `versions.env`, see [Versions of the services](deployment.md#versions-of-the-services).
-* pgAdmin 4 runs at `https://127.0.0.1/pgadmin4/`. `envs/pgadmin4-proxy.env` is optional in development. See [deployment.md](deployment.md#pgadmin-4).
+* pgAdmin 4 runs at `https://127.0.0.1/pgadmin4/`, and directly at `http://127.0.0.1:5050` (port `8080` in the container). `envs/pgadmin4-proxy.env` is optional in development. See [deployment.md](deployment.md#pgadmin-4).
 * After a change in `provision/nginx/nginx-docker.conf`, run `task dev:nginx-recreate`.
 * After a change of the dependencies or the `Dockerfile`, run `task dev:app-recreate`. The app then needs a few seconds to start. Until then, nginx answers with 502.
 * After a change in `app/models.py`, create and apply a migration: `task db:migrate -- -m "what changed"`.

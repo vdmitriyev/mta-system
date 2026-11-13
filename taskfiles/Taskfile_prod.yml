@@ -2,6 +2,15 @@ version: '3'
 
 vars:
   PROD_COMPOSE: docker compose -f compose.prod.yaml -f compose.services.yml
+  # SERVER_FQDN from the env file of the app (ENV_FILE_NAME)
+  SERVER_FQDN:
+    sh: |
+      test -f "$ENV_FILE_NAME" || exit 0
+      tr -d '\r' < "$ENV_FILE_NAME" | sed -nE "s/^[[:space:]]*SERVER_FQDN[[:space:]]*=[[:space:]]*['\"]?([^'\" #]*).*/\1/p" | tail -n 1
+
+env:
+  # nginx uses the Let's Encrypt certificate with this name (provision/nginx/ssl-cert.sh)
+  SSL_CERT_NAME: '{{.SERVER_FQDN}}'
 
 tasks:
 
@@ -72,12 +81,12 @@ tasks:
       - "{{.PROD_COMPOSE}} exec webapp python -m app.cli db-upgrade"
 
   cert:
-    desc: "gets a Let's Encrypt certificate (task prod:cert -- <host>)"
+    desc: "gets a Let's Encrypt certificate for SERVER_FQDN"
     preconditions:
-      - sh: test -n "{{.CLI_ARGS}}"
-        msg: "Give the host name: task prod:cert -- mtas.example.org"
+      - sh: test -n "{{.SERVER_FQDN}}" && test "{{.SERVER_FQDN}}" != localhost
+        msg: "Set SERVER_FQDN in {{.ENV_FILE_NAME}} (or choose the file with ENV_FILE_NAME=...)"
     cmds:
-      - "{{.PROD_COMPOSE}} run --rm certbot certonly --webroot -w /var/www/certbot --cert-name ${SSL_CERT_NAME:-mtas-system} -d {{.CLI_ARGS}}"
+      - "{{.PROD_COMPOSE}} run --rm certbot certonly --webroot -w /var/www/certbot --cert-name {{.SERVER_FQDN}} -d {{.SERVER_FQDN}}"
       # nginx picks the certificate on start
       - "{{.PROD_COMPOSE}} restart nginx"
 

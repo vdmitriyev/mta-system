@@ -16,8 +16,11 @@ task app:build-image   # builds mta-system:latest
 ## Production
 
 1. Copy the settings: `cp samples/webapp.env envs/.env`. Set `TARGET_SERVER=production` and your values.
-2. Create the other env files: `task app:init-env`. It keeps existing files.
-3. Start: `task prod:up`. This starts the app, nginx, PostgreSQL and pgAdmin 4.
+2. Tell the tasks to use this file: `export ENV_FILE_NAME=envs/.env`. Put this line in `~/.profile` of the server user, so each shell has it.
+3. Create the other env files: `task app:init-env`. It keeps existing files.
+4. Start: `task prod:up`. This starts the app, nginx, PostgreSQL and pgAdmin 4.
+
+Without `ENV_FILE_NAME`, all tasks use `envs/webapp-dev-local.env`, also the `prod:` tasks. The file `.env` in the project folder cannot set `ENV_FILE_NAME`. To check it: `echo $ENV_FILE_NAME`.
 
 Before you go live:
 
@@ -36,7 +39,7 @@ Before you go live:
 | `task prod:logs -- <service>` | Shows the logs. Without `-- <service>`: all services. |
 | `task prod:build` | Builds the images of the app and nginx. |
 | `task prod:migrate` | Applies the migrations to the database of the app. |
-| `task prod:cert -- <host>` | Gets a Let's Encrypt certificate and restarts nginx. |
+| `task prod:cert` | Gets a Let's Encrypt certificate for `SERVER_FQDN` and restarts nginx. |
 | `task prod:cert-renew` | Renews the certificates and reloads nginx. |
 | `task prod:nginx-reload` | Checks the nginx configuration and reloads it. Old name: `prod:reload`. |
 | `task prod:nginx-recreate` | Builds nginx again and recreates only nginx. Use it after a change in `provision/nginx/nginx-docker.conf`: the file is part of the image. |
@@ -48,18 +51,21 @@ After `task prod:app-recreate`, the app needs a few seconds to start. Until then
 
 nginx starts with a self-signed certificate. To get one from Let's Encrypt:
 
-1. Point the DNS entry of your host to the server. Open port `80` in the firewall.
-2. Run `task prod:up`, then `task prod:cert -- mtas.example.org`.
-3. Renew the certificate before 90 days pass: `task prod:cert-renew`, for example weekly with cron.
+1. Set `SERVER_FQDN` in the env file of the app, for example `SERVER_FQDN=mtas.example.org`.
+2. Point the DNS entry of this host to the server. Open port `80` in the firewall.
+3. Run `task prod:up`, then `task prod:cert`.
+4. Renew the certificate before 90 days pass: `task prod:cert-renew`, for example weekly with cron.
 
-You do not change `provision/nginx/nginx-docker.conf`. On each start, nginx uses the certificate in `certbot/conf/live/mtas-system/` if it exists. Else it uses the self-signed one.
+`task prod:cert` reads `SERVER_FQDN` from the env file in `ENV_FILE_NAME` (see [Production](#production)).
 
-Let's Encrypt checks the host at `http://<host>/.well-known/acme-challenge/`. nginx redirects all other requests on port `80` to HTTPS.
+You do not change `provision/nginx/nginx-docker.conf`. On each start, nginx uses the certificate in `certbot/conf/live/<SERVER_FQDN>/` if it exists. Else it uses the self-signed one.
 
-Up to version 2.4.2, you edited `nginx-docker.conf` on the server. The certificate there has the name of the host. To update such a server:
+Let's Encrypt checks the host at `http://<SERVER_FQDN>/.well-known/acme-challenge/`. nginx redirects all other requests on port `80` to HTTPS.
+
+If you edited `nginx-docker.conf` on the server before:
 
 1. Drop the local change: `git checkout provision/nginx/nginx-docker.conf`. Then run `git pull`.
-2. In the file `.env` in the project folder, add `SSL_CERT_NAME=<host>`. Or get a new certificate with `task prod:cert -- <host>`.
+2. Check that `SERVER_FQDN` is the name of the folder in `certbot/conf/live/`. Else get a new certificate with `task prod:cert`.
 3. Run `task prod:nginx-recreate`.
 
 ### Containers of the users
@@ -80,6 +86,7 @@ pgAdmin 4 runs at `https://<SERVER_FQDN>/pgadmin4/`. nginx asks for the login of
 * `task prod:up` and `task prod:nginx-recreate` stop if the file is missing.
 * To change the secret, edit the file and run `task prod:up`.
 * pgAdmin listens on port `8080` (`PGADMIN_LISTEN_PORT` in `compose.services.yml`). Port `80` fails on servers where Docker uses `no-new-privileges`. nginx then answers with 502.
+* If nginx answers with 502, read `.logs/nginx/error.log`. To test the connection from nginx: `docker exec mta-system-nginx ping -c 3 pgadmin4-service`.
 
 `provision/pgadmin4/config_local.py` holds the settings:
 
