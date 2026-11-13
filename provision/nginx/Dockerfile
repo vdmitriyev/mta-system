@@ -5,6 +5,7 @@ RUN apt-get update \
            ca-certificates \
            openssl \
            wget \
+           iputils-ping \
            bash \
     && rm -rf /var/lib/apt/lists/*
 

@@ -41,8 +41,12 @@ services:
       # shared secret with nginx (task app:init-env creates the file)
       - path: envs/pgadmin4-proxy.env
         required: false
+    environment:
+      # Fixed port. With no-new-privileges (Docker), pgAdmin 9.x cannot use port 80
+      # and switches to 8080 by itself. nginx (nginx-docker.conf) uses this port.
+      PGADMIN_LISTEN_PORT: "8080"
     ports:
-      - "127.0.0.1:5050:80"
+      - "127.0.0.1:5050:8080"
     volumes:
       - pga4volume-service:/var/lib/pgadmin
       - type: bind

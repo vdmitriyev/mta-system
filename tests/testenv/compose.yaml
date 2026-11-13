@@ -36,7 +36,7 @@ services:
       METABASE_TRY_COUNT: "20"
       METABASE_TRY_SLEEP_SEC: "15"
       # for tests/testenv/services_check.py
-      MTAS_PGADMIN4_URL: http://pgadmin4
+      MTAS_PGADMIN4_URL: http://pgadmin4:8080
       MTAS_PGADMIN4_SECRET: testenv-pgadmin-secret # sandbox only, same as in "pgadmin4" and "nginx"
       MTAS_NGINX_URL: https://nginx
       # sqlmate and SurveyLite
@@ -77,6 +77,10 @@ services:
       PGADMIN_DEFAULT_PASSWORD: testenv-pgadmin # sandbox only
       PGADMIN_CONFIG_CHECK_EMAIL_DELIVERABILITY: "False"
       PGADMIN_WEBSERVER_SECRET: testenv-pgadmin-secret # sandbox only (envs/pgadmin4-proxy.env)
+      PGADMIN_LISTEN_PORT: "8080" # as in compose.services.yml
+    # as on hardened servers: without the fixed port, pgAdmin would leave port 80
+    security_opt:
+      - no-new-privileges:true
     volumes:
       # nginx logs the users in (basic auth) and passes the name on: X-Forwarded-User
       - ${MTAS_HOST_DIR:-.}/provision/pgadmin4/config_local.py:/pgadmin4/config_local.py:ro

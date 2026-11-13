@@ -30,7 +30,7 @@ services:
 
   pgadmin4:
     ports:
-      - "127.0.0.1:35050:80"
+      - "127.0.0.1:35050:8080"
 
   mariadb:
     ports:

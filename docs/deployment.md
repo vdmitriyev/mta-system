@@ -79,6 +79,7 @@ pgAdmin 4 runs at `https://<SERVER_FQDN>/pgadmin4/`. nginx asks for the login of
 * Without the secret, pgAdmin shows its own login page. So other containers in the network cannot log in as a user.
 * `task prod:up` and `task prod:nginx-recreate` stop if the file is missing.
 * To change the secret, edit the file and run `task prod:up`.
+* pgAdmin listens on port `8080` (`PGADMIN_LISTEN_PORT` in `compose.services.yml`). Port `80` fails on servers where Docker uses `no-new-privileges`. nginx then answers with 502.
 
 `provision/pgadmin4/config_local.py` holds the settings:
 

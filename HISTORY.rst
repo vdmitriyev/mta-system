@@ -2,6 +2,14 @@
 History
 =======
 
+2.4.4 (2026-11-13)
+-------------------
+
+* pgAdmin 4: fixed 502 at `/pgadmin4/`. On servers where Docker uses `no-new-privileges`, pgAdmin 9.x listens on port `8080` instead of `80`. pgAdmin now always uses `8080`, and nginx connects to it there. To apply it, run `task prod:up`.
+* Test copy: pgAdmin 4 runs with `no-new-privileges`, as on such servers.
+* nginx image: has `ping` (package `iputils-ping`), to check the connection to other containers.
+* Docs: `docs/deployment.md` names the port of pgAdmin 4.
+
 2.4.3 (2026-11-13)
 -------------------
 
@@ -9,7 +17,6 @@ History
 * pgAdmin 4: nginx and pgAdmin now share a secret. nginx sends it with each request. pgAdmin accepts the user name only with it. Before, every container in the network could log in to pgAdmin as any user.
 * The secret is in the new file `envs/pgadmin4-proxy.env`. `task app:init-env` creates it from `samples/pgadmin4-proxy.env` with a random value. `task prod:up` and `task prod:nginx-recreate` stop if the file is missing. In development, the file is optional.
 * To update a server: back up the volume `pga4volume-service`, then run `task app:init-env`, `task services:pull-pgadmin4` and `task prod:up`.
-* Test copy: checks the pgAdmin 4 login with and without the secret, and through nginx.
 * `versions.env` is shorter. sqlmate and SurveyLite each have their own block. `SQLMATE_SOURCE` and `SURVEYLITE_SOURCE` are gone: the images must be on the server. 
     - `task services:build-sqlmate` and `task services:build-surveylite` build them from `temp/sqlmate` and `temp/surveylite`.
 * nginx picks the HTTPS certificate by itself. You no longer edit `provision/nginx/nginx-docker.conf`, so `git pull` on the server has no conflict. On each start, nginx uses `certbot/conf/live/<SSL_CERT_NAME>/` if it exists, else the self-signed certificate.
