@@ -62,8 +62,8 @@ The versions are in `versions.env`. To change one, see [Versions of the services
 | PostgreSQL (shared) | `postgres` from Docker Hub | `17.11` | `POSTGRESQL_VERSION` |
 | pgAdmin 4 (shared) | `dpage/pgadmin4` from Docker Hub | `8.12` | `PGADMIN4_VERSION` |
 | MariaDB (shared, for WordPress) | `mariadb` from Docker Hub | `13.0.2` | `MARIADB_VERSION` |
-| [sqlmate](https://github.com/vdmitriyev/sqlmate) (shared) | built from the source in `SQLMATE_SOURCE` | `1.9.0` | `SQLMATE_VERSION` |
-| [SurveyLite](https://github.com/vdmitriyev/surveylite) (shared) | built from the source in `SURVEYLITE_SOURCE` | `0.21.0` (or newer) | `SURVEYLITE_VERSION` |
+| [sqlmate](https://github.com/vdmitriyev/sqlmate) (shared, optional) | built from the source in `SQLMATE_SOURCE` | `1.9.0` | `SQLMATE_VERSION` |
+| [SurveyLite](https://github.com/vdmitriyev/surveylite) (shared, optional) | built from the source in `SURVEYLITE_SOURCE` | `0.21.0` (or newer) | `SURVEYLITE_VERSION` |
 
 JupyterHub, NiFi and Superset are deprecated: the app creates no new accounts in them.
 

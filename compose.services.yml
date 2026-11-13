@@ -42,10 +42,12 @@ services:
     networks:
       - mtas-network
 
-  # sqlmate: SQL exercises, at https://<SERVER_FQDN>/sqlmate/ (nginx).
+  # sqlmate: SQL exercises, at https://<SERVER_FQDN>/sqlmate/ (nginx). Optional:
+  # starts only with the profile "sqlmate", e.g. COMPOSE_PROFILES=sqlmate,surveylite in .env.
   # Built from SQLMATE_SOURCE (versions.env). Set up once: task prod:sqlmate-init.
   # The API key of the app is API_KEY in envs/sqlmate-service.env: sqlmate stores it at start.
   sqlmate-service:
+    profiles: [sqlmate]
     build: ${SQLMATE_SOURCE:?set it in versions.env and use task, or docker compose --env-file versions.env}
     image: sqlmate:${SQLMATE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
     command: gunicorn --config gunicorn.config.docker.prod.py run:app
@@ -73,6 +75,7 @@ services:
       - mtas-network
 
   sqlmate-database:
+    profiles: [sqlmate]
     image: "postgres:${POSTGRESQL_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}"
     restart: unless-stopped
     env_file:
@@ -90,10 +93,12 @@ services:
     networks:
       - mtas-network
 
-  # SurveyLite: anonymous surveys, at https://<SERVER_FQDN>/surveylite/ (nginx).
+  # SurveyLite: anonymous surveys, at https://<SERVER_FQDN>/surveylite/ (nginx). Optional:
+  # starts only with the profile "surveylite".
   # Built from SURVEYLITE_SOURCE (versions.env). It imports the YAML files of
   # setup/surveylite at start.
   surveylite-service:
+    profiles: [surveylite]
     build: ${SURVEYLITE_SOURCE:?set it in versions.env and use task, or docker compose --env-file versions.env}
     image: surveylite:${SURVEYLITE_VERSION:?set it in versions.env and use task, or docker compose --env-file versions.env}
     restart: unless-stopped

@@ -66,6 +66,9 @@ tasks:
 
   sqlmate-init:
     desc: sets up sqlmate once (tables, sandbox database, exercises from setup/sqlmate); also after an update of sqlmate
+    preconditions:
+      - sh: echo ",$COMPOSE_PROFILES," | grep -q ",sqlmate,"
+        msg: "sqlmate is optional: put COMPOSE_PROFILES=sqlmate (or sqlmate,surveylite) into .env, then run task prod:up"
     cmds:
       - "{{.PROD_COMPOSE}} exec sqlmate-service flask db upgrade"
       # each flask command also stores API_KEY: on the first start, the tables were missing

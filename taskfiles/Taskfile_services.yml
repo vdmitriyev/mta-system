@@ -19,6 +19,7 @@ tasks:
       - echo "MARIADB_VERSION=$MARIADB_VERSION"
       - echo "SQLMATE_VERSION=$SQLMATE_VERSION (from $SQLMATE_SOURCE)"
       - echo "SURVEYLITE_VERSION=$SURVEYLITE_VERSION (from $SURVEYLITE_SOURCE)"
+      - echo "COMPOSE_PROFILES=$COMPOSE_PROFILES (optional services that start)"
 
   update-all:
     desc: gets all service images in the versions of versions.env (pulls, builds OpenRefine)
@@ -30,8 +31,11 @@ tasks:
       - task: pull-postgresql
       - task: pull-pgadmin4
       - task: pull-mariadb
+      # optional services: only if their profile is in COMPOSE_PROFILES
       - task: build-sqlmate
+        if: echo ",$COMPOSE_PROFILES," | grep -q ",sqlmate,"
       - task: build-surveylite
+        if: echo ",$COMPOSE_PROFILES," | grep -q ",surveylite,"
 
   build-openrefine:
     desc: builds the OpenRefine image (openrefine:<OPENREFINE_VERSION>) from provision/openrefine

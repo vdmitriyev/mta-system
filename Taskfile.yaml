@@ -2,7 +2,8 @@ version: '3'
 
 # Versions of the service images (METABASE_VERSION, OPENREFINE_VERSION, WORDPRESS_VERSION)
 # for all tasks, e.g. the docker compose calls. A variable in the shell wins.
-dotenv: ['versions.env']
+# .env (optional, not in git): COMPOSE_PROFILES, the optional services sqlmate and surveylite.
+dotenv: ['versions.env', '.env']
 
 vars:
   ENV_FILE_NAME: '{{.ENV_FILE_NAME | default "envs/webapp-dev-local.env"}}'

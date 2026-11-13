@@ -70,6 +70,8 @@ All services are switched off at the start. The app then runs on its own, withou
 
 [sqlmate](https://github.com/vdmitriyev/sqlmate) (SQL exercises) and [SurveyLite](https://github.com/vdmitriyev/surveylite) (anonymous surveys) run as shared services in Docker (`compose.services.yml`). The app creates the accounts through their APIs.
 
+Both are optional. Docker starts them only with their Compose profile: put `COMPOSE_PROFILES=sqlmate,surveylite` into the file `.env` in the project folder (not in git). Then `task dev:up` and `task prod:up` also build them from the source folders `SQLMATE_SOURCE` and `SURVEYLITE_SOURCE` of `versions.env`. Without the profiles, no source code of sqlmate or SurveyLite is needed.
+
 * **sqlmate**: each user gets an account with the internal e-mail of the user. The services page shows the address, a personal login link, the login and the PIN. Admin page: **Services → sqlmate**.
 * **SurveyLite** (version 0.21.0 or newer): each user gets an anonymous participant. SurveyLite does not know who the participant is: only the table `surveylite_service` of the app links them. The services page shows the link to `/me` of SurveyLite, a personal login link (`/me?auth=…`), the login, the PIN and the survey links of the user. The survey links also log the user in, so they open surveys that need a login (`require_login`). If a login link becomes known to others, **New login link** on the admin page makes a new one: the old links stop working.
 * On the admin page **Services → SurveyLite**, an admin gives surveys to the users and chooses services that open only after a completed survey (for example sqlmate). Until then, the services page shows the survey instead of the login of the service. A new user gets these surveys at once.

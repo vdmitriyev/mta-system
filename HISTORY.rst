@@ -12,7 +12,8 @@ History
 * sqlmate 1.9.0: the API key of the app is `API_KEY` in `envs/sqlmate-service.env` (same value as `SQLMATE_API_KEY` of the app); sqlmate stores it at start, so `flask api-create-key` is no longer needed. compose no longer mounts the `migrations` folder of the source, and sqlmate also starts without exercises.
 * SurveyLite 0.21.0: the services page shows the personal login link of `/me` ("Log in to SurveyLite"), and the survey links also log the user in, so surveys with `require_login` open with one click. The admin page makes a new login link on request ("New login link"). Participants from before get their login link on the next visit of the services page. SurveyLite trusts the forwarded address of nginx (`FORWARDED_ALLOW_IPS`), so its login limits count per user address.
 * The test copy also runs sqlmate, SurveyLite and the nginx of production, and checks them.
-* Features that the services do not have yet: `MISSING-FEATURES.md`.
+* sqlmate and SurveyLite are optional: Docker starts them only with their Compose profile (`COMPOSE_PROFILES=sqlmate,surveylite` in the file `.env` of the project folder). Without it, `task prod:up` and `task dev:up` need no source code of them. `services:update-all` builds them only if their profile is on, `prod:sqlmate-init` stops with a message if it is off, and `services:versions` shows `COMPOSE_PROFILES`.
+* The README is shorter: the setup, tests and API moved to `docs/development.md`, the Docker image, production and the versions of the services to `docs/deployment.md`. The README lists the supported versions of the services in a table.
 
 2.3.0 (2026-11-11)
 -------------------
