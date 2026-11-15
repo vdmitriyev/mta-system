@@ -41,7 +41,7 @@
             <td class="nowrap">{{ task.created_at.strftime("%Y-%m-%d %H:%M:%S") if task.created_at else "" }}</td>
             <td><code>{{ task.kind }}</code></td>
             <td>{{ ui.task_badge(task.status) }}</td>
-            <td>{{ task.message or "" }}</td>
+            <td>{% if task.about_user_id %}<span class="badge">user_id {{ task.about_user_id }}</span> {% endif %}{{ task.message or "" }}</td>
           </tr>
           {% endfor %}
         </tbody>

@@ -264,7 +264,8 @@ def test_generate_accounts_task(db, monkeypatch):
 def test_login_link_is_logged_in_development_only(db, student, caplog, tmp_path):
     with caplog.at_level("INFO"):
         users.send_access_email(student)
-    assert "Login link" in caplog.text
+    assert f"Login link was made for {student.email}" in caplog.text
+    assert "uHash" not in caplog.text
 
     caplog.clear()
     set_settings(make_settings(tmp_path, TARGET_SERVER="production"))

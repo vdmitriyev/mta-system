@@ -2,6 +2,18 @@
 History
 =======
 
+2.4.5 (2026-11-13)
+-------------------
+
+* Backup of the database: `task prod:backup` (server) and `task db:backup` (computer) copy the SQLite database to `.backups/`. The name starts with the date and time, for example `20261113-201500-mta-system.db`. The copy is complete also while the app runs. Git and the Docker image do not include `.backups/`.
+* New command `create-admins` (`task prod:create-admins`, `task app:create-admins`, `task dev:create-admins`): creates an account for each e-mail in `SYSTEM_ADMINS`. It prints the user ID, the PIN and the login link, and sends the login data by e-mail. `--no-mail` only prints. Existing accounts stay.
+* Log: outside production, the log shows only the e-mail of a new login link, no longer the full link.
+* E-mails: the subject starts with `[MTA-SYSTEM]`. The sender name is "modular teaching assistance system". The registration e-mail ends with "Course Team" (was "VLBA Course Team").
+* Admin overview, **Background tasks**: the column **Result** shows the user ID that the task is about. New column `about_user_id` in the table `background_tasks`.
+* Login history: the new table `login_history` stores each login attempt with the user ID, the method (e-mail and PIN, or login link) and the result (success, failed, blocked). It stores no e-mail. The new admin page **Logins** (in the menu after **Monitoring**, template `admin/logins_history.html`) lists the newest 200 attempts, of all users or of one user.
+* To update a server: `git pull`, then `task prod:up`. The app applies the migration on start. The new volume `.backups` is created.
+* Docs: the README and `docs/deployment.md` describe admin accounts, backups and the login history.
+
 2.4.4 (2026-11-13)
 -------------------
 

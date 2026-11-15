@@ -1,0 +1,39 @@
+{% extends "admin/base.html" %}
+{% block title %}Logins{% endblock %}
+{% block admin %}
+{{ ui.page_head("Logins", "The newest 200 login attempts. The ID is the user ID on the page Users. An empty ID: the e-mail is not known.") }}
+{% if filter_user_id is not none %}
+<p class="row">
+  <span>Only user_id <strong>{{ filter_user_id }}</strong>.</span>
+  <a href="/mtas-admin/logins">Show all users</a>
+</p>
+{% endif %}
+<div class="card flush">
+  {% if not entries %}
+    <div class="empty">No logins yet.</div>
+  {% else %}
+  <div class="table-wrap">
+    <table class="table" id="logins-table">
+      <thead>
+        <tr>
+          <th data-sort>Time (UTC)</th>
+          <th data-sort="number">user_id</th>
+          <th data-sort>Method</th>
+          <th data-sort>Result</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td class="nowrap">{{ entry.created_at.strftime("%Y-%m-%d %H:%M:%S") if entry.created_at else "" }}</td>
+          <td>{% if entry.user_id is not none %}<a href="/mtas-admin/logins?user_id={{ entry.user_id }}">{{ entry.user_id }}</a>{% else %}–{% endif %}</td>
+          <td>{{ {"form": "e-mail and PIN", "link": "login link"}.get(entry.method, entry.method) }}</td>
+          <td><span class="badge {{ {'success': 'success', 'failed': 'danger', 'blocked': 'warning'}.get(entry.result, '') }}">{{ entry.result }}</span></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

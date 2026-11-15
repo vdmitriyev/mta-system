@@ -26,12 +26,12 @@ from app.config import (
     get_settings,
 )
 from app.emails import email_content, send_email
-from app.models import SERVICE_MODELS, Users
+from app.models import SERVICE_MODELS, LoginHistory, Users
 from app.provisioning import email_to_tokens
 from app.security import generate_pin, make_hash, random_string
 from app.service_settings import creates_accounts
 from app.services import docker_ctl, postgresql
-from app.tasks import TaskError
+from app.tasks import TaskError, set_about_user
 
 logger = logging.getLogger(__name__)
 
@@ -203,7 +203,7 @@ def send_access_email(user: Users) -> bool:
     settings = get_settings()
     link = access_url(user)
     if settings.debug:
-        logger.info("Login link of %s: %s", user.email, link)
+        logger.info("Login link was made for %s", user.email)
     return send_email(
         to_email=user.email,
         subject="Registration",
@@ -342,6 +342,7 @@ def register_user_task(db: Session, email: str) -> str:
     known = user is not None
     if not known:
         user = assign_available_account(db, email) or register_new_user(db, email)
+    set_about_user(db, user.itid)
 
     if not send_access_email(user):
         raise TaskError(
@@ -362,3 +363,24 @@ def generate_accounts_task(db: Session, count: int) -> str:
         email = f"tmp.generated{index}_{uuid.uuid4().hex[:6]}@localhost.lc"
         register_new_user(db, email, is_assigned=False)
     return f"Prepared accounts: {count}"
+
+
+def record_login(db: Session, user_id: int | None, method: str, result: str) -> None:
+    """Stores a login attempt in the table login_history (user ID, no e-mail)"""
+
+    try:
+        db.add(LoginHistory(user_id=user_id, method=method, result=result))
+        db.commit()
+    except Exception:
+        # the login works also if the history cannot be written
+        db.rollback()
+        logger.exception("The login of user %s was not stored", user_id)
+
+
+def login_history(db: Session, user_id: int | None = None, limit: int = 200) -> list:
+    """The newest login attempts, of all users or of one user"""
+
+    query = db.query(LoginHistory)
+    if user_id is not None:
+        query = query.filter(LoginHistory.user_id == user_id)
+    return query.order_by(LoginHistory.itid.desc()).limit(limit).all()

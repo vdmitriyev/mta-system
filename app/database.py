@@ -1,7 +1,10 @@
 """SQLite database of the app (users, exercises, reviews, bonus points, settings)."""
 
 import os
+import sqlite3
 from contextlib import contextmanager
+from datetime import datetime
+from pathlib import Path
 from typing import Iterator
 
 from sqlalchemy import create_engine, event
@@ -70,3 +73,25 @@ def session_scope() -> Iterator[Session]:
         yield db
     finally:
         db.close()
+
+
+def backup_sqlite(db_file: Path, backup_dir: Path) -> Path:
+    """Copies the SQLite database to <backup_dir>/<YYYYmmdd-HHMMSS>-<file name>.
+
+    Uses the backup API of SQLite: the copy is complete also while the app writes.
+    """
+
+    if not db_file.is_file():
+        raise FileNotFoundError(f"No database at {db_file}")
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    target = backup_dir / f"{stamp}-{db_file.name}"
+    source = sqlite3.connect(db_file)
+    copy = sqlite3.connect(target)
+    try:
+        with copy:
+            source.backup(copy)
+    finally:
+        copy.close()
+        source.close()
+    return target

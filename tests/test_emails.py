@@ -43,7 +43,7 @@ def test_email_content_has_link_and_pin():
 
 def test_build_email_uses_defaults():
     message = build_email("to@x.org", None, None, None)
-    assert message["Subject"] == "No Subject"
+    assert message["Subject"] == "[MTA-SYSTEM] No Subject"
     assert message["To"] == "to@x.org"
     assert "No body" in message.get_content()
 
@@ -63,8 +63,8 @@ def test_send_email_with_login(use_settings, monkeypatch):
     server = FakeSMTP.instances[0]
     assert (server.host, server.port) == ("smtp.x.org", 2525)
     assert server.calls == ["ehlo", "starttls", ("login", "mailer", "pw")]
-    assert server.sent[0]["From"] == "course@x.org"
-    assert server.sent[0]["Subject"] == "Registration"
+    assert server.sent[0]["From"] == "modular teaching assistance system <course@x.org>"
+    assert server.sent[0]["Subject"] == "[MTA-SYSTEM] Registration"
 
 
 def test_send_email_without_login(settings, monkeypatch):
@@ -114,3 +114,14 @@ def test_timeout_comes_from_the_settings(use_settings, monkeypatch):
     monkeypatch.setattr(emails.smtplib, "SMTP", FakeSMTP)
     send_email("to@x.org", "S", "B", settings)
     assert FakeSMTP.instances[-1].timeout == 3
+
+
+def test_email_is_signed_by_the_course_team():
+    text = email_content(link="https://x/login", pin="0042")
+    assert text.rstrip().endswith("Course Team")
+    assert "VLBA" not in text
+
+
+def test_build_email_keeps_only_the_address_of_the_sender():
+    message = build_email("to@x.org", "S", "B", "Old Name <course@x.org>")
+    assert message["From"] == "modular teaching assistance system <course@x.org>"

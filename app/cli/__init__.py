@@ -2,11 +2,13 @@
 
 import click
 
+from app.cli.admins import create_admins
 from app.cli.auto_creation import auto_creation
 from app.cli.config import show_config
 from app.cli.database import (
     create_custom_db,
     create_demo_db,
+    db_backup,
     db_migrate,
     db_upgrade,
     grant_public_schema,
@@ -24,6 +26,7 @@ def cli():
 for command in (
     db_upgrade,
     db_migrate,
+    db_backup,
     import_data_exercises,
     create_demo_db,
     create_custom_db,
@@ -32,5 +35,6 @@ for command in (
     show_config,
     check_mail,
     auto_creation,
+    create_admins,
 ):
     cli.add_command(command)

@@ -19,6 +19,7 @@ task app:build-image   # builds mta-system:latest
 2. Tell the tasks to use this file: `export ENV_FILE_NAME=envs/.env`. Put this line in `~/.profile` of the server user, so each shell has it.
 3. Create the other env files: `task app:init-env`. It keeps existing files.
 4. Start: `task prod:up`. This starts the app, nginx, PostgreSQL and pgAdmin 4.
+5. Create the accounts of the admins: `task prod:create-admins`. See [Admin accounts](#admin-accounts).
 
 Without `ENV_FILE_NAME`, all tasks use `envs/webapp-dev-local.env`, also the `prod:` tasks. The file `.env` in the project folder cannot set `ENV_FILE_NAME`. To check it: `echo $ENV_FILE_NAME`.
 
@@ -27,7 +28,7 @@ Before you go live:
 1. Use new random values for `SECRET_KEY`, `HASH_KEY_LINKS`, `HASH_KEY_HIDDEN` and all passwords in `envs/`.
 2. Set `SERVER_FQDN`, `SYSTEM_ADMINS`, `ALLOWED_FQDN_FOR_EMAILS` and `MAIL_*`.
 3. Only nginx (`80`, `443`) and PostgreSQL (`5432`, or `POSTGRESQL_PUBLIC_PORT`) are open to all networks. Use a strong `POSTGRES_PASSWORD` in `envs/postgresql-service.env`. Open `5432` in the firewall only for the networks that need it.
-4. Back up `data/` (SQLite database) and `.htpasswd_nginx/`.
+4. Back up `.backups/` (see [Backup of the database](#backup-of-the-database)) and `.htpasswd_nginx/`.
 
 `TARGET_SERVER=production` switches off the debug pages and the API docs. The session cookie then works only over HTTPS.
 
@@ -39,6 +40,8 @@ Before you go live:
 | `task prod:logs -- <service>` | Shows the logs. Without `-- <service>`: all services. |
 | `task prod:build` | Builds the images of the app and nginx. |
 | `task prod:migrate` | Applies the migrations to the database of the app. |
+| `task prod:backup` | Copies the database of the app to `.backups/`. |
+| `task prod:create-admins` | Creates the accounts of `SYSTEM_ADMINS`. Prints the login data and sends it by e-mail. |
 | `task prod:cert` | Gets a Let's Encrypt certificate for `SERVER_FQDN` and restarts nginx. |
 | `task prod:cert-renew` | Renews the certificates and reloads nginx. |
 | `task prod:nginx-reload` | Checks the nginx configuration and reloads it. Old name: `prod:reload`. |
@@ -102,6 +105,28 @@ To update a server from pgAdmin 8.x (mta-system 2.4.2 or older):
 2. Run `task app:init-env`.
 3. Run `task services:pull-pgadmin4`, then `task prod:up`.
 4. Log in at `/pgadmin4/` as a user. You must see the account of the user, not the login page of pgAdmin.
+
+### Admin accounts
+
+`task prod:create-admins` creates an account for each e-mail in `SYSTEM_ADMINS`:
+
+* It prints the user ID, the PIN and the login link of each admin on the screen. The log file gets only the e-mail, not the link.
+* It sends the login data by e-mail, if the mail server works. Without e-mail: `task prod:create-admins -- --no-mail`.
+* An existing account stays. The task prints its login data again.
+
+### Backup of the database
+
+`task prod:backup` copies the SQLite database of the app to `.backups/`, for example `.backups/20261113-201500-mta-system.db`. The name starts with the date and time.
+
+* The copy is complete also while the app runs.
+* Git and the Docker image do not include `.backups/`.
+* Copy the folder to another computer. For a daily backup, run the task with cron.
+
+On your computer, `task db:backup` does the same.
+
+### Login history
+
+The admin page **Logins** (in the menu after **Monitoring**) lists the newest 200 login attempts: time, user ID, method and result. A click on a user ID shows only the logins of this user. The e-mail is not stored, only the user ID. The ID is the same as on the page **Users**.
 
 ### Delete a user
 

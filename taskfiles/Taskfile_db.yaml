@@ -20,6 +20,13 @@ tasks:
     cmds:
       - python -m app.cli db-upgrade
 
+  backup:
+    desc: copies the SQLite database to .backups/<date>-<time>-<name>
+    aliases: [b]
+    deps: [":app:check-virtualenv"]
+    cmds:
+      - python -m app.cli db-backup {{.CLI_ARGS}}
+
   migrate:
     desc: 'creates and applies a migration (task db:migrate -- -m "what changed")'
     aliases: [m]

@@ -7,6 +7,7 @@ stored in the table "background_tasks", so every worker can report it.
 import logging
 import os
 import uuid
+from contextvars import ContextVar
 from datetime import datetime, timedelta, timezone
 from typing import Callable
 
@@ -28,6 +29,9 @@ STALE_MESSAGE = "The task took too long. A service did not answer. Try again lat
 
 logger = logging.getLogger(__name__)
 
+# public_id of the task that runs in this thread (see set_about_user)
+_current_task: ContextVar[str | None] = ContextVar("current_task", default=None)
+
 
 class TaskError(Exception):
     """Stops a job. The text is shown to the user."""
@@ -40,14 +44,20 @@ def enqueue(
     func: Callable,
     *args,
     user_id: int | None = None,
+    about_user_id: int | None = None,
 ) -> BackgroundTask:
     """Registers a job and runs func(db, *args) after the response.
 
     func returns the text to show when the job is done (or None).
+    user_id: who started the job. about_user_id: the user that the job is about.
     """
 
     task = BackgroundTask(
-        public_id=uuid.uuid4().hex, kind=kind, user_id=user_id, status=QUEUED
+        public_id=uuid.uuid4().hex,
+        kind=kind,
+        user_id=user_id,
+        about_user_id=about_user_id,
+        status=QUEUED,
     )
     db.add(task)
     db.commit()
@@ -55,7 +65,16 @@ def enqueue(
     return task
 
 
+def set_about_user(db: Session, user_id: int) -> None:
+    """Stores the user that the running job is about, if the job finds it only later"""
+
+    public_id = _current_task.get()
+    if public_id:
+        _set_state(db, public_id, about_user_id=user_id)
+
+
 def run_task(public_id: str, func: Callable, *args) -> None:
+    _current_task.set(public_id)
     with session_scope() as db:
         _set_state(
             db,

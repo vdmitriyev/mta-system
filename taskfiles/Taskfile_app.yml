@@ -75,6 +75,12 @@ tasks:
     cmds:
       - python -m app.cli {{.CLI_ARGS}}
 
+  create-admins:
+    desc: "creates the accounts of SYSTEM_ADMINS, prints and e-mails the login data (-- --no-mail)"
+    deps: [check-virtualenv]
+    cmds:
+      - python -m app.cli create-admins {{.CLI_ARGS}}
+
   config:
     desc: checks and shows the settings
     aliases: [c]

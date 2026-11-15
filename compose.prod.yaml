@@ -26,6 +26,7 @@ services:
       DOCKER_NETWORK_NAME: mta-system-prod_mtas-network
     volumes:
       - ./data:/mta-system/data # SQLite database (MTAS_DB_PATH)
+      - ./.backups:/mta-system/.backups # task prod:backup
       - ./.logs:/mta-system/.logs
       - ./setup:/mta-system/setup:ro # initial data (initial_exercises.csv)
       - ./.htpasswd_nginx:/mta-system/.htpasswd_nginx

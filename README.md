@@ -3,7 +3,7 @@
 **mta-system** (**m**odular **t**eaching **a**ssistance **system**) gives students hands-on experience with software. A lecturer hosts it for a course. Each student gets an own account in services such as PostgreSQL, pgAdmin 4, Metabase and OpenRefine. Optional: SQL exercises ([sqlmate](https://github.com/vdmitriyev/sqlmate)) and anonymous surveys ([SurveyLite](https://github.com/vdmitriyev/surveylite)).
 
 * **Students** register with their e-mail address and a course code. They see the logins of their services, start their containers, import sample datasets, and read the reviews and bonus points of their exercises.
-* **Admins** write reviews and bonus points. They manage the databases, logins and containers of the users, prepare accounts, delete users, choose the visible parts of the pages, and watch the server.
+* **Admins** write reviews and bonus points. They manage the databases, logins and containers of the users, prepare accounts, delete users, read the login history, choose the visible parts of the pages, and watch the server.
 
 The pages have a light and a dark theme. The button in the header switches it.
 
@@ -12,7 +12,7 @@ Documentation: [vdmitriyev.github.io/mta-system](https://vdmitriyev.github.io/mt
 | Guide | Content |
 | --- | --- |
 | [docs/development.md](docs/development.md) | Install, settings, run the app, Docker for development, commands, API, tests |
-| [docs/deployment.md](docs/deployment.md) | Server, HTTPS certificate, pgAdmin 4 login, delete users, sqlmate, SurveyLite, versions of the services |
+| [docs/deployment.md](docs/deployment.md) | Server, HTTPS certificate, pgAdmin 4 login, admin accounts, backups, login history, delete users, sqlmate, SurveyLite, versions of the services |
 | [HISTORY.rst](HISTORY.rst) | Changes of each version. Read it before you update a server. |
 
 ## Architecture
@@ -84,9 +84,10 @@ Before `task app:serve`, change the secrets in `envs/webapp-dev-local.env`. See 
 
 | Group | Main tasks | Guide |
 | --- | --- | --- |
-| `app:` | `app:serve`, `app:test`, `app:config`, `app:init-env`, `app:cli -- <command>` | [development](docs/development.md) |
+| `app:` | `app:serve`, `app:test`, `app:config`, `app:init-env`, `app:create-admins`, `app:cli -- <command>` | [development](docs/development.md) |
+| `db:` | `db:init`, `db:upgrade`, `db:migrate`, `db:backup` | [development](docs/development.md#create-the-database-and-run-the-app) |
 | `dev:` | `dev:up`, `dev:init`, `dev:logs`, `dev:down`, `dev:app-recreate`, `dev:nginx-recreate` | [development](docs/development.md#run-in-docker-for-development) |
-| `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate`, `prod:app-recreate` | [deployment](docs/deployment.md#production) |
+| `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate`, `prod:app-recreate`, `prod:backup`, `prod:create-admins` | [deployment](docs/deployment.md#production) |
 | `prod:` nginx | `prod:cert`, `prod:cert-renew`, `prod:nginx-reload`, `prod:nginx-recreate` | [deployment](docs/deployment.md#https-certificate-lets-encrypt) |
 | `sqlmate:` | `sqlmate:up`, `sqlmate:init`, `sqlmate:logs`, `sqlmate:down` | [deployment](docs/deployment.md#sqlmate-optional) |
 | `surveylite:` | `surveylite:up`, `surveylite:logs`, `surveylite:down` | [deployment](docs/deployment.md#surveylite-optional) |

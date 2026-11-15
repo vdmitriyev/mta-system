@@ -1,10 +1,15 @@
 import logging
 import smtplib
 from email.message import EmailMessage
+from email.utils import formataddr, parseaddr
 
 from app.config import Settings
 
 logger = logging.getLogger(__name__)
+
+# in front of each subject, and the name of the sender
+SUBJECT_PREFIX = "[MTA-SYSTEM]"
+SENDER_NAME = "modular teaching assistance system"
 
 REGISTRATION_TEXT = """Dear student,
 
@@ -21,7 +26,7 @@ The link above could be used to check, which services are available to you and h
 Good luck!
 
 Best regards,
-VLBA Course Team
+Course Team
 """
 
 
@@ -31,8 +36,9 @@ def email_content(link: str, pin: str) -> str:
 
 def build_email(to_email: str, subject: str, content: str, sender: str | None):
     msg = EmailMessage()
-    msg["Subject"] = subject or "No Subject"
-    msg["From"] = sender or ""
+    msg["Subject"] = f"{SUBJECT_PREFIX} {subject or 'No Subject'}"
+    address = parseaddr(sender or "")[1]
+    msg["From"] = formataddr((SENDER_NAME, address)) if address else ""
     msg["To"] = to_email
     msg.set_content(content or "No body")
     return msg

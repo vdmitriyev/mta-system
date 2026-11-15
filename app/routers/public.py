@@ -12,8 +12,10 @@ from app.service_settings import DEPRECATED_SERVICES
 from app.tasks import enqueue, get_task
 from app.users import (
     email_hash,
+    find_user_by_hash,
     is_email_in_allowed_fqdn_list,
     pin_hash,
+    record_login,
     register_user_task,
     validate_credentials,
 )
@@ -212,8 +214,21 @@ def _login_key(request: Request, email: str) -> str:
     return f"{client}|{email}"
 
 
-def _login(page: Page, u_hash: str, p_hash: str, limiter_key: str, email: str = ""):
+def _known_user_id(page: Page, u_hash: str) -> int | None:
+    user = find_user_by_hash(page.db, u_hash)
+    return user.itid if user else None
+
+
+def _login(
+    page: Page,
+    u_hash: str,
+    p_hash: str,
+    limiter_key: str,
+    method: str,
+    email: str = "",
+):
     if login_limiter.is_blocked(limiter_key):
+        record_login(page.db, _known_user_id(page, u_hash), method, "blocked")
         return page.render(
             "login.html",
             status_code=429,
@@ -224,6 +239,7 @@ def _login(page: Page, u_hash: str, p_hash: str, limiter_key: str, email: str = 
     user = validate_credentials(page.db, u_hash, p_hash)
     if user is None:
         login_limiter.add_failure(limiter_key)
+        record_login(page.db, _known_user_id(page, u_hash), method, "failed")
         return page.render(
             "login.html",
             status_code=401,
@@ -233,6 +249,7 @@ def _login(page: Page, u_hash: str, p_hash: str, limiter_key: str, email: str = 
 
     login_limiter.reset(limiter_key)
     login_user(page.request, user)
+    record_login(page.db, user.itid, method, "success")
     logger.info("User %s logged in", user.itid)
     return redirect("/services")
 
@@ -242,7 +259,7 @@ def login_form(page: Page = Depends(), uHash: str = None, pHash: str = None):
     """Shows the login form. The link in the registration e-mail logs in directly."""
 
     if uHash and pHash:
-        return _login(page, uHash, pHash, _login_key(page.request, uHash))
+        return _login(page, uHash, pHash, _login_key(page.request, uHash), "link")
     if page.user is not None:
         return redirect("/services")
     return page.render("login.html", email="", error=None)
@@ -256,6 +273,7 @@ def login(page: Page = Depends(), email: str = Form(""), pin: str = Form("")):
         email_hash(email),
         pin_hash(pin.strip()),
         _login_key(page.request, email),
+        "form",
         email=email,
     )
 

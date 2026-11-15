@@ -381,6 +381,7 @@ def import_dataset(
             user.itid,
             dataset,
             user_id=user.itid,
+            about_user_id=user.itid,
         )
     return redirect("/services")
 

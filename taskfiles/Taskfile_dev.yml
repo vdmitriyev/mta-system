@@ -46,6 +46,11 @@ tasks:
     cmds:
       - "{{.DEV_COMPOSE}} exec webapp python -m app.cli {{.CLI_ARGS}}"
 
+  create-admins:
+    desc: "creates the accounts of SYSTEM_ADMINS, prints and e-mails the login data (-- --no-mail)"
+    cmds:
+      - "{{.DEV_COMPOSE}} exec webapp python -m app.cli create-admins {{.CLI_ARGS}}"
+
   init:
     desc: creates the database, exercises and demo database
     aliases: [i]

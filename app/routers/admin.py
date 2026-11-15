@@ -53,6 +53,7 @@ from app.users import (
     email_to_name,
     generate_accounts_task,
     get_user_services,
+    login_history,
 )
 from app.visibility import change_ui_visibility_settings, grouped_visibility_rows
 from app.web import Page, flash, redirect, require_admin
@@ -400,6 +401,7 @@ def service_action(
             service,
             student.itid,
             user_id=page.user.itid,
+            about_user_id=student.itid,
         )
         flash(
             page.request,
@@ -438,6 +440,17 @@ def server_summary() -> dict:
         "memory_used_mb": round(memory.used / megabyte),
         "memory_available_mb": round(memory.available / megabyte),
     }
+
+
+@router.get("/logins")
+def logins_page(page: Page = Depends(), user_id: int | None = None):
+    """Login history: the newest attempts, of all users or of one user"""
+
+    return page.render(
+        "admin/logins_history.html",
+        entries=login_history(page.db, user_id=user_id),
+        filter_user_id=user_id,
+    )
 
 
 @router.get("/monitoring")

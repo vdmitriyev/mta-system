@@ -38,7 +38,7 @@ Then change the values in `envs/webapp-dev-local.env`:
 | `SYSTEM_ADMINS` | E-mail addresses of the admins, separated by `;`. |
 | `ALLOWED_FQDN_FOR_EMAILS` | E-mail domains that can register, for example `uol.de;uni-oldenburg.de`. List each subdomain. Empty: all domains. |
 | `MTAS_DB_PATH` | SQLite file. Default: `data/mta-system.db`. |
-| `MAIL_*` | SMTP server for the registration e-mail. |
+| `MAIL_*` | SMTP server for the registration e-mail. The e-mails come from "modular teaching assistance system" (`MAIL_DEFAULT_SENDER`). Their subject starts with `[MTA-SYSTEM]`. |
 | `TARGET_SERVER` | `development` or `production`. |
 | `ENABLE_API_DOCS` | Switches the API docs on or off. See [API docs](#api-and-api-docs). |
 
@@ -126,6 +126,8 @@ task app:serve    # runs the app on http://127.0.0.1:5353 and reloads on code ch
 | `task app:start` | Runs the app without reload. More workers: `WORKERS=4 task app:start` |
 | `task app:cli -- <command>` | Runs a command of the app, see [Commands](#commands) |
 | `task app:config` | Checks the settings and shows them without secrets |
+| `task app:create-admins` | Creates the accounts of `SYSTEM_ADMINS`, prints the login data and sends it by e-mail |
+| `task db:backup` | Copies the SQLite database to `.backups/<date>-<time>-<name>` |
 
 ### Run in Docker for development
 
@@ -142,8 +144,8 @@ task dev:nginx-recreate       # builds nginx again, recreates only nginx
 task dev:nginx-reload         # checks the nginx configuration and reloads it
 ```
 
-* Register with an address from `SYSTEM_ADMINS` to see the admin pages. To register the same address again, delete the user on the admin page **Users**.
-* In development, the app writes the login link to the log. You do not need a mail server.
+* Register with an address from `SYSTEM_ADMINS` to see the admin pages, or run `task dev:create-admins`. To register the same address again, delete the user on the admin page **Users**.
+* In development, the log shows the e-mail of each new login link, but not the link. Without a mail server, `task dev:create-admins -- --no-mail` prints the PIN and the login link of the admins.
 * The containers of the users need their images: `task services:pull-metabase` and `task services:build-openrefine`. After a change in `versions.env`, see [Versions of the services](deployment.md#versions-of-the-services).
 * pgAdmin 4 runs at `https://127.0.0.1/pgadmin4/`, and directly at `http://127.0.0.1:5050` (port `8080` in the container). `envs/pgadmin4-proxy.env` is optional in development. See [deployment.md](deployment.md#pgadmin-4).
 * After a change in `provision/nginx/nginx-docker.conf`, run `task dev:nginx-recreate`.
@@ -161,6 +163,7 @@ python -m app.cli --help
 | --- | --- |
 | `db-upgrade` | Creates or updates the SQLite database |
 | `db-migrate` | Creates a migration from the changes in the models |
+| `db-backup` | Copies the SQLite database to `.backups/`. Other folder: `--dir <folder>` |
 | `import-data-exercises` | Imports the exercises from the CSV file |
 | `create-demo-db` | Creates the demo database and a read-only user in PostgreSQL |
 | `create-custom-db` | Creates a database with its own user in PostgreSQL |
@@ -169,6 +172,7 @@ python -m app.cli --help
 | `show-config` | Shows the settings without secrets |
 | `auto-creation` | Shows or changes the services of new users (`--on <service>`, `--off <service>`) |
 | `check-mail` | Logs in to the SMTP server. `--to <address>` also sends a test e-mail |
+| `create-admins` | Creates the accounts of `SYSTEM_ADMINS`, prints the login data and sends it by e-mail. `--no-mail`: only prints |
 
 ## API and API docs
 

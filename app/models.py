@@ -315,7 +315,10 @@ class BackgroundTask(Base):
     itid = Column(Integer, primary_key=True)
     public_id = Column(String(32), nullable=False, unique=True)
     kind = Column(String(50), nullable=False)
+    # user who started the task
     user_id = Column(Integer, ForeignKey("users.itid"), nullable=True, index=True)
+    # user that the task is about (e.g. the new user of a registration)
+    about_user_id = Column(Integer, nullable=True, index=True)
     status = Column(String(20), default="queued", nullable=False, index=True)
     message = Column(Text)
     created_at = Column(DateTime, server_default=func.now())
@@ -323,3 +326,18 @@ class BackgroundTask(Base):
     finished_at = Column(DateTime)
     # process that runs the task: if it is gone, the task was lost
     worker_pid = Column(Integer)
+
+
+class LoginHistory(Base):
+    """Each login attempt. Holds the internal user ID, not the e-mail."""
+
+    __tablename__ = "login_history"
+
+    itid = Column(Integer, primary_key=True)
+    # empty if the e-mail is not known
+    user_id = Column(Integer, nullable=True, index=True)
+    # "form" (e-mail and PIN) or "link" (login link of the e-mail)
+    method = Column(String(10), nullable=False)
+    # "success", "failed" or "blocked" (too many failed logins)
+    result = Column(String(10), nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), index=True)

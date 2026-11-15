@@ -1,6 +1,8 @@
 import csv
 import os
+import sqlite3
 from datetime import datetime
+from pathlib import Path
 
 import click
 from alembic import command
@@ -8,12 +10,13 @@ from alembic.config import Config
 from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, get_settings
-from app.database import session_scope
+from app.database import backup_sqlite, session_scope
 from app.models import Exercises
 from app.services import postgresql
 from app.users import course_users, get_user_services
 
 DEFAULT_EXERCISES_FILE = os.path.join("setup", "initial_exercises.csv")
+BACKUP_DIR = BASE_DIR / ".backups"
 
 
 def alembic_config() -> Config:
@@ -28,6 +31,24 @@ def db_upgrade():
 
     command.upgrade(alembic_config(), "head")
     click.echo("[i] database is up to date")
+
+
+@click.command("db-backup")
+@click.option(
+    "--dir",
+    "backup_dir",
+    type=click.Path(file_okay=False),
+    default=str(BACKUP_DIR),
+    show_default=True,
+)
+def db_backup(backup_dir: str):
+    """Copies the SQLite database to the backup folder, with date and time in front"""
+
+    try:
+        target = backup_sqlite(get_settings().mtas_db_path, Path(backup_dir))
+    except (OSError, sqlite3.Error) as error:
+        raise click.ClickException(f"No backup: {error}")
+    click.echo(f"[i] backup: {target}")
 
 
 @click.command("db-migrate")
