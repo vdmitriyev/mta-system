@@ -1,41 +1,55 @@
 {% extends "admin/base.html" %}
 {% block title %}Visibility{% endblock %}
+{% macro group_card(group, items) %}
+<section class="card flush">
+  <div class="table-wrap">
+    <table class="table visibility-table">
+      <colgroup><col class="col-key"><col><col class="col-status"><col class="col-action"></colgroup>
+      <thead>
+        <tr><th colspan="4">{{ group }}{% if group in deprecated %} <span class="badge warning">deprecated</span>{% endif %}</th></tr>
+      </thead>
+      <tbody>
+        {% for row, label in items %}
+        <tr>
+          <td class="col-key"><code>{{ row.ui_key }}</code></td>
+          <td>{{ label }}</td>
+          <td class="col-status">{{ ui.yes_no(row.visible, "shown", "hidden") }}</td>
+          <td class="col-action">
+            <form method="post" action="/mtas-admin/visibility" class="inline-form">
+              {{ ui.csrf(csrf_token) }}
+              <input type="hidden" name="ui_key" value="{{ row.ui_key }}">
+              <input type="hidden" name="visible" value="{{ 'false' if row.visible else 'true' }}">
+              <button type="submit" class="btn sm">{{ "Hide" if row.visible else "Show" }}</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endmacro %}
 {% block admin %}
 {{ ui.page_head("Visibility", "Choose which services, importers and menu entries the users see.") }}
 {% for category, groups in categories.items() %}
 <section class="settings-category">
   <h2>{{ category }}</h2>
-  <div class="block-list">
-    {% for group, items in groups.items() %}
-    <section class="card flush">
-      <div class="table-wrap">
-        <table class="table visibility-table">
-          <colgroup><col class="col-key"><col><col class="col-status"><col class="col-action"></colgroup>
-          <thead>
-            <tr><th colspan="4">{{ group }}{% if group in deprecated %} <span class="badge warning">deprecated</span>{% endif %}</th></tr>
-          </thead>
-          <tbody>
-            {% for row, label in items %}
-            <tr>
-              <td class="col-key"><code>{{ row.ui_key }}</code></td>
-              <td>{{ label }}</td>
-              <td class="col-status">{{ ui.yes_no(row.visible, "shown", "hidden") }}</td>
-              <td class="col-action">
-                <form method="post" action="/mtas-admin/visibility" class="inline-form">
-                  {{ ui.csrf(csrf_token) }}
-                  <input type="hidden" name="ui_key" value="{{ row.ui_key }}">
-                  <input type="hidden" name="visible" value="{{ 'false' if row.visible else 'true' }}">
-                  <button type="submit" class="btn sm">{{ "Hide" if row.visible else "Show" }}</button>
-                </form>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </section>
+  <div class="grid two visibility-grid">
+    {% for group, items in groups.items() if group not in deprecated %}
+    {{ group_card(group, items) }}
     {% endfor %}
   </div>
+  {% set old_groups = groups | select("in", deprecated) | list %}
+  {% if old_groups %}
+  <details class="item deprecated-services">
+    <summary>Deprecated services ({{ old_groups | length }})</summary>
+    <div class="body grid two visibility-grid">
+      {% for group in old_groups %}
+      {{ group_card(group, groups[group]) }}
+      {% endfor %}
+    </div>
+  </details>
+  {% endif %}
 </section>
 {% endfor %}
 {% endblock %}

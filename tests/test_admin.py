@@ -657,8 +657,8 @@ def test_old_settings_address_leads_to_the_settings_page(admin_client):
 
 def test_visibility_is_grouped_by_category_and_service(admin_client, db):
     text = admin_client.get("/mtas-admin/visibility").text
-    # stacked blocks over the full width, as on the services page of a user
-    assert '<div class="block-list">' in text and "grid two" not in text
+    # two columns, as on the Settings page
+    assert '<div class="grid two visibility-grid">' in text and "block-list" not in text
     services = text.index("<h2>Services</h2>")
     menu = text.index("<h2>Menu</h2>")
     assert services < menu
@@ -685,6 +685,17 @@ def test_visibility_is_grouped_by_category_and_service(admin_client, db):
     entries = block("Menu entries")
     assert text.index('<th colspan="4">Menu entries</th>') > menu
     assert "Reviews of the exercises" in entries and "Bonus points" in entries
+
+
+def test_deprecated_services_are_folded(admin_client):
+    text = admin_client.get("/mtas-admin/visibility").text
+    folded = text.index('<details class="item deprecated-services">')
+    assert "<summary>Deprecated services (3)</summary>" in text
+    for name in ("NiFi", "Superset", "JupyterHub"):
+        assert (
+            text.index(f'<th colspan="4">{name} <span class="badge warning">') > folded
+        )
+    assert text.index('<th colspan="4">PostgreSQL</th>') < folded
 
 
 def test_unknown_visibility_keys_are_in_other(db):

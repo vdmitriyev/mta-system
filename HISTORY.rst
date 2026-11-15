@@ -2,6 +2,11 @@
 History
 =======
 
+2.4.6 (2026-11-15)
+-------------------
+
+* Admin page **Visibility**: the services are in two columns, aligned as on **Settings** (one column on small screens). The deprecated services are folded under **Deprecated services**; a click unfolds them.
+
 2.4.5 (2026-11-13)
 -------------------
 
@@ -11,8 +16,7 @@ History
 * E-mails: the subject starts with `[MTA-SYSTEM]`. The sender name is "modular teaching assistance system". The registration e-mail ends with "Course Team" (was "VLBA Course Team").
 * Admin overview, **Background tasks**: the column **Result** shows the user ID that the task is about. New column `about_user_id` in the table `background_tasks`.
 * Login history: the new table `login_history` stores each login attempt with the user ID, the method (e-mail and PIN, or login link) and the result (success, failed, blocked). It stores no e-mail. The new admin page **Logins** (in the menu after **Monitoring**, template `admin/logins_history.html`) lists the newest 200 attempts, of all users or of one user.
-* To update a server: `git pull`, then `task prod:up`. The app applies the migration on start. The new volume `.backups` is created.
-* Docs: the README and `docs/deployment.md` describe admin accounts, backups and the login history.
+* Docs: the README and `docs/deployment.md` describe admin accounts, backups and the login history. `docs/development.md` describes the new commands and how to get a login link without a mail server.
 
 2.4.4 (2026-11-13)
 -------------------

@@ -373,7 +373,7 @@ main {
   margin-bottom: 0.75rem;
 }
 
-/* blocks stacked over the full width (services page, Visibility) */
+/* blocks stacked over the full width (services page) */
 .block-list {
   display: flex;
   flex-direction: column;
@@ -388,15 +388,31 @@ main {
 }
 
 .visibility-table .col-key {
-  width: 30%;
+  width: 38%;
 }
 
 .visibility-table .col-status {
-  width: 8rem;
+  width: 6rem;
 }
 
 .visibility-table .col-action {
-  width: 7rem;
+  width: 5.5rem;
+}
+
+/* Visibility: always two columns, one on small screens */
+.grid.two.visibility-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 960px) {
+  .grid.two.visibility-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Visibility: deprecated services, folded under the other services */
+.deprecated-services {
+  margin-top: 1.25rem;
 }
 
 .visibility-table td {
