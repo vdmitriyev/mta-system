@@ -61,6 +61,8 @@ def public_link(url: str | None) -> str | None:
     SurveyLite builds its links from its own SURVEYLITE_BASE_URL. Without the
     prefix /surveylite there, https://<host>/me?auth=... opens the page /me of this
     app. The app keeps only the path in SurveyLite and the query of the link.
+    Everything before the prefix is dropped: a server name in the path, or a
+    SURVEYLITE_BASE_URL without https:// (<host>/surveylite/me).
     """
 
     if not url:
@@ -68,9 +70,19 @@ def public_link(url: str | None) -> str | None:
     public = get_settings().surveylite_public_url
     prefix = urlsplit(public).path or "/"
     parts = urlsplit(url)
+    if not parts.scheme and not parts.netloc and _starts_with_host(parts.path):
+        parts = urlsplit("//" + url)
     path = parts.path
-    path = path[len(prefix) :] if path.startswith(prefix) else path.lstrip("/")
+    start = path.find(prefix) if prefix != "/" else -1
+    path = path[start + len(prefix) :] if start >= 0 else path.lstrip("/")
     return public + path + (f"?{parts.query}" if parts.query else "")
+
+
+def _starts_with_host(path: str) -> bool:
+    """host/path without https://, e.g. mtas.example.org/surveylite/me"""
+
+    first = path.split("/", 1)[0]
+    return first == "localhost" or "." in first or ":" in first
 
 
 def survey_link(row: SurveyAssignment) -> str | None:

@@ -179,13 +179,13 @@ Up to version 2.4.0, `task prod:up` started sqlmate. Remove the old containers o
 [SurveyLite](https://github.com/vdmitriyev/surveylite) (0.21.0 or newer) runs anonymous surveys. It has its own compose file (`provision/surveylite/compose.yml`) and settings (`envs/surveylite-service.env`).
 
 1. Get the image `surveylite:<SURVEYLITE_VERSION>` on the server. Check it with `docker image ls surveylite`. To build it from the source in `temp/surveylite`: `task services:build-surveylite`. This needs `docker buildx`.
-2. In `envs/surveylite-service.env`, change every `<CHANGE-ME>`. Set `SURVEYLITE_BASE_URL=https://<SERVER_FQDN>`.
+2. In `envs/surveylite-service.env`, change every `<CHANGE-ME>`. Set `SURVEYLITE_BASE_URL=https://<SERVER_FQDN>`, with `https://` and without `/surveylite`. SurveyLite adds `/surveylite` itself.
 3. In the env file of the app, set `SURVEYLITE_API_KEY` to one of `SURVEYLITE_API_KEYS` of `envs/surveylite-service.env`.
 4. Put the surveys in `setup/surveylite` as YAML files, or build them at `https://<SERVER_FQDN>/surveylite/admin`.
 5. Start mta-system first, then SurveyLite: `task surveylite:up`.
 6. Switch on SurveyLite on the admin page **Services → Auto creation**.
 
-SurveyLite runs at `https://<SERVER_FQDN>/surveylite/`. It joins the network of mta-system and opens no port. Other tasks: `surveylite:ps`, `surveylite:logs`, `surveylite:restart`, `surveylite:down` (the data stays).
+SurveyLite runs at `https://<SERVER_FQDN>/surveylite/`. If **Log in to SurveyLite** opens a wrong address, check `SURVEYLITE_BASE_URL`, then run `task surveylite:up` (a restart does not read the env file again). It joins the network of mta-system and opens no port. Other tasks: `surveylite:ps`, `surveylite:logs`, `surveylite:restart`, `surveylite:down` (the data stays).
 
 | Setting (shell or `.env`) | Default |
 | --- | --- |

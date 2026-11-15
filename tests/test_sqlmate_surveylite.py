@@ -227,6 +227,11 @@ def test_services_page_shows_sqlmate_and_surveylite(
         "https://mtas.example.org/me?auth=key-1",
         "http://surveylite-service:5001/me?auth=key-1",
         "https://mtas.example.org/surveylite/me?auth=key-1",
+        # server name in front of the path (wrong SURVEYLITE_BASE_URL)
+        "https://mtas.example.org/mtas.example.org/surveylite/me?auth=key-1",
+        # SURVEYLITE_BASE_URL without https://
+        "mtas.example.org/surveylite/me?auth=key-1",
+        "/surveylite/me?auth=key-1",
     ],
 )
 def test_links_of_surveylite_use_its_public_address(settings, link):

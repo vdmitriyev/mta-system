@@ -2,6 +2,11 @@
 History
 =======
 
+2.4.7 (2026-11-15)
+-------------------
+
+* SurveyLite: fixed the link **Log in to SurveyLite** and the survey links. When SurveyLite put the server name in front of `/surveylite` (`https://<host>/<host>/surveylite/me?auth=...`), the link did not work. The app now drops everything before `/surveylite/`. This also fixes the links that are already stored.
+
 2.4.6 (2026-11-15)
 -------------------
 

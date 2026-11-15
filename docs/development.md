@@ -97,7 +97,7 @@ All steps: [deployment.md](deployment.md#sqlmate-optional).
 * The services page shows the login link, the login, the PIN and the survey links. The survey links also log the user in.
 * On the admin page **Services → SurveyLite**, an admin gives surveys to the users. An admin can also lock a service (for example sqlmate) until the user completes a survey.
 * **New login link** on the admin page makes a new link. The old links stop working.
-* Settings of the app: `SURVEYLITE_API_URL`, `SURVEYLITE_API_KEY` (one of `SURVEYLITE_API_KEYS` in `envs/surveylite-service.env`) and `SURVEYLITE_URL`. The app builds all links from `SURVEYLITE_URL`.
+* Settings of the app: `SURVEYLITE_API_URL`, `SURVEYLITE_API_KEY` (one of `SURVEYLITE_API_KEYS` in `envs/surveylite-service.env`) and `SURVEYLITE_URL`. The app builds all links from `SURVEYLITE_URL`. From the links of SurveyLite, it keeps only the part after `/surveylite/`. A server name in front of it is dropped.
 
 To use it with `task dev:up`:
 
