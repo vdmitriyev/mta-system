@@ -13,16 +13,25 @@ env:
 
 tasks:
 
-  up:
-    desc: starts SurveyLite
+  check-setup:
+    desc: checks the settings file and the network of SurveyLite
     preconditions:
-      - sh: docker image inspect "surveylite:$SURVEYLITE_VERSION" >/dev/null 2>&1
-        msg: "The image surveylite:{{.SURVEYLITE_VERSION}} is missing (SURVEYLITE_VERSION in versions.env). Load it, or build it: task services:build-surveylite"
       - sh: test -f envs/surveylite-service.env
         msg: "envs/surveylite-service.env is missing: task app:init-env, then change every <CHANGE-ME>"
       - sh: docker network inspect "{{.SURVEYLITE_NETWORK}}" >/dev/null 2>&1
         msg: "The network {{.SURVEYLITE_NETWORK}} is missing: start mta-system first (task prod:up), or set SURVEYLITE_NETWORK"
+
+  check-image:
+    desc: checks that the image surveylite:<SURVEYLITE_VERSION> exists
+    preconditions:
+      - sh: docker image inspect "surveylite:$SURVEYLITE_VERSION" >/dev/null 2>&1
+        msg: "The image surveylite:{{.SURVEYLITE_VERSION}} is missing (SURVEYLITE_VERSION in versions.env). Load it, or build it: task services:build-surveylite"
+
+  up:
+    desc: starts SurveyLite
     cmds:
+      - task: check-image
+      - task: check-setup
       - mkdir -p .logs/surveylite setup/surveylite
       - "{{.SURVEYLITE_COMPOSE}} up -d"
 
@@ -35,6 +44,14 @@ tasks:
     desc: restarts SurveyLite and imports the surveys again
     cmds:
       - "{{.SURVEYLITE_COMPOSE}} restart"
+
+  rebuild:
+    desc: builds the SurveyLite image again and replaces the running SurveyLite (data stays)
+    cmds:
+      - task: check-setup
+      - task: :services:build-surveylite
+      - mkdir -p .logs/surveylite setup/surveylite
+      - "{{.SURVEYLITE_COMPOSE}} up -d --force-recreate surveylite-service"
 
   ps:
     desc: shows the state of SurveyLite

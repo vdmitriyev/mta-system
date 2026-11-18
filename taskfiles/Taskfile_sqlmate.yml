@@ -13,16 +13,25 @@ env:
 
 tasks:
 
-  up:
-    desc: starts sqlmate and its database
+  check-setup:
+    desc: checks the settings file and the network of sqlmate
     preconditions:
-      - sh: docker image inspect "sqlmate:$SQLMATE_VERSION" >/dev/null 2>&1
-        msg: "The image sqlmate:{{.SQLMATE_VERSION}} is missing (SQLMATE_VERSION in versions.env). Load it, or build it: task services:build-sqlmate"
       - sh: test -f envs/sqlmate-service.env
         msg: "envs/sqlmate-service.env is missing: task app:init-env, then change every <CHANGE-ME>"
       - sh: docker network inspect "{{.SQLMATE_NETWORK}}" >/dev/null 2>&1
         msg: "The network {{.SQLMATE_NETWORK}} is missing: start mta-system first (task prod:up), or set SQLMATE_NETWORK"
+
+  check-image:
+    desc: checks that the image sqlmate:<SQLMATE_VERSION> exists
+    preconditions:
+      - sh: docker image inspect "sqlmate:$SQLMATE_VERSION" >/dev/null 2>&1
+        msg: "The image sqlmate:{{.SQLMATE_VERSION}} is missing (SQLMATE_VERSION in versions.env). Load it, or build it: task services:build-sqlmate"
+
+  up:
+    desc: starts sqlmate and its database
     cmds:
+      - task: check-image
+      - task: check-setup
       - mkdir -p .logs/sqlmate setup/sqlmate
       - "{{.SQLMATE_COMPOSE}} up -d"
 
@@ -35,6 +44,15 @@ tasks:
     desc: restarts sqlmate
     cmds:
       - "{{.SQLMATE_COMPOSE}} restart"
+
+  rebuild:
+    desc: builds the sqlmate image again and replaces the running sqlmate (database stays)
+    cmds:
+      - task: check-setup
+      - task: :services:build-sqlmate
+      - mkdir -p .logs/sqlmate setup/sqlmate
+      - "{{.SQLMATE_COMPOSE}} up -d --no-deps --force-recreate sqlmate-service"
+      - echo "If the new version changes the database, run 'task sqlmate:init'"
 
   ps:
     desc: shows the state of sqlmate

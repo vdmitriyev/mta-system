@@ -2,6 +2,14 @@
 History
 =======
 
+2.4.8 (2026-11-18)
+-------------------
+
+* New tasks `task sqlmate:rebuild` and `task surveylite:rebuild`: build the image again from `temp/sqlmate` or `temp/surveylite` and replace the running container. The data stays. For sqlmate, the database container keeps running; if the new version changes the database, run `task sqlmate:init`.
+* Taskfiles of sqlmate and SurveyLite: the checks before a start are separate tasks. `check-setup` checks the env file and the network of mta-system, `check-image` checks the image. `up` runs both, `rebuild` runs only `check-setup`.
+* Admin menu: **Auto creation** is a menu entry of its own, no longer under **Services**.
+* Docs: `docs/deployment.md` names the new `rebuild` tasks.
+
 2.4.7 (2026-11-15)
 -------------------
 

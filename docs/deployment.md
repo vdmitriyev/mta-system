@@ -165,7 +165,7 @@ Put `COMPOSE_PROFILES` in the file `.env` in the project folder, for example `CO
 
 6. Switch on sqlmate on the admin page **Services → Auto creation**.
 
-sqlmate runs at `https://<SERVER_FQDN>/sqlmate/`. It joins the network of mta-system and opens no port. Other tasks: `sqlmate:ps`, `sqlmate:logs`, `sqlmate:restart`, `sqlmate:down` (the data stays).
+sqlmate runs at `https://<SERVER_FQDN>/sqlmate/`. It joins the network of mta-system and opens no port. Other tasks: `sqlmate:ps`, `sqlmate:logs`, `sqlmate:restart`, `sqlmate:rebuild` (builds the image again and replaces the running sqlmate), `sqlmate:down` (the data stays).
 
 | Setting (shell or `.env`) | Default |
 | --- | --- |
@@ -185,7 +185,7 @@ Up to version 2.4.0, `task prod:up` started sqlmate. Remove the old containers o
 5. Start mta-system first, then SurveyLite: `task surveylite:up`.
 6. Switch on SurveyLite on the admin page **Services → Auto creation**.
 
-SurveyLite runs at `https://<SERVER_FQDN>/surveylite/`. If **Log in to SurveyLite** opens a wrong address, check `SURVEYLITE_BASE_URL`, then run `task surveylite:up` (a restart does not read the env file again). It joins the network of mta-system and opens no port. Other tasks: `surveylite:ps`, `surveylite:logs`, `surveylite:restart`, `surveylite:down` (the data stays).
+SurveyLite runs at `https://<SERVER_FQDN>/surveylite/`. If **Log in to SurveyLite** opens a wrong address, check `SURVEYLITE_BASE_URL`, then run `task surveylite:up` (a restart does not read the env file again). It joins the network of mta-system and opens no port. Other tasks: `surveylite:ps`, `surveylite:logs`, `surveylite:restart`, `surveylite:rebuild` (builds the image again and replaces the running SurveyLite), `surveylite:down` (the data stays).
 
 | Setting (shell or `.env`) | Default |
 | --- | --- |
