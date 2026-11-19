@@ -1,7 +1,8 @@
 """Client of the sqlmate API: creates the accounts of the users.
 
-sqlmate creates a user with an e-mail address and answers with the PIN and a
-personal login link. The API needs REGISTRATION_API=True in sqlmate and an API key
+sqlmate creates a user with the registration e-mail and the internal e-mail of the
+app, and answers with the PIN and a personal login link (internal_email needs
+sqlmate 1.12.0 or newer). The API needs REGISTRATION_API=True in sqlmate and an API key
 (SQLMATE_API_KEY, the same value as API_KEY in sqlmate).
 """
 
@@ -22,6 +23,7 @@ class SqlmateError(Exception):
 @dataclass(frozen=True)
 class SqlmateAccount:
     login: str
+    internal_email: str | None
     pin: str
     login_url: str
     created: bool
@@ -55,6 +57,7 @@ def _request(method: str, path: str, **kwargs) -> requests.Response:
 def _account(data: dict) -> SqlmateAccount:
     return SqlmateAccount(
         login=data["email"],
+        internal_email=data.get("internal_email"),
         pin=str(data["pin"]),
         login_url=data["login_url"],
         created=bool(data.get("created")),
@@ -67,10 +70,15 @@ def ping() -> str:
     return _request("GET", "/ping").json().get("key", "")
 
 
-def create_user(email: str) -> SqlmateAccount:
-    """Creates the user (or gets the existing one). sqlmate sends no e-mail."""
+def create_user(email: str, internal_email: str) -> SqlmateAccount:
+    """Creates the user (or gets the existing one). sqlmate sends no e-mail.
 
-    response = _request("POST", "/users", json={"email": email, "notify": False})
+    sqlmate answers 409 if the user exists with another internal e-mail, or if
+    another user has this internal e-mail.
+    """
+
+    body = {"email": email, "internal_email": internal_email, "notify": False}
+    response = _request("POST", "/users", json=body)
     return _account(response.json())
 
 

@@ -109,10 +109,11 @@ def surveylite(monkeypatch):
 def sqlmate(monkeypatch):
     calls = []
 
-    def create_user(email):
-        calls.append(email)
+    def create_user(email, internal_email):
+        calls.append((email, internal_email))
         return sqlmate_api.SqlmateAccount(
             login=email,
+            internal_email=internal_email,
             pin="4321",
             login_url="https://mtas.example.org/sqlmate/login?uHash=u&pHash=p",
             created=True,
@@ -126,7 +127,7 @@ def sqlmate(monkeypatch):
 def add_sqlmate(db, user):
     entry = SqlmateService(
         user_id=user.itid,
-        sqlmate_login=user.internal_email,
+        sqlmate_login=user.email,
         sqlmate_pin="4321",
         sqlmate_login_url="https://mtas.example.org/sqlmate/login?uHash=u&pHash=p",
         created=True,
@@ -139,26 +140,31 @@ def add_sqlmate(db, user):
 # ---------- provisioning ----------
 
 
-def test_sqlmate_account_with_the_internal_email(db, student, sqlmate):
+def test_sqlmate_account_with_both_emails(db, student, sqlmate):
     switch_on(db, "sqlmate")
-    assert provisioning.sqlmate_user(db, student.itid, student.internal_email)
+    assert provisioning.sqlmate_user(
+        db, student.itid, student.email, student.internal_email
+    )
     entry = db.query(SqlmateService).one()
-    assert sqlmate == [student.internal_email]
+    assert sqlmate == [(student.email, student.internal_email)]
+    assert entry.sqlmate_login == student.email
     assert (entry.sqlmate_pin, entry.created) == ("4321", True)
     assert entry.sqlmate_login_url.endswith("uHash=u&pHash=p")
 
 
 def test_sqlmate_is_skipped_when_switched_off(db, student, sqlmate):
-    assert provisioning.sqlmate_user(db, student.itid, "x@y.z") is False
+    assert provisioning.sqlmate_user(db, student.itid, "x@y.z", "i@y.z") is False
     assert sqlmate == [] and db.query(SqlmateService).count() == 0
 
 
 def test_sqlmate_errors_keep_the_registration_going(db, student, monkeypatch):
-    def fail(email):
+    def fail(email, internal_email):
         raise sqlmate_api.SqlmateError("sqlmate is not reachable")
 
     monkeypatch.setattr(sqlmate_api, "create_user", fail)
-    assert not provisioning.sqlmate_user(db, student.itid, "x@y.z", force_create=True)
+    assert not provisioning.sqlmate_user(
+        db, student.itid, "x@y.z", "i@y.z", force_create=True
+    )
     assert db.query(SqlmateService).one().created is False
 
 
@@ -185,7 +191,7 @@ def test_registration_creates_both_accounts(db, sqlmate, surveylite, no_email):
 
     switch_on(db, "sqlmate", "surveylite")
     user = register_new_user(db, "new.student@uni.example")
-    assert sqlmate == [user.internal_email]
+    assert sqlmate == [(user.email, user.internal_email)]
     assert db.query(SurveyliteService).filter_by(user_id=user.itid).count() == 1
 
 
@@ -206,7 +212,7 @@ def test_services_page_shows_sqlmate_and_surveylite(
     assert 'href="https://mtas.example.org/sqlmate/login?uHash=u&amp;pHash=p"' in (
         sqlmate_card
     )
-    assert student.internal_email in sqlmate_card
+    assert student.email in sqlmate_card
     assert 'data-secret="4321"' in sqlmate_card
     assert "https://mtas.example.org/sqlmate/" in sqlmate_card
 
@@ -424,7 +430,7 @@ def test_admin_creates_a_sqlmate_account(admin_client, db, student, sqlmate):
     text = admin_client.get("/mtas-admin/services/sqlmate").text
     assert "API key “mta-system” works" in text
     post(admin_client, "/mtas-admin/services/sqlmate/create", {"user_id": student.itid})
-    assert sqlmate == [student.internal_email]
+    assert sqlmate == [(student.email, student.internal_email)]
     text = admin_client.get("/mtas-admin/services/sqlmate").text
     assert "sqlmate was set up for" in text
 
@@ -488,3 +494,38 @@ def test_clients_send_the_key(use_settings, monkeypatch):
     assert seen == [
         ("GET", "http://surveylite:5001/api/v1/surveys", {"X-API-Key": "sl-key"})
     ]
+
+
+def test_sqlmate_client_sends_both_emails(use_settings, monkeypatch):
+    use_settings(SQLMATE_API_KEY="sm-key")
+    seen = []
+
+    class Answer:
+        status_code = 200
+
+        def json(self):
+            return {
+                "email": "sam@uni.example",
+                "internal_email": "pg_user_01@mtas.example.org",
+                "pin": 1234,
+                "login_url": "https://mtas.example.org/sqlmate/login?uHash=u",
+                "created": True,
+            }
+
+    def fake_request(method, url, headers, timeout, **kwargs):
+        seen.append((method, url, kwargs.get("json")))
+        return Answer()
+
+    monkeypatch.setattr(sqlmate_api.requests, "request", fake_request)
+    account = sqlmate_api.create_user("sam@uni.example", "pg_user_01@mtas.example.org")
+    assert seen[0][1].endswith("/users")
+    assert seen[0][2] == {
+        "email": "sam@uni.example",
+        "internal_email": "pg_user_01@mtas.example.org",
+        "notify": False,
+    }
+    assert (account.login, account.internal_email, account.pin) == (
+        "sam@uni.example",
+        "pg_user_01@mtas.example.org",
+        "1234",
+    )

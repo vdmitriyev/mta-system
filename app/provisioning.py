@@ -276,16 +276,21 @@ def superset_user(
 
 
 def sqlmate_user(
-    db: Session, user_id: int, login: str, force_create: bool = False
+    db: Session,
+    user_id: int,
+    email: str,
+    internal_email: str,
+    force_create: bool = False,
 ) -> bool:
-    """Creates the account in sqlmate. The login is the internal e-mail of the user."""
+    """Creates the account in sqlmate with the registration e-mail (the login) and
+    the internal e-mail of the user."""
 
     if not force_create and not creates_accounts(db, "sqlmate"):
         return _skip("sqlmate")
 
-    entry = SqlmateService(user_id=user_id, sqlmate_login=login, created=False)
+    entry = SqlmateService(user_id=user_id, sqlmate_login=email, created=False)
     try:
-        account = sqlmate_api.create_user(login)
+        account = sqlmate_api.create_user(email, internal_email)
     except sqlmate_api.SqlmateError as error:
         logger.error("sqlmate account of user %s: %s", user_id, error)
     else:

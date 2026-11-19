@@ -60,7 +60,7 @@ Registration, dataset imports and new containers can take minutes. The app runs 
 | PostgreSQL (shared) | `postgres` | `17.11` | `POSTGRESQL_VERSION` |
 | pgAdmin 4 (shared) | `dpage/pgadmin4` | `9.19` | `PGADMIN4_VERSION` |
 | MariaDB (shared, for WordPress) | `mariadb` | `13.0.2` | `MARIADB_VERSION` |
-| sqlmate (shared, optional) | `sqlmate`, must be on the server | `1.9.0` | `SQLMATE_VERSION` |
+| sqlmate (shared, optional) | `sqlmate`, must be on the server | `1.12.0` | `SQLMATE_VERSION` |
 | SurveyLite (shared, optional) | `surveylite`, must be on the server | `0.21.0` or newer | `SURVEYLITE_VERSION` |
 
 The images come from Docker Hub, except OpenRefine, sqlmate and SurveyLite. `task services:build-sqlmate` and `task services:build-surveylite` build these two from `temp/sqlmate` and `temp/surveylite`. JupyterHub, NiFi and Superset are deprecated.

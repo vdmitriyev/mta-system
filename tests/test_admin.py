@@ -643,9 +643,10 @@ def test_services_menu(admin_client, docker):
     for href in (
         "/mtas-admin/services/metabase",
         "/mtas-admin/services/openrefine",
-        "/mtas-admin/auto-creation",
     ):
         assert f'href="{href}"' in menu
+    assert 'href="/mtas-admin/auto-creation"' not in menu
+    assert 'href="/mtas-admin/auto-creation"' in text
     text = admin_client.get("/mtas-admin/users").text
     assert "<summary>Services" in text
 

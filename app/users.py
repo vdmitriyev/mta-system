@@ -314,7 +314,9 @@ def register_new_user(db: Session, email: str, is_assigned: bool = True) -> User
             password,
             wordpress_port,
         ),
-        lambda: provisioning.sqlmate_user(db, user.itid, user.internal_email),
+        lambda: provisioning.sqlmate_user(
+            db, user.itid, user.email, user.internal_email
+        ),
         lambda: provisioning.surveylite_participant(db, user.itid),
         lambda: provisioning.nifi_user(
             db,

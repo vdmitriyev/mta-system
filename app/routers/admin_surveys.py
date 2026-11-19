@@ -78,7 +78,11 @@ def sqlmate_create(page: Page = Depends(), user_id: int = Form(...)):
         return redirect(SQLMATE_PAGE)
     _mark_deleted(page.db, entry)
     if provisioning.sqlmate_user(
-        page.db, student.itid, student.internal_email, force_create=True
+        page.db,
+        student.itid,
+        student.email,
+        student.internal_email,
+        force_create=True,
     ):
         flash(page.request, f"sqlmate was set up for {student.email}.", "success")
     else:

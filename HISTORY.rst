@@ -2,6 +2,13 @@
 History
 =======
 
+2.4.9 (2026-11-19)
+-------------------
+
+* sqlmate: the app creates the account with the registration e-mail and the internal e-mail of the user (`internal_email` of `POST /api/v1/users`). The login in sqlmate is now the registration e-mail, not the internal e-mail. Needs sqlmate 1.12.0 or newer.
+* sqlmate: new version 1.12.0 (was 1.11.0). Build the image and replace the running sqlmate: `task sqlmate:rebuild`, then `task sqlmate:init`.
+* Docs: `docs/development.md` and the README name the e-mails and the version of sqlmate.
+
 2.4.8 (2026-11-18)
 -------------------
 

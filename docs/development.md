@@ -73,7 +73,7 @@ task app:cli -- auto-creation --on postgresql --on pgadmin4
 
 ### sqlmate (optional)
 
-[sqlmate](https://github.com/vdmitriyev/sqlmate) gives SQL exercises to the students. The app creates the accounts through the API of sqlmate. The services page shows the address, a login link, the login and the PIN.
+[sqlmate](https://github.com/vdmitriyev/sqlmate) gives SQL exercises to the students. The app creates the accounts through the API of sqlmate, with the registration e-mail (the login in sqlmate) and the internal e-mail of the user. This needs sqlmate 1.12.0 or newer. The services page shows the address, a login link, the login and the PIN.
 
 Settings of the app: `SQLMATE_API_URL`, `SQLMATE_API_KEY` (same as `API_KEY` in `envs/sqlmate-service.env`) and `SQLMATE_URL`.
 
