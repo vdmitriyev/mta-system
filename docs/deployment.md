@@ -28,7 +28,7 @@ Before you go live:
 1. Use new random values for `SECRET_KEY`, `HASH_KEY_LINKS`, `HASH_KEY_HIDDEN` and all passwords in `envs/`.
 2. Set `SERVER_FQDN`, `SYSTEM_ADMINS`, `ALLOWED_FQDN_FOR_EMAILS` and `MAIL_*`.
 3. Only nginx (`80`, `443`) and PostgreSQL (`5432`, or `POSTGRESQL_PUBLIC_PORT`) are open to all networks. Use a strong `POSTGRES_PASSWORD` in `envs/postgresql-service.env`. Open `5432` in the firewall only for the networks that need it.
-4. Back up `.backups/` (see [Backup of the database](#backup-of-the-database)) and `.htpasswd_nginx/`.
+4. Back up `.backups/` (see [Backup of the database](#backup-of-the-database)), `submissions/` and `.htpasswd_nginx/`.
 
 `TARGET_SERVER=production` switches off the debug pages and the API docs. The session cookie then works only over HTTPS.
 
@@ -41,6 +41,7 @@ Before you go live:
 | `task prod:build` | Builds the images of the app and nginx. |
 | `task prod:migrate` | Applies the migrations to the database of the app. |
 | `task prod:backup` | Copies the database of the app to `.backups/`. |
+| `task prod:export-exercises` | Writes the exercises as CSV to `.backups/`. |
 | `task prod:create-admins` | Creates the accounts of `SYSTEM_ADMINS`. Prints the login data and sends it by e-mail. |
 | `task prod:cert` | Gets a Let's Encrypt certificate for `SERVER_FQDN` and restarts nginx. |
 | `task prod:cert-renew` | Renews the certificates and reloads nginx. |
@@ -123,6 +124,26 @@ To update a server from pgAdmin 8.x (mta-system 2.4.2 or older):
 * Copy the folder to another computer. For a daily backup, run the task with cron.
 
 On your computer, `task db:backup` does the same.
+
+### Submissions
+
+Students upload their reports on the page **Submissions**: PDF, TXT, MD or DOCX files. Until the deadline they can upload more files and delete them. After the deadline the files stay, but the students cannot change them.
+
+* The admin page **Exercises** switches the submissions of an exercise on, sets the deadline and switches the confirmation e-mail on or off. The e-mail lists the files with their size and SHA-256 hash.
+* The admin page **Submissions** shows the number of files per user and exercise. A click on a cell lists the files (also the deleted ones), and sets or removes a personal deadline for this user. **ZIP** downloads all files of an exercise.
+* The files are in `submissions/` on the host (`SUBMISSIONS_DIR` in the container): `<user-id>_<name>/<EXERCISE_CODE>/<file>`, for example `submissions/0007_sam.student/EX01/report.pdf`.
+* One upload has at most 10 MB. The app checks it, and nginx rejects larger uploads (`client_max_body_size 11M` for `/submissions/<code>/upload`).
+* The deadline is the local time of the server (`TZ` in `compose.prod.yaml`).
+* `task prod:backup` does not copy `submissions/`. Back up this folder on its own.
+* The page needs the menu entry **Submissions** on the admin page **Visibility** (on by default).
+
+### Exercises as CSV
+
+Changes on the admin page **Exercises** are stored in the database only. **Download CSV** on this page gives all exercises in the format of `setup/initial_exercises.csv`.
+
+* Keep the file as a backup, or save it as `setup/initial_exercises.csv` for a new deployment.
+* On the server: `task prod:export-exercises` writes the file to `.backups/<date>-<time>-initial_exercises.csv`.
+* The import adds only exercises with a new code. It does not change existing exercises. Use the file for a new (empty) database.
 
 ### Login history
 

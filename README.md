@@ -2,8 +2,8 @@
 
 **mta-system** (**m**odular **t**eaching **a**ssistance **system**) gives students hands-on experience with software. A lecturer hosts it for a course. Each student gets an own account in services such as PostgreSQL, pgAdmin 4, Metabase and OpenRefine. Optional: SQL exercises ([sqlmate](https://github.com/vdmitriyev/sqlmate)) and anonymous surveys ([SurveyLite](https://github.com/vdmitriyev/surveylite)).
 
-* **Students** register with their e-mail address and a course code. They see the logins of their services, start their containers, import sample datasets, and read the reviews and bonus points of their exercises.
-* **Admins** write reviews and bonus points. They manage the databases, logins and containers of the users, prepare accounts, delete users, read the login history, choose the visible parts of the pages, and watch the server.
+* **Students** register with their e-mail address and a course code. They see the logins of their services, start their containers, import sample datasets, submit their reports (PDF, TXT, MD, DOCX) until the deadline, and read the reviews and bonus points of their exercises.
+* **Admins** manage the exercises and their deadlines, download the submitted files, give single students a later deadline, and write reviews and bonus points. They manage the databases, logins and containers of the users, prepare accounts, delete users, read the login history, choose the visible parts of the pages, and watch the server.
 
 The pages have a light and a dark theme. The button in the header switches it.
 
@@ -12,7 +12,7 @@ Documentation: [vdmitriyev.github.io/mta-system](https://vdmitriyev.github.io/mt
 | Guide | Content |
 | --- | --- |
 | [docs/development.md](docs/development.md) | Install, settings, run the app, Docker for development, commands, API, tests |
-| [docs/deployment.md](docs/deployment.md) | Server, HTTPS certificate, pgAdmin 4 login, admin accounts, backups, login history, delete users, sqlmate, SurveyLite, versions of the services |
+| [docs/deployment.md](docs/deployment.md) | Server, HTTPS certificate, pgAdmin 4 login, admin accounts, backups, submissions, login history, delete users, sqlmate, SurveyLite, versions of the services |
 | [HISTORY.rst](HISTORY.rst) | Changes of each version. Read it before you update a server. |
 
 ## Architecture

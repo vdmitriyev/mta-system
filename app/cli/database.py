@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, get_settings
 from app.database import backup_sqlite, session_scope
+from app.exercises import EXERCISE_COLUMNS, exercises_csv, get_exercises
 from app.models import Exercises
 from app.services import postgresql
 from app.users import course_users, get_user_services
@@ -82,14 +83,51 @@ def db_migrate(message: str):
     "--file", "-f", "fname_csv", default=DEFAULT_EXERCISES_FILE, show_default=True
 )
 def import_data_exercises(fname_csv: str):
-    """Imports the exercises (with their review and bonus parts) from the CSV file"""
+    """Imports the exercises (with their review, bonus and submission parts) from the CSV file"""
 
     if not os.path.exists(fname_csv):
         click.echo(f"[e] CSV file with the exercises was not found: {fname_csv}")
         return
+    missing = missing_exercise_columns(fname_csv)
+    if missing:
+        click.echo(
+            f"[e] {fname_csv} is in an old format. Add the columns "
+            f"{', '.join(missing)} (see samples/initial_exercises.csv). "
+            "No exercises were imported."
+        )
+        return
     with session_scope() as db:
         added = import_exercises(db, fname_csv)
     click.echo(f"[i] new exercises: {added}")
+
+
+@click.command("export-data-exercises")
+@click.option(
+    "--file",
+    "-f",
+    "fname_csv",
+    default=None,
+    help="Target file. Default: .backups/<date>-<time>-initial_exercises.csv",
+)
+def export_data_exercises(fname_csv: str | None):
+    """Writes all exercises into a CSV file, in the format of import-data-exercises"""
+
+    if fname_csv is None:
+        stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        fname_csv = str(BACKUP_DIR / f"{stamp}-initial_exercises.csv")
+    os.makedirs(os.path.dirname(os.path.abspath(fname_csv)), exist_ok=True)
+    with session_scope() as db:
+        content = exercises_csv(db)
+        count = len(get_exercises(db))
+    with open(fname_csv, "w", newline="", encoding="utf-8") as csvfile:
+        csvfile.write(content)
+    click.echo(f"[i] exercises: {count} rows -> {fname_csv}")
+
+
+def missing_exercise_columns(fname_csv: str) -> list:
+    with open(fname_csv, newline="", encoding="utf-8") as csvfile:
+        header = next(csv.reader(csvfile, delimiter=";"), [])
+    return [column for column in EXERCISE_COLUMNS if column not in header]
 
 
 def import_exercises(db: Session, fname_csv: str) -> int:
@@ -122,6 +160,8 @@ def import_exercises(db: Session, fname_csv: str) -> int:
                     has_review=to_bool(row["has_review"]),
                     has_bonus=to_bool(row["has_bonus"]),
                     bonus_max_points=to_value(row["bonus_max_points"], float),
+                    has_submission=to_bool(row["has_submission"]),
+                    submission_email=to_bool(row["submission_email"]),
                 )
             )
             added += 1

@@ -34,10 +34,11 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 # Files can come from Windows: convert line endings of the entrypoint
 RUN dos2unix /usr/local/bin/docker-entrypoint.sh \
     && chmod +x /usr/local/bin/docker-entrypoint.sh \
-    && mkdir -p .logs data
+    && mkdir -p .logs data submissions
 
-# The SQLite database (MTAS_DB_PATH, default data/mta-system.db) and the logs belong on volumes
-VOLUME ["/mta-system/data", "/mta-system/.logs"]
+# The SQLite database (MTAS_DB_PATH, default data/mta-system.db), the submitted files
+# (SUBMISSIONS_DIR) and the logs belong on volumes
+VOLUME ["/mta-system/data", "/mta-system/submissions", "/mta-system/.logs"]
 
 # Runs as root: the app starts and stops the service containers through /var/run/docker.sock
 EXPOSE 5151

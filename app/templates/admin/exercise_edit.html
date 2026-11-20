@@ -1,0 +1,62 @@
+{% extends "admin/base.html" %}
+{% set title = "Edit exercise " ~ exercise.code if exercise else "New exercise" %}
+{% block title %}{{ title }}{% endblock %}
+{% block admin %}
+{{ ui.page_head(title) }}
+<section class="card narrow">
+  {% if error %}{{ ui.alert(error, "danger") }}{% endif %}
+  <form class="form" method="post" action="/mtas-admin/exercises/edit">
+    {{ ui.csrf(csrf_token) }}
+    <input type="hidden" name="original_code" value="{{ exercise.code if exercise else '' }}">
+    <div class="field">
+      <label for="code">Code</label>
+      {% if exercise %}
+        <input class="input short" type="text" id="code" value="{{ values.code }}" disabled>
+        <span class="hint">The code cannot be changed.</span>
+      {% else %}
+        <input class="input short" type="text" id="code" name="code" value="{{ values.code }}" required maxlength="20" pattern="[A-Za-z0-9_\-]{1,20}">
+        <span class="hint">For example EX01. Letters, digits, "_" and "-". The code is also the name of the folder of the files.</span>
+      {% endif %}
+    </div>
+    <div class="field">
+      <label for="name">Name</label>
+      <input class="input" type="text" id="name" name="name" value="{{ values.name }}" required maxlength="200">
+    </div>
+    <div class="field">
+      <label for="description">Description</label>
+      <textarea class="input" id="description" name="description">{{ values.description }}</textarea>
+    </div>
+    <div class="field">
+      <label for="year">Year</label>
+      <input class="input short" type="text" id="year" name="year" inputmode="numeric" value="{{ values.year }}">
+    </div>
+    <div class="field">
+      <label for="exercise_order">Order</label>
+      <input class="input short" type="text" id="exercise_order" name="exercise_order" inputmode="numeric" value="{{ values.exercise_order }}">
+    </div>
+    <label class="check"><input type="checkbox" name="visible" {% if values.visible %}checked{% endif %}> The users can see the exercise</label>
+
+    <h2>Submissions</h2>
+    <label class="check"><input type="checkbox" name="has_submission" {% if values.has_submission %}checked{% endif %}> The users can upload files (PDF, TXT, MD, DOCX)</label>
+    <div class="field">
+      <label for="submission_deadline">Deadline</label>
+      <input class="input short" type="datetime-local" id="submission_deadline" name="submission_deadline" value="{{ values.submission_deadline }}">
+      <span class="hint">Local time of the server. Empty: no deadline. After the deadline, the users cannot upload or delete files. Give single users a later deadline on the page <a href="/mtas-admin/submissions">Submissions</a>.</span>
+    </div>
+    <label class="check"><input type="checkbox" name="submission_email" {% if values.submission_email %}checked{% endif %}> Send the user a confirmation e-mail after each upload and delete</label>
+
+    <h2>Review and bonus points</h2>
+    <label class="check"><input type="checkbox" name="has_review" {% if values.has_review %}checked{% endif %}> The exercise has a review</label>
+    <label class="check"><input type="checkbox" name="has_bonus" {% if values.has_bonus %}checked{% endif %}> The exercise has bonus points</label>
+    <div class="field">
+      <label for="bonus_max_points">Maximum bonus points</label>
+      <input class="input short" type="text" id="bonus_max_points" name="bonus_max_points" inputmode="decimal" value="{{ values.bonus_max_points }}">
+    </div>
+
+    <div class="row">
+      <button type="submit" class="btn primary">Save</button>
+      <a class="btn" href="/mtas-admin/exercises">Back to the exercises</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

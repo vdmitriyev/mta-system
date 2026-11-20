@@ -2,6 +2,24 @@
 History
 =======
 
+2.5.1 (2026-11-20)
+-------------------
+
+* Admin page **Exercises**: new button **Download CSV**. It gives all exercises (also the hidden ones) in the format of `setup/initial_exercises.csv`: a backup, and the file for a new deployment.
+* New command `python -m app.cli export-data-exercises` and task `task prod:export-exercises`: write the same file to `.backups/<date>-<time>-initial_exercises.csv` (or to `--file`).
+
+2.5.0 (2026-11-20)
+-------------------
+
+* New: students submit their solutions as PDF, TXT, MD or DOCX files on the page **Submissions**. They can upload and delete files until the deadline of the exercise. The app checks the type and the content of each file. One upload has at most 10 MB; a user has at most 5 files per exercise (`SUBMISSION_MAX_FILES`).
+* The files are in the folder `submissions/` (`SUBMISSIONS_DIR`): `<user-id>_<name>/<EXERCISE_CODE>/<file>`. `compose.prod.yaml` maps it to `./submissions` on the host. Back up this folder: `task prod:backup` copies only the database.
+* New admin page **Exercises**: add exercises and change them, also the deadline, the review, bonus and submission parts, and the confirmation e-mail.
+* New admin page **Submissions**: files per user and exercise, download of one file or all files of an exercise (ZIP), deletes, and a personal deadline (extension) for a user.
+* Optional confirmation e-mail after each upload and delete, switched on per exercise. It lists the files with size and SHA-256 hash.
+* nginx: uploads to `/submissions/<code>/upload` are limited to 11 MB (10 MB of files plus the form). Rebuild nginx: `task prod:up`.
+* Database: new migration (exercise columns `has_submission` and `submission_email`, tables `exercise_submissions` and `submission_extensions`). The app applies it on start; existing exercises have submissions switched off.
+* **Breaking:** `setup/initial_exercises.csv` needs the new columns `has_submission` and `submission_email` (see `samples/initial_exercises.csv`). A file in the old format is not imported; the log says which columns are missing.
+
 2.4.9 (2026-11-19)
 -------------------
 

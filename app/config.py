@@ -54,6 +54,9 @@ WORDPRESS_PORT_OFFSET = 7000
 
 MAX_USERS_NGINX_GENERATE = 100
 
+# Upper limit of an upload of the users (nginx allows a bit more, for the form data)
+MAX_UPLOAD_MB = 10
+
 DEFAULT_SERVICES_UI = [
     "pgadmin4",
     "postgresql",
@@ -121,6 +124,15 @@ class Settings(BaseSettings):
 
     # ---- database of the app (relative paths start at the project folder) ----
     mtas_db_path: Path = Path("data", "mta-system.db")
+
+    # ---- files that the users submit for the exercises ----
+    submissions_dir: Path = Path("submissions")
+    # limit of one upload (one file, and all files of one upload together)
+    submission_max_file_mb: Annotated[int, Field(ge=1, le=MAX_UPLOAD_MB)] = (
+        MAX_UPLOAD_MB
+    )
+    # files of a user per exercise
+    submission_max_files: PositiveInt = 5
 
     # ---- e-mail ----
     mail_server: str = "localhost"
@@ -244,7 +256,7 @@ class Settings(BaseSettings):
     def _clean_domains(cls, value: list[str]) -> list[str]:
         return [domain.lower().lstrip("@") for domain in value]
 
-    @field_validator("mtas_db_path")
+    @field_validator("mtas_db_path", "submissions_dir")
     @classmethod
     def _db_path_in_project(cls, value: Path) -> Path:
         return value if value.is_absolute() else BASE_DIR / value

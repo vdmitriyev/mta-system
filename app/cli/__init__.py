@@ -11,6 +11,7 @@ from app.cli.database import (
     db_backup,
     db_migrate,
     db_upgrade,
+    export_data_exercises,
     grant_public_schema,
     import_data_exercises,
 )
@@ -28,6 +29,7 @@ for command in (
     db_migrate,
     db_backup,
     import_data_exercises,
+    export_data_exercises,
     create_demo_db,
     create_custom_db,
     grant_public_schema,

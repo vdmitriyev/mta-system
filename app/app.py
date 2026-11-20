@@ -11,7 +11,16 @@ from starlette.middleware.sessions import SessionMiddleware
 from app import __version__
 from app.config import BASE_DIR, Settings, get_settings, set_settings
 from app.database import init_engine, session_scope
-from app.routers import account, admin, admin_databases, admin_surveys, api, public
+from app.routers import (
+    account,
+    admin,
+    admin_databases,
+    admin_submissions,
+    admin_surveys,
+    api,
+    public,
+    submissions,
+)
 from app.service_settings import add_default_service_settings
 from app.tasks import fail_stale_tasks
 from app.visibility import add_default_ui_visibility_settings
@@ -25,6 +34,10 @@ ERROR_PAGES = {
     403: ("No access", "You have no rights to see this page."),
     404: ("Page not found", "This page does not exist. Check the address."),
     405: ("Not allowed", "This action is not allowed here."),
+    413: (
+        "Upload too large",
+        "The upload is too large. Go back and choose smaller files.",
+    ),
     500: ("Server error", "Something went wrong on the server. Try again later."),
 }
 
@@ -139,7 +152,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     for router in (
         public.router,
         account.router,
+        submissions.router,
         admin_databases.router,
+        admin_submissions.router,
         admin_surveys.router,
         admin.router,
         api.router,

@@ -26,7 +26,7 @@ tasks:
       - sh: test -f envs/pgadmin4-proxy.env
         msg: "envs/pgadmin4-proxy.env is missing (secret of nginx and pgAdmin 4). Run 'task app:init-env': it creates the file and keeps the others"
     cmds:
-      - mkdir -p data .logs/nginx .backups .htpasswd_nginx certbot/www certbot/conf
+      - mkdir -p data submissions .logs/nginx .backups .htpasswd_nginx certbot/www certbot/conf
       - "{{.PROD_COMPOSE}} up -d --build"
 
   down:
@@ -70,7 +70,7 @@ tasks:
   app-recreate:
     desc: rebuilds and recreates only the app
     cmds:
-      - mkdir -p data .logs .backups .htpasswd_nginx
+      - mkdir -p data submissions .logs .backups .htpasswd_nginx
       - "{{.PROD_COMPOSE}} up -d --build --force-recreate --no-deps webapp"
       # nginx looks up the address of the app only at start or reload
       - task: nginx-reload
@@ -84,6 +84,11 @@ tasks:
     desc: copies the production database to .backups/<date>-<time>-<name>
     cmds:
       - "{{.PROD_COMPOSE}} exec webapp python -m app.cli db-backup"
+
+  export-exercises:
+    desc: "writes the exercises as CSV to .backups/<date>-<time>-initial_exercises.csv"
+    cmds:
+      - "{{.PROD_COMPOSE}} exec webapp python -m app.cli export-data-exercises"
 
   create-admins:
     desc: "creates the accounts of SYSTEM_ADMINS, prints and e-mails the login data (-- --no-mail)"

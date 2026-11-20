@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+{% block title %}Submission{% endblock %}
+{% block admin %}
+{{ ui.page_head("Submission") }}
+<div class="grid two">
+  <section class="card">
+    <dl class="kv">
+      <div><dt>Student</dt><dd>{{ student_name }} <span class="muted small">{{ student.email }}</span></dd></div>
+      <div><dt>Exercise</dt><dd>{{ exercise.name }} <span class="badge">{{ exercise.code }}</span></dd></div>
+      <div><dt>Deadline</dt><dd>
+        {{ deadline.strftime("%Y-%m-%d %H:%M") if deadline else "no deadline" }}
+        {% if extension %}<span class="badge warning">personal</span>{% endif %}
+        {% if is_open %}<span class="badge info">open</span>{% else %}<span class="badge danger">closed</span>{% endif %}
+      </dd></div>
+    </dl>
+    <h2>Files</h2>
+    {% if files %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>File</th><th class="num">Size</th><th>Uploaded</th><th>SHA-256</th><th></th></tr></thead>
+        <tbody>
+          {% for file in files %}
+          <tr{% if file.deleted %} class="muted"{% endif %}>
+            <td>
+              {% if file.deleted %}
+                <s>{{ file.original_name }}</s><br><span class="small">deleted {{ file.deleted_at.strftime("%Y-%m-%d %H:%M") if file.deleted_at else "" }}</span>
+              {% else %}
+                <a href="/mtas-admin/submissions/file/{{ file.itid }}">{{ ui.icon("download") }} {{ file.original_name }}</a>
+                <br><span class="muted small">{{ file.folder }}/{{ file.stored_name }}</span>
+              {% endif %}
+            </td>
+            <td class="num">{{ format_size(file.size_bytes) }}</td>
+            <td>{{ file.created_at.strftime("%Y-%m-%d %H:%M") if file.created_at else "" }}</td>
+            <td><code class="small" title="{{ file.sha256 }}">{{ file.sha256[:12] }}…</code></td>
+            <td>
+              {% if not file.deleted %}
+              <form method="post" action="/mtas-admin/submissions/delete" class="inline-form"
+                    data-confirm="Delete {{ file.original_name }} of {{ student.email }}? The file is removed from the server.">
+                {{ ui.csrf(csrf_token) }}
+                <input type="hidden" name="submission_id" value="{{ file.itid }}">
+                <button type="submit" class="btn sm danger">{{ ui.icon("trash") }} Delete</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="muted">The user has not uploaded files.</p>
+    {% endif %}
+    <div class="row">
+      <a class="btn" href="/mtas-admin/submissions">Back to the submissions</a>
+    </div>
+  </section>
+  <section class="card">
+    <h2>Personal deadline</h2>
+    <p class="muted">Deadline of the exercise: {{ exercise.submission_deadline.strftime("%Y-%m-%d %H:%M") if exercise.submission_deadline else "none" }}.
+      A personal deadline replaces it for this user only.</p>
+    <form class="form" method="post" action="/mtas-admin/submissions/extension">
+      {{ ui.csrf(csrf_token) }}
+      <input type="hidden" name="user" value="{{ student.itid }}">
+      <input type="hidden" name="exercise" value="{{ exercise.code }}">
+      <div class="field">
+        <label for="deadline">New deadline</label>
+        <input class="input short" type="datetime-local" id="deadline" name="deadline" value="{{ extension_input }}" required>
+      </div>
+      <div class="field">
+        <label for="note">Note (for the admins)</label>
+        <input class="input" type="text" id="note" name="note" maxlength="200" value="{{ extension.note if extension and extension.note else '' }}">
+      </div>
+      <div class="row">
+        <button type="submit" class="btn primary">Save the deadline</button>
+      </div>
+    </form>
+    {% if extension %}
+    <form class="form" method="post" action="/mtas-admin/submissions/extension">
+      {{ ui.csrf(csrf_token) }}
+      <input type="hidden" name="user" value="{{ student.itid }}">
+      <input type="hidden" name="exercise" value="{{ exercise.code }}">
+      <input type="hidden" name="remove" value="true">
+      <button type="submit" class="btn danger">Remove the personal deadline</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

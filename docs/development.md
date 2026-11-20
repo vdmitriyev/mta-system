@@ -38,6 +38,8 @@ Then change the values in `envs/webapp-dev-local.env`:
 | `SYSTEM_ADMINS` | E-mail addresses of the admins, separated by `;`. |
 | `ALLOWED_FQDN_FOR_EMAILS` | E-mail domains that can register, for example `uol.de;uni-oldenburg.de`. List each subdomain. Empty: all domains. |
 | `MTAS_DB_PATH` | SQLite file. Default: `data/mta-system.db`. |
+| `SUBMISSIONS_DIR` | Folder of the files that the users submit. Default: `submissions`. |
+| `SUBMISSION_MAX_FILE_MB`, `SUBMISSION_MAX_FILES` | Limit of one upload in MB (1 to 10, default 10) and files of a user per exercise (default 5). |
 | `MAIL_*` | SMTP server for the registration e-mail. The e-mails come from "modular teaching assistance system" (`MAIL_DEFAULT_SENDER`). Their subject starts with `[MTA-SYSTEM]`. |
 | `TARGET_SERVER` | `development` or `production`. |
 | `ENABLE_API_DOCS` | Switches the API docs on or off. See [API docs](#api-and-api-docs). |
@@ -151,7 +153,7 @@ task dev:nginx-reload         # checks the nginx configuration and reloads it
 * After a change in `provision/nginx/nginx-docker.conf`, run `task dev:nginx-recreate`.
 * After a change of the dependencies or the `Dockerfile`, run `task dev:app-recreate`. The app then needs a few seconds to start. Until then, nginx answers with 502.
 * After a change in `app/models.py`, create and apply a migration: `task db:migrate -- -m "what changed"`.
-* `setup/initial_exercises.csv` lists the exercises. Each exercise has a review part (`has_review`), a bonus part (`has_bonus`, `bonus_max_points`) or both.
+* `setup/initial_exercises.csv` lists the exercises. Each exercise can have a review part (`has_review`), a bonus part (`has_bonus`, `bonus_max_points`) and a submission part (`has_submission`, `submission_deadline`, `submission_email`). All columns are required: see `samples/initial_exercises.csv`. The admin page **Exercises** changes the exercises later.
 
 ### Commands
 
@@ -163,6 +165,7 @@ python -m app.cli --help
 | --- | --- |
 | `db-upgrade` | Creates or updates the SQLite database |
 | `db-migrate` | Creates a migration from the changes in the models |
+| `export-data-exercises` | Writes all exercises as CSV (format of `setup/initial_exercises.csv`), default `.backups/<date>-<time>-initial_exercises.csv` |
 | `db-backup` | Copies the SQLite database to `.backups/`. Other folder: `--dir <folder>` |
 | `import-data-exercises` | Imports the exercises from the CSV file |
 | `create-demo-db` | Creates the demo database and a read-only user in PostgreSQL |

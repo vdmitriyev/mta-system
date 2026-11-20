@@ -9,7 +9,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
 )
-from sqlalchemy.sql import func
+from sqlalchemy.sql import false, func
 
 from app.database import Base
 
@@ -246,6 +246,14 @@ class Exercises(Base):
     has_review = Column(Boolean, default=True, nullable=False)
     has_bonus = Column(Boolean, default=False, nullable=False)
     bonus_max_points = Column(Float, nullable=True)
+    # students can upload files (reports) until the deadline
+    has_submission = Column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
+    # students get an e-mail after each upload or delete
+    submission_email = Column(
+        Boolean, default=False, server_default=false(), nullable=False
+    )
     created_at = Column(DateTime, server_default=func.now())
 
 
@@ -283,6 +291,44 @@ class ExerciseBonusPoints(Base):
     is_addable = Column(Boolean, default=True, nullable=False)
     deleted = Column(Boolean, default=False, nullable=False)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class ExerciseSubmissions(Base):
+    """A file that a user uploaded for an exercise. The row stays after a delete."""
+
+    __tablename__ = "exercise_submissions"
+
+    itid = Column(Integer, primary_key=True)
+    exercise_id = Column(
+        Integer, ForeignKey("exercises.itid"), nullable=False, index=True
+    )
+    user_id = Column(Integer, ForeignKey("users.itid"), nullable=False, index=True)
+    # name of the file on the computer of the user
+    original_name = Column(String(255), nullable=False)
+    # name of the file in the folder of the user and exercise
+    stored_name = Column(String(255), nullable=False)
+    folder = Column(String(255), nullable=False)
+    size_bytes = Column(Integer, nullable=False)
+    sha256 = Column(String(64), nullable=False)
+    content_type = Column(String(100), nullable=False)
+    deleted = Column(Boolean, default=False, nullable=False)
+    deleted_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class SubmissionExtensions(Base):
+    """A later deadline for one user and exercise"""
+
+    __tablename__ = "submission_extensions"
+    __table_args__ = (UniqueConstraint("exercise_id", "user_id"),)
+
+    itid = Column(Integer, primary_key=True)
+    exercise_id = Column(Integer, ForeignKey("exercises.itid"), nullable=False)
+    user_id = Column(Integer, ForeignKey("users.itid"), nullable=False, index=True)
+    deadline = Column(DateTime, nullable=False)
+    note = Column(String(200))
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
 
 class UIVisibilitySettings(Base):

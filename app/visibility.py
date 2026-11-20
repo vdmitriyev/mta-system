@@ -65,6 +65,9 @@ VISIBILITY_ITEMS = [
         "reviews", MENU_CATEGORY, "Menu entries", "Reviews of the exercises"
     ),
     VisibilityItem("bonus", MENU_CATEGORY, "Menu entries", "Bonus points"),
+    VisibilityItem(
+        "submissions", MENU_CATEGORY, "Menu entries", "Submissions of the exercises"
+    ),
 ]
 VISIBILITY_INFO = {item.ui_key: item for item in VISIBILITY_ITEMS}
 

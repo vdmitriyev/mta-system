@@ -8,6 +8,7 @@ compose-claude.yaml
 temp/
 logs/*
 data/*
+/submissions/
 /favicon/
 *-data/*
 data-*/*

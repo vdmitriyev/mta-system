@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Submissions{% endblock %}
+{% block content %}
+{{ ui.page_head("Submissions", "Upload your solutions as PDF, TXT, MD or DOCX files. Until the deadline you can upload more files or delete them.") }}
+{% if not items %}
+  <div class="card empty">There are no exercises with submissions yet.</div>
+{% endif %}
+{% for item in items %}
+{% set exercise = item.exercise %}
+<details class="item"{% if item.open %} open{% endif %}>
+  <summary>
+    <span>{{ exercise.name or exercise.code }}</span>
+    <span class="row">
+      {% if item.files %}
+        <span class="badge success">{{ item.files | length }} file{{ "s" if item.files | length != 1 }}</span>
+      {% else %}
+        <span class="badge">no files</span>
+      {% endif %}
+      {% if item.open %}
+        <span class="badge info">open</span>
+      {% else %}
+        <span class="badge danger">closed</span>
+      {% endif %}
+    </span>
+  </summary>
+  <div class="body">
+    {% if exercise.description %}<p>{{ exercise.description }}</p>{% endif %}
+    <p>
+      {% if item.deadline %}
+        Deadline: <strong>{{ item.deadline.strftime("%Y-%m-%d %H:%M") }}</strong>
+        {% if item.extended %}<span class="badge warning">your personal deadline</span>{% endif %}
+      {% else %}
+        There is no deadline.
+      {% endif %}
+    </p>
+
+    {% if item.files %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>File</th><th class="num">Size</th><th>Uploaded</th><th></th></tr></thead>
+        <tbody>
+          {% for file in item.files %}
+          <tr>
+            <td><a href="/submissions/file/{{ file.itid }}">{{ ui.icon("download") }} {{ file.original_name }}</a></td>
+            <td class="num">{{ format_size(file.size_bytes) }}</td>
+            <td>{{ file.created_at.strftime("%Y-%m-%d %H:%M") if file.created_at else "" }}</td>
+            <td>
+              {% if item.open %}
+              <form method="post" action="/submissions/{{ exercise.code }}/delete" class="inline-form"
+                    data-confirm="Delete {{ file.original_name }}?">
+                {{ ui.csrf(csrf_token) }}
+                <input type="hidden" name="submission_id" value="{{ file.itid }}">
+                <button type="submit" class="btn sm danger">{{ ui.icon("trash") }} Delete</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if item.open %}
+      {% if item.files | length < max_files %}
+      <form class="form" method="post" action="/submissions/{{ exercise.code }}/upload"
+            enctype="multipart/form-data" data-max-upload="{{ max_mb * 1024 * 1024 }}">
+        {{ ui.csrf(csrf_token) }}
+        <div class="field">
+          <label for="files-{{ exercise.code }}">Files</label>
+          <input class="input" type="file" id="files-{{ exercise.code }}" name="files" accept="{{ accept }}" multiple required>
+          <span class="hint">PDF, TXT, MD or DOCX. At most {{ max_mb }} MB per upload, {{ max_files }} files per exercise.</span>
+          <span class="hint" data-upload-error hidden></span>
+        </div>
+        <div class="row">
+          <button type="submit" class="btn primary">Upload</button>
+        </div>
+      </form>
+      {% else %}
+      <p class="muted">You have uploaded {{ max_files }} files, the maximum. Delete a file to upload another one.</p>
+      {% endif %}
+    {% else %}
+      <p class="muted">The deadline has passed. You can no longer upload or delete files.</p>
+    {% endif %}
+  </div>
+</details>
+{% endfor %}
+{% endblock %}

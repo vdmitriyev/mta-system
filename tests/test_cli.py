@@ -1,3 +1,5 @@
+from datetime import datetime
+
 import pytest
 from click.testing import CliRunner
 from sqlalchemy import inspect
@@ -5,13 +7,17 @@ from sqlalchemy import inspect
 from app.cli import cli
 from app.cli.database import import_exercises
 from app.database import get_engine, init_engine, session_scope
+from app.exercises import exercise_csv_row
 from app.models import Exercises
 from tests.conftest import add_postgresql, add_user
 
-EXERCISES_CSV = """code;name;description;year;visible;exercise_order;submission_deadline;has_review;has_bonus;bonus_max_points
+EXERCISES_CSV = """code;name;description;year;visible;exercise_order;submission_deadline;has_review;has_bonus;bonus_max_points;has_submission;submission_email
+EX1;Data model;First exercise;2026;true;1;2026-11-30T23:59:00;true;true;5;true;true
+EX2;ETL process;;2026;false;2;;true;false;;false;false
+;No code;;;;;;;;;;
+"""
+OLD_EXERCISES_CSV = """code;name;description;year;visible;exercise_order;submission_deadline;has_review;has_bonus;bonus_max_points
 EX1;Data model;First exercise;2026;true;1;2026-11-30T23:59:00;true;true;5
-EX2;ETL process;;2026;false;2;;true;false;
-;No code;;;;;;;;
 """
 
 
@@ -35,6 +41,7 @@ def test_help_lists_all_commands(runner):
         "db-upgrade",
         "db-migrate",
         "import-data-exercises",
+        "export-data-exercises",
         "create-demo-db",
         "create-custom-db",
         "grant-public-schema",
@@ -100,6 +107,8 @@ def test_import_exercises(runner, exercises_file):
             False,
             None,
         )
+        assert (first.has_submission, first.submission_email) == (True, True)
+        assert (second.has_submission, second.submission_email) == (False, False)
 
     again = runner.invoke(cli, ["import-data-exercises", "--file", exercises_file])
     assert "new exercises: 0" in again.output
@@ -109,6 +118,27 @@ def test_import_exercises_without_file(runner):
     result = runner.invoke(cli, ["import-data-exercises", "--file", "no-such-file.csv"])
     assert result.exit_code == 0
     assert "was not found" in result.output
+
+
+def test_import_exercises_rejects_the_old_format(runner, tmp_path):
+    runner.invoke(cli, ["db-upgrade"])
+    path = tmp_path / "old.csv"
+    path.write_text(OLD_EXERCISES_CSV, encoding="utf-8")
+    result = runner.invoke(cli, ["import-data-exercises", "--file", str(path)])
+    # the container still starts (docker-entrypoint.sh)
+    assert result.exit_code == 0
+    assert "has_submission, submission_email" in result.output
+    with session_scope() as db:
+        assert db.query(Exercises).count() == 0
+
+
+def test_sample_exercises_have_all_columns():
+    from app.cli.database import missing_exercise_columns
+    from app.config import BASE_DIR
+
+    assert (
+        missing_exercise_columns(BASE_DIR / "samples" / "initial_exercises.csv") == []
+    )
 
 
 def test_import_exercises_function(db, exercises_file):
@@ -260,3 +290,51 @@ def test_check_mail_names_the_problem(runner, monkeypatch):
     assert result.exit_code == 1
     assert "Cannot connect to the SMTP server localhost:587" in result.output
     assert "VPN" in result.output
+
+
+def test_export_and_import_give_the_same_exercises(runner, tmp_path, monkeypatch):
+    from app.cli.database import missing_exercise_columns
+
+    runner.invoke(cli, ["db-upgrade"])
+    with session_scope() as db:
+        db.add(
+            Exercises(
+                code="EX7",
+                name='Report "final"; part 1',
+                description="Line one;\nline two",
+                year=2026,
+                visible=False,
+                exercise_order=7,
+                submission_deadline=datetime(2026, 12, 24, 18, 30),
+                has_review=False,
+                has_bonus=True,
+                bonus_max_points=2.5,
+                has_submission=True,
+                submission_email=True,
+            )
+        )
+        db.add(Exercises(code="EX8", name="Plain", exercise_order=8))
+        db.commit()
+
+    path = tmp_path / "export.csv"
+    result = runner.invoke(cli, ["export-data-exercises", "--file", str(path)])
+    assert result.exit_code == 0, result.output
+    assert "2 rows" in result.output
+    assert missing_exercise_columns(str(path)) == []
+
+    with session_scope() as db:
+        before = [exercise_csv_row(e) for e in db.query(Exercises).all()]
+        db.query(Exercises).delete()
+        db.commit()
+        assert import_exercises(db, str(path)) == 2
+        after = [exercise_csv_row(e) for e in db.query(Exercises).all()]
+    assert sorted(after, key=lambda r: r["code"]) == sorted(
+        before, key=lambda r: r["code"]
+    )
+
+    # without --file: into the backup folder, the setup file stays
+    monkeypatch.setattr("app.cli.database.BACKUP_DIR", tmp_path / "backups")
+    result = runner.invoke(cli, ["export-data-exercises"])
+    assert result.exit_code == 0, result.output
+    [backup] = (tmp_path / "backups").glob("*-initial_exercises.csv")
+    assert backup.read_text(encoding="utf-8") == path.read_text(encoding="utf-8")

@@ -1,6 +1,11 @@
+from datetime import datetime
+
 from app.exercises import (
+    EXERCISE_COLUMNS,
     PART_BONUS,
     PART_REVIEW,
+    exercise_csv_row,
+    exercises_csv,
     get_exercise,
     get_exercises,
     get_latest_bonus_points,
@@ -140,3 +145,29 @@ def test_default_visibility_needs_the_table(settings, tmp_path):
     init_engine(settings.database_url)
     with session_scope() as empty_db:
         add_default_ui_visibility_settings(empty_db)
+
+
+def test_exercise_as_csv_row(db):
+    exercise = add_exercise(
+        db,
+        "EX1",
+        submission_deadline=datetime(2026, 11, 30, 23, 59),
+        bonus_max_points=5.0,
+        has_submission=True,
+    )
+    row = exercise_csv_row(exercise)
+    assert list(row) == list(EXERCISE_COLUMNS)
+    assert row["submission_deadline"] == "2026-11-30T23:59:00"
+    assert (row["bonus_max_points"], row["year"], row["description"]) == ("5", "", "")
+    assert (row["has_submission"], row["submission_email"]) == ("true", "false")
+
+    exercise.bonus_max_points = 2.5
+    assert exercise_csv_row(exercise)["bonus_max_points"] == "2.5"
+
+
+def test_exercises_csv_has_all_exercises_in_order(db):
+    add_exercise(db, "B", order=2, visible=False)
+    add_exercise(db, "A", order=1)
+    lines = exercises_csv(db).splitlines()
+    assert lines[0] == ";".join(EXERCISE_COLUMNS)
+    assert [line.split(";")[0] for line in lines[1:]] == ["A", "B"]

@@ -1,3 +1,6 @@
+import csv
+import io
+
 import markdown
 from markupsafe import Markup
 from sqlalchemy.orm import Session
@@ -6,6 +9,23 @@ from app.models import ExerciseBonusPoints, ExerciseReviews, Exercises
 
 PART_REVIEW = "review"
 PART_BONUS = "bonus"
+
+# Columns of setup/initial_exercises.csv (import and export), separated by ";"
+EXERCISE_COLUMNS = (
+    "code",
+    "name",
+    "description",
+    "year",
+    "visible",
+    "exercise_order",
+    "submission_deadline",
+    "has_review",
+    "has_bonus",
+    "bonus_max_points",
+    "has_submission",
+    "submission_email",
+)
+CSV_DELIMITER = ";"
 
 
 def get_exercises(db: Session, part: str = None, only_visible: bool = False) -> list:
@@ -129,3 +149,39 @@ def get_user_bonus_points(db: Session, exercises: list, user_id: int) -> tuple:
         bonus_points.append(item)
 
     return bonus_points, bonus_total
+
+
+def _csv_value(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    if hasattr(value, "isoformat"):
+        return value.isoformat()
+    return str(value)
+
+
+def exercise_csv_row(exercise: Exercises) -> dict:
+    """The exercise as a row of the CSV file, in the format of the import"""
+
+    return {
+        column: _csv_value(getattr(exercise, column)) for column in EXERCISE_COLUMNS
+    }
+
+
+def exercises_csv(db: Session) -> str:
+    """All exercises (also the hidden ones) as CSV, ready for the import"""
+
+    output = io.StringIO()
+    writer = csv.DictWriter(
+        output,
+        fieldnames=EXERCISE_COLUMNS,
+        delimiter=CSV_DELIMITER,
+        lineterminator="\n",
+    )
+    writer.writeheader()
+    for exercise in get_exercises(db):
+        writer.writerow(exercise_csv_row(exercise))
+    return output.getvalue()

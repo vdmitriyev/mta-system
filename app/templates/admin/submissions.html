@@ -1,0 +1,56 @@
+{% extends "admin/base.html" %}
+{% block title %}Submissions{% endblock %}
+{% block admin %}
+{{ ui.page_head("Submissions", "Files that the users uploaded. Select a cell to see the files of a user and to give a later deadline.") }}
+{% if not exercises %}
+  <div class="card empty">No exercise has submissions. Switch them on at <a href="/mtas-admin/exercises">Exercises</a>.</div>
+{% else %}
+<p class="muted small">Folder on the server: <code>{{ folder }}</code> (<code>&lt;user&gt;/&lt;exercise&gt;/&lt;file&gt;</code>)</p>
+{{ ui.table_filter("submissions-table", rows | length) }}
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table" id="submissions-table">
+      <thead>
+        <tr>
+          <th data-sort="number">ID</th>
+          <th data-sort>Name</th>
+          {% for exercise in exercises %}
+          <th class="center" title="{{ exercise.name }}">
+            {{ exercise.code }}
+            <br><span class="muted small">{{ exercise.submission_deadline.strftime("%Y-%m-%d %H:%M") if exercise.submission_deadline else "no deadline" }}</span>
+            <br><span class="muted small">{{ totals[loop.index0] }} of {{ rows | length }}</span>
+            <br><a class="btn sm" href="/mtas-admin/submissions/zip/{{ exercise.code | urlencode }}" title="All files of {{ exercise.code }} as ZIP">{{ ui.icon("download") }} ZIP</a>
+          </th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+        <tr>
+          <td>{{ row.user.itid }}</td>
+          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          {% for cell in row.cells %}
+          {% set exercise = exercises[loop.index0] %}
+          <td class="center">
+            <a class="cell-link" href="/mtas-admin/submissions/detail?user={{ row.user.itid }}&amp;exercise={{ exercise.code | urlencode }}"
+               title="Files of {{ row.name }} for {{ exercise.name }}">
+              {% if cell and cell.count %}
+                <span class="badge success">{{ cell.count }}</span>
+              {% else %}
+                <span class="badge">0</span>
+              {% endif %}
+              {% if cell and cell.extension %}
+                <span class="badge warning" title="Personal deadline">{{ cell.extension.strftime("%m-%d %H:%M") }}</span>
+              {% endif %}
+            </a>
+          </td>
+          {% endfor %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
+</div>
+{% endif %}
+{% endblock %}

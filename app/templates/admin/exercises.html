@@ -1,0 +1,47 @@
+{% extends "admin/base.html" %}
+{% block title %}Exercises{% endblock %}
+{% block admin %}
+{{ ui.page_head("Exercises", "Exercises of the course with their parts and the deadline of the submissions. Select an exercise to change it.") }}
+<div class="row">
+  <a class="btn primary" href="/mtas-admin/exercises/edit">New exercise</a>
+  <a class="btn" href="/mtas-admin/exercises/export">{{ ui.icon("download") }} Download CSV</a>
+</div>
+<p class="muted small">The CSV file has all exercises in the format of <code>setup/initial_exercises.csv</code>. Keep it as a backup, or save it as <code>setup/initial_exercises.csv</code> for a new deployment.</p>
+<div class="card flush">
+  <div class="table-wrap">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Order</th>
+          <th>Code</th>
+          <th>Name</th>
+          <th>Deadline</th>
+          <th class="center">Visible</th>
+          <th class="center">Submissions</th>
+          <th class="center">E-mail</th>
+          <th class="center">Review</th>
+          <th class="center">Bonus</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for exercise in exercises %}
+        <tr>
+          <td>{{ exercise.exercise_order if exercise.exercise_order is not none else "" }}</td>
+          <td><span class="badge">{{ exercise.code }}</span></td>
+          <td>{{ exercise.name or "" }}</td>
+          <td>{{ exercise.submission_deadline.strftime("%Y-%m-%d %H:%M") if exercise.submission_deadline else "–" }}</td>
+          <td class="center">{{ ui.yes_no(exercise.visible) }}</td>
+          <td class="center">{{ ui.yes_no(exercise.has_submission) }}</td>
+          <td class="center">{{ ui.yes_no(exercise.submission_email) }}</td>
+          <td class="center">{{ ui.yes_no(exercise.has_review) }}</td>
+          <td class="center">{{ ui.yes_no(exercise.has_bonus) }}</td>
+          <td><a class="btn sm" href="/mtas-admin/exercises/edit?code={{ exercise.code | urlencode }}">{{ ui.icon("edit") }} Edit</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% if not exercises %}<div class="empty">No exercises yet. Add one, or import them with <code>task db:init</code>.</div>{% endif %}
+</div>
+{% endblock %}

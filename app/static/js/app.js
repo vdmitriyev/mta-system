@@ -112,9 +112,33 @@
   });
 
   // ----- forms: confirm, no double submit -----
+  function uploadTooLarge(form) {
+    if (!form.dataset.maxUpload) return false;
+    let total = 0;
+    each("input[type=file]", function (input) {
+      Array.prototype.forEach.call(input.files || [], function (file) {
+        total += file.size;
+      });
+    }, form);
+    const limit = Number(form.dataset.maxUpload);
+    const error = form.querySelector("[data-upload-error]");
+    const tooLarge = total > limit;
+    if (error) {
+      error.hidden = !tooLarge;
+      error.textContent = tooLarge
+        ? "The files are too large: " + (total / 1048576).toFixed(1) + " MB. Upload at most " + Math.round(limit / 1048576) + " MB at once."
+        : "";
+    }
+    return tooLarge;
+  }
+
   each("form", function (form) {
     form.addEventListener("submit", function (event) {
       if (form.dataset.confirm && !window.confirm(form.dataset.confirm)) {
+        event.preventDefault();
+        return;
+      }
+      if (uploadTooLarge(form)) {
         event.preventDefault();
         return;
       }

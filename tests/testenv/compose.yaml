@@ -48,6 +48,7 @@ services:
       SURVEYLITE_URL: https://localhost/surveylite/
     volumes:
       - app-data:/mta-system/data # own SQLite database
+      - submissions:/mta-system/submissions # files that the users submit
       - htpasswd:/mta-system/.htpasswd_nginx # logins for nginx (basic auth), as in production
       - /var/run/docker.sock:/var/run/docker.sock # starts the containers of the users
       - ${MTAS_HOST_DIR:-.}/.logs/testenv:/mta-system/.logs
@@ -216,6 +217,7 @@ networks:
 
 volumes:
   app-data:
+  submissions:
   htpasswd:
   pg15volume-database:
   mariadb-data:

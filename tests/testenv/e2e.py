@@ -1,4 +1,5 @@
-"""Checks the main flow of the test copy: register, log in, see the services, import a dataset.
+"""Checks the main flow of the test copy: register, log in, see the services, import a
+dataset, submit a file.
 
 Runs inside the app container: task testenv:check
 """
@@ -18,6 +19,7 @@ import psycopg2
 
 from app.config import get_settings
 from app.database import init_engine, session_scope
+from app.models import Exercises, ExerciseSubmissions
 from app.security import make_hash
 from app.users import find_user_by_email, get_user_services
 
@@ -131,3 +133,40 @@ with connection.cursor() as cursor:
     rows = cursor.fetchone()[0]
 connection.close()
 step(f"rows in the table flights of the user: {rows}", rows > 0)
+
+# submit a file for an exercise with an open deadline
+with session_scope() as db:
+    if db.query(Exercises).filter_by(code="E2E").first() is None:
+        db.add(
+            Exercises(code="E2E", name="E2E check", visible=True, has_submission=True)
+        )
+        db.commit()
+
+page = get("/submissions")
+boundary = uuid.uuid4().hex
+content = b"# E2E report\n"
+body = (
+    (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="csrf_token"\r\n\r\n'
+        f"{csrf(page)}\r\n"
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="files"; filename="report.md"\r\n'
+        "Content-Type: text/markdown\r\n\r\n"
+    ).encode()
+    + content
+    + f"\r\n--{boundary}--\r\n".encode()
+)
+request = urllib.request.Request(
+    BASE_URL + "/submissions/E2E/upload",
+    data=body,
+    headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+)
+with opener.open(request, timeout=60) as response:
+    page = response.read().decode()
+step("submission: upload of report.md", "Submitted: report.md" in page)
+
+with session_scope() as db:
+    row = db.query(ExerciseSubmissions).filter_by(user_id=user.itid).one()
+path = settings.submissions_dir / row.folder / row.stored_name
+step(f"submission: file on the volume {path}", path.read_bytes() == content)

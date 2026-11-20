@@ -771,6 +771,10 @@ a.card h3 {
   font-size: 0.85rem;
 }
 
+.field .hint[data-upload-error] {
+  color: var(--danger);
+}
+
 .input,
 textarea.input {
   width: 100%;
