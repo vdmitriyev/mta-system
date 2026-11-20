@@ -23,17 +23,26 @@ router = APIRouter(
 )
 
 
-def parse_deadline(value: str) -> datetime | None:
-    """Value of <input type="datetime-local">, e.g. 2026-11-30T23:59. Empty: None."""
+DEADLINE_FORMAT = "%d.%m.%Y %H:%M"
 
-    value = (value or "").strip()
+
+def parse_deadline(value: str) -> datetime | None:
+    """30.11.2026 23:59, 30.11.2026 (until 23:59) or ISO 2026-11-30T23:59. Empty: None."""
+
+    value = " ".join((value or "").split())
     if not value:
         return None
+    for fmt, end_of_day in ((DEADLINE_FORMAT, False), ("%d.%m.%Y", True)):
+        try:
+            parsed = datetime.strptime(value, fmt)
+        except ValueError:
+            continue
+        return parsed.replace(hour=23, minute=59) if end_of_day else parsed
     return datetime.fromisoformat(value).replace(second=0, microsecond=0)
 
 
 def deadline_input(value: datetime | None) -> str:
-    return value.strftime("%Y-%m-%dT%H:%M") if value else ""
+    return value.strftime(DEADLINE_FORMAT) if value else ""
 
 
 def exercise_or_404(page: Page, code: str) -> Exercises:
@@ -287,7 +296,7 @@ def submission_extension(
     submissions.set_extension(page.db, exercise_db, student.itid, parsed, note)
     flash(
         page.request,
-        f"New deadline for {student.email}: {parsed:%Y-%m-%d %H:%M}.",
+        f"New deadline for {student.email}: {parsed:%d.%m.%Y %H:%M}.",
         "success",
     )
     return redirect(_detail_url(student.itid, exercise_db.code))

@@ -2,6 +2,14 @@
 History
 =======
 
+2.5.2 (2026-11-20)
+-------------------
+
+* Admin: new date picker for deadlines. Weeks start on Monday, time in 24 hours, button **23:59**. Deadlines are entered as `DD.MM.YYYY HH:MM`, e.g. `30.11.2026 23:59`; only a date means 23:59 of that day.
+* All pages and the confirmation e-mail show date and time in European format: `30.11.2026 23:59`. The CSV file of the exercises keeps the ISO format (`2026-11-30T23:59:00`).
+* Page **Services**: the sample dataset buttons are now below the text, larger and blue.
+* Page **Submissions**: the table column **File** is now **Upload**.
+
 2.5.1 (2026-11-20)
 -------------------
 

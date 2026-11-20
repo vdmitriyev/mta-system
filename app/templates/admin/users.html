@@ -28,7 +28,7 @@
           <td>{{ row.user.internal_email }}</td>
           <td>{{ ui.yes_no(row.user.is_user_assigned, "registered", "prepared") }}</td>
           <td class="small">{{ row.services | join(", ") or "–" }}</td>
-          <td class="nowrap">{{ row.user.created_at.strftime("%Y-%m-%d %H:%M") if row.user.created_at else "" }}</td>
+          <td class="nowrap">{{ row.user.created_at.strftime("%d.%m.%Y %H:%M") if row.user.created_at else "" }}</td>
           <td>{{ ui.copy_button(row.access_url) }}</td>
           <td>
             {% if row.user.itid != user.itid %}

@@ -40,8 +40,11 @@
     <label class="check"><input type="checkbox" name="has_submission" {% if values.has_submission %}checked{% endif %}> The users can upload files (PDF, TXT, MD, DOCX)</label>
     <div class="field">
       <label for="submission_deadline">Deadline</label>
-      <input class="input short" type="datetime-local" id="submission_deadline" name="submission_deadline" value="{{ values.submission_deadline }}">
-      <span class="hint">Local time of the server. Empty: no deadline. After the deadline, the users cannot upload or delete files. Give single users a later deadline on the page <a href="/mtas-admin/submissions">Submissions</a>.</span>
+      <span class="datepicker">
+        <input class="input short" type="text" autocomplete="off" placeholder="DD.MM.YYYY HH:MM" data-datepicker id="submission_deadline" name="submission_deadline" value="{{ values.submission_deadline }}">
+        <button type="button" class="btn datepicker-toggle" aria-label="Choose the date" aria-expanded="false">{{ ui.icon("calendar") }}</button>
+      </span>
+      <span class="hint">Format DD.MM.YYYY HH:MM, e.g. 30.11.2026 23:59, local time of the server. Empty: no deadline. After the deadline, the users cannot upload or delete files. Give single users a later deadline on the page <a href="/mtas-admin/submissions">Submissions</a>.</span>
     </div>
     <label class="check"><input type="checkbox" name="submission_email" {% if values.submission_email %}checked{% endif %}> Send the user a confirmation e-mail after each upload and delete</label>
 

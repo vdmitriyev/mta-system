@@ -17,7 +17,7 @@
           {% for exercise in exercises %}
           <th class="center" title="{{ exercise.name }}">
             {{ exercise.code }}
-            <br><span class="muted small">{{ exercise.submission_deadline.strftime("%Y-%m-%d %H:%M") if exercise.submission_deadline else "no deadline" }}</span>
+            <br><span class="muted small">{{ exercise.submission_deadline.strftime("%d.%m.%Y %H:%M") if exercise.submission_deadline else "no deadline" }}</span>
             <br><span class="muted small">{{ totals[loop.index0] }} of {{ rows | length }}</span>
             <br><a class="btn sm" href="/mtas-admin/submissions/zip/{{ exercise.code | urlencode }}" title="All files of {{ exercise.code }} as ZIP">{{ ui.icon("download") }} ZIP</a>
           </th>
@@ -40,7 +40,7 @@
                 <span class="badge">0</span>
               {% endif %}
               {% if cell and cell.extension %}
-                <span class="badge warning" title="Personal deadline">{{ cell.extension.strftime("%m-%d %H:%M") }}</span>
+                <span class="badge warning" title="Personal deadline">{{ cell.extension.strftime("%d.%m. %H:%M") }}</span>
               {% endif %}
             </a>
           </td>

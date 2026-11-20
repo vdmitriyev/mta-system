@@ -455,9 +455,9 @@ def confirmation_text(
     if deadline:
         lines += [
             "",
-            f"Deadline: {deadline:%Y-%m-%d %H:%M}. Until then you can upload and delete files.",
+            f"Deadline: {deadline:%d.%m.%Y %H:%M}. Until then you can upload and delete files.",
         ]
-    lines += ["", "Time of this e-mail: " + datetime.now().strftime("%Y-%m-%d %H:%M")]
+    lines += ["", "Time of this e-mail: " + datetime.now().strftime("%d.%m.%Y %H:%M")]
     return "\n".join(lines)
 
 

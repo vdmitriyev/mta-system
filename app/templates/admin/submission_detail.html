@@ -8,7 +8,7 @@
       <div><dt>Student</dt><dd>{{ student_name }} <span class="muted small">{{ student.email }}</span></dd></div>
       <div><dt>Exercise</dt><dd>{{ exercise.name }} <span class="badge">{{ exercise.code }}</span></dd></div>
       <div><dt>Deadline</dt><dd>
-        {{ deadline.strftime("%Y-%m-%d %H:%M") if deadline else "no deadline" }}
+        {{ deadline.strftime("%d.%m.%Y %H:%M") if deadline else "no deadline" }}
         {% if extension %}<span class="badge warning">personal</span>{% endif %}
         {% if is_open %}<span class="badge info">open</span>{% else %}<span class="badge danger">closed</span>{% endif %}
       </dd></div>
@@ -23,14 +23,14 @@
           <tr{% if file.deleted %} class="muted"{% endif %}>
             <td>
               {% if file.deleted %}
-                <s>{{ file.original_name }}</s><br><span class="small">deleted {{ file.deleted_at.strftime("%Y-%m-%d %H:%M") if file.deleted_at else "" }}</span>
+                <s>{{ file.original_name }}</s><br><span class="small">deleted {{ file.deleted_at.strftime("%d.%m.%Y %H:%M") if file.deleted_at else "" }}</span>
               {% else %}
                 <a href="/mtas-admin/submissions/file/{{ file.itid }}">{{ ui.icon("download") }} {{ file.original_name }}</a>
                 <br><span class="muted small">{{ file.folder }}/{{ file.stored_name }}</span>
               {% endif %}
             </td>
             <td class="num">{{ format_size(file.size_bytes) }}</td>
-            <td>{{ file.created_at.strftime("%Y-%m-%d %H:%M") if file.created_at else "" }}</td>
+            <td>{{ file.created_at.strftime("%d.%m.%Y %H:%M") if file.created_at else "" }}</td>
             <td><code class="small" title="{{ file.sha256 }}">{{ file.sha256[:12] }}…</code></td>
             <td>
               {% if not file.deleted %}
@@ -56,7 +56,7 @@
   </section>
   <section class="card">
     <h2>Personal deadline</h2>
-    <p class="muted">Deadline of the exercise: {{ exercise.submission_deadline.strftime("%Y-%m-%d %H:%M") if exercise.submission_deadline else "none" }}.
+    <p class="muted">Deadline of the exercise: {{ exercise.submission_deadline.strftime("%d.%m.%Y %H:%M") if exercise.submission_deadline else "none" }}.
       A personal deadline replaces it for this user only.</p>
     <form class="form" method="post" action="/mtas-admin/submissions/extension">
       {{ ui.csrf(csrf_token) }}
@@ -64,7 +64,10 @@
       <input type="hidden" name="exercise" value="{{ exercise.code }}">
       <div class="field">
         <label for="deadline">New deadline</label>
-        <input class="input short" type="datetime-local" id="deadline" name="deadline" value="{{ extension_input }}" required>
+        <span class="datepicker">
+          <input class="input short" type="text" autocomplete="off" placeholder="DD.MM.YYYY HH:MM" data-datepicker id="deadline" name="deadline" value="{{ extension_input }}" required>
+          <button type="button" class="btn datepicker-toggle" aria-label="Choose the date" aria-expanded="false">{{ ui.icon("calendar") }}</button>
+        </span>
       </div>
       <div class="field">
         <label for="note">Note (for the admins)</label>

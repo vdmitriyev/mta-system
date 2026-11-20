@@ -111,6 +111,176 @@
     });
   });
 
+  // ----- date picker: DD.MM.YYYY HH:MM, weeks start on Monday -----
+  const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+    "August", "September", "October", "November", "December"];
+  const WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+
+  function pad(number) {
+    return String(number).padStart(2, "0");
+  }
+
+  function parseDate(text) {
+    const match = /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/.exec(text.trim());
+    if (!match) return null;
+    const date = new Date(+match[3], +match[2] - 1, +match[1],
+      match[4] === undefined ? 23 : +match[4], match[5] === undefined ? 59 : +match[5]);
+    return date.getDate() === +match[1] ? date : null;
+  }
+
+  function formatDate(date) {
+    return pad(date.getDate()) + "." + pad(date.getMonth() + 1) + "." + date.getFullYear() +
+      " " + pad(date.getHours()) + ":" + pad(date.getMinutes());
+  }
+
+  function element(tag, className, text) {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  each("input[data-datepicker]", function (input) {
+    const wrap = input.closest(".datepicker");
+    const toggle = wrap.querySelector(".datepicker-toggle");
+    const panel = element("div", "datepicker-panel");
+    panel.hidden = true;
+    wrap.appendChild(panel);
+
+    let selected = null;
+    let shown = new Date();
+
+    function hourMinute() {
+      return selected ? [selected.getHours(), selected.getMinutes()] : [23, 59];
+    }
+
+    function pick(year, month, day) {
+      const time = hourMinute();
+      selected = new Date(year, month, day, time[0], time[1]);
+      input.value = formatDate(selected);
+      draw();
+    }
+
+    function setTime(text) {
+      const match = /^(\d{1,2}):(\d{2})$/.exec(text.trim());
+      if (!match || +match[1] > 23 || +match[2] > 59) return false;
+      const base = selected || new Date();
+      selected = new Date(base.getFullYear(), base.getMonth(), base.getDate(), +match[1], +match[2]);
+      input.value = formatDate(selected);
+      draw();
+      return true;
+    }
+
+    function draw() {
+      panel.replaceChildren();
+      const head = element("div", "datepicker-head");
+      const previous = element("button", "btn sm", "‹");
+      const next = element("button", "btn sm", "›");
+      previous.type = next.type = "button";
+      previous.setAttribute("aria-label", "Previous month");
+      next.setAttribute("aria-label", "Next month");
+      previous.addEventListener("click", function () {
+        shown = new Date(shown.getFullYear(), shown.getMonth() - 1, 1);
+        draw();
+      });
+      next.addEventListener("click", function () {
+        shown = new Date(shown.getFullYear(), shown.getMonth() + 1, 1);
+        draw();
+      });
+      head.append(previous, element("strong", "", MONTHS[shown.getMonth()] + " " + shown.getFullYear()), next);
+      panel.appendChild(head);
+
+      const grid = element("div", "datepicker-grid");
+      WEEKDAYS.forEach(function (name) {
+        grid.appendChild(element("span", "datepicker-weekday", name));
+      });
+      const year = shown.getFullYear();
+      const month = shown.getMonth();
+      const offset = (new Date(year, month, 1).getDay() + 6) % 7;
+      for (let i = 0; i < offset; i += 1) grid.appendChild(element("span"));
+      const today = new Date();
+      const days = new Date(year, month + 1, 0).getDate();
+      for (let day = 1; day <= days; day += 1) {
+        const button = element("button", "datepicker-day", String(day));
+        button.type = "button";
+        if (day === today.getDate() && month === today.getMonth() && year === today.getFullYear()) {
+          button.classList.add("is-today");
+        }
+        if (selected && day === selected.getDate() && month === selected.getMonth() && year === selected.getFullYear()) {
+          button.classList.add("is-selected");
+        }
+        button.addEventListener("click", function () {
+          pick(year, month, day);
+        });
+        grid.appendChild(button);
+      }
+      panel.appendChild(grid);
+
+      const foot = element("div", "datepicker-foot");
+      const time = element("input", "input datepicker-time");
+      const current = hourMinute();
+      time.value = pad(current[0]) + ":" + pad(current[1]);
+      time.setAttribute("aria-label", "Time (HH:MM)");
+      time.maxLength = 5;
+      time.addEventListener("change", function () {
+        if (!setTime(time.value)) time.classList.add("is-invalid");
+      });
+      const endOfDay = element("button", "btn sm", "23:59");
+      const done = element("button", "btn sm primary", "Done");
+      const clear = element("button", "btn sm", "Clear");
+      endOfDay.type = done.type = clear.type = "button";
+      endOfDay.addEventListener("click", function () {
+        setTime("23:59");
+      });
+      clear.addEventListener("click", function () {
+        selected = null;
+        input.value = "";
+        close();
+      });
+      done.addEventListener("click", function () {
+        if (time.value && !setTime(time.value)) return;
+        close();
+      });
+      foot.append(time, endOfDay, clear, done);
+      panel.appendChild(foot);
+    }
+
+    function open() {
+      selected = parseDate(input.value);
+      shown = selected ? new Date(selected.getFullYear(), selected.getMonth(), 1) : new Date();
+      draw();
+      panel.hidden = false;
+      toggle.setAttribute("aria-expanded", "true");
+    }
+
+    function close() {
+      panel.hidden = true;
+      toggle.setAttribute("aria-expanded", "false");
+    }
+
+    toggle.addEventListener("click", function () {
+      if (panel.hidden) open();
+      else close();
+    });
+    input.addEventListener("blur", function () {
+      const date = parseDate(input.value);
+      if (date) input.value = formatDate(date);
+    });
+    document.addEventListener("click", function (event) {
+      if (!wrap.contains(event.target)) close();
+    });
+    wrap.addEventListener("keydown", function (event) {
+      if (event.key === "Escape") {
+        close();
+        toggle.focus();
+      }
+      if (event.key === "Enter" && event.target.classList.contains("datepicker-time")) {
+        event.preventDefault();
+        if (setTime(event.target.value)) close();
+      }
+    });
+  });
+
   // ----- forms: confirm, no double submit -----
   function uploadTooLarge(form) {
     if (!form.dataset.maxUpload) return false;

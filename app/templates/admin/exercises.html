@@ -30,7 +30,7 @@
           <td>{{ exercise.exercise_order if exercise.exercise_order is not none else "" }}</td>
           <td><span class="badge">{{ exercise.code }}</span></td>
           <td>{{ exercise.name or "" }}</td>
-          <td>{{ exercise.submission_deadline.strftime("%Y-%m-%d %H:%M") if exercise.submission_deadline else "–" }}</td>
+          <td>{{ exercise.submission_deadline.strftime("%d.%m.%Y %H:%M") if exercise.submission_deadline else "–" }}</td>
           <td class="center">{{ ui.yes_no(exercise.visible) }}</td>
           <td class="center">{{ ui.yes_no(exercise.has_submission) }}</td>
           <td class="center">{{ ui.yes_no(exercise.submission_email) }}</td>

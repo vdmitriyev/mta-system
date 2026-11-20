@@ -528,3 +528,34 @@ def test_migration_keeps_the_exercises(settings):
 
     command.downgrade(alembic_config(), "e3b7c1d9a2f4")
     assert "exercise_submissions" not in inspect(get_engine()).get_table_names()
+
+
+@pytest.mark.parametrize(
+    "value, expected",
+    [
+        ("30.11.2026 23:59", datetime(2026, 11, 30, 23, 59)),
+        (" 1.2.2027  8:05 ", datetime(2027, 2, 1, 8, 5)),
+        ("30.11.2026", datetime(2026, 11, 30, 23, 59)),
+        ("2026-11-30T23:59", datetime(2026, 11, 30, 23, 59)),
+        ("", None),
+    ],
+)
+def test_parse_deadline_european(value, expected):
+    from app.routers.admin_submissions import parse_deadline
+
+    assert parse_deadline(value) == expected
+
+
+def test_parse_deadline_invalid():
+    from app.routers.admin_submissions import parse_deadline
+
+    with pytest.raises(ValueError):
+        parse_deadline("31.02.2026 12:00")
+
+
+def test_exercise_form_shows_european_deadline(admin_client, db, exercise):
+    exercise.submission_deadline = datetime(2026, 11, 30, 23, 59)
+    db.commit()
+    text = admin_client.get("/mtas-admin/exercises/edit?code=EX01").text
+    assert 'value="30.11.2026 23:59"' in text
+    assert "data-datepicker" in text
