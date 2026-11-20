@@ -118,6 +118,7 @@ def test_bonus_points_total_counts_only_addable_points(db):
     bonuses, total = get_user_bonus_points(db, [first, second, third], user.itid)
     assert total == 3.5
     assert [item["points"] for item in bonuses] == [3.5, 2.0, 0.0]
+    assert [item["is_set"] for item in bonuses] == [True, True, False]
     assert bonuses[0]["max_points"] == 5.0
     assert get_latest_bonus_points(db, user.itid, third.itid) is None
 

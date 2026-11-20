@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
 {% block title %}Bonus points{% endblock %}
 {% block admin %}
-{{ ui.page_head("Bonus points", "Select a cell to change the points. Struck-out points do not count for the total.") }}
+{{ ui.page_head("Bonus points", "Select a cell to change the points. Green: points are saved. –: no points yet. Struck-out points do not count for the total.") }}
 {% if not exercises %}
   <div class="card empty">There are no exercises with a bonus part. Import them with <code>task db:init</code>.</div>
 {% else %}
@@ -31,7 +31,11 @@
           <td class="num">
             <a class="cell-link" href="/mtas-admin/bonus/edit?user={{ row.user.itid }}&amp;exercise={{ item.code }}"
                title="Bonus points of {{ row.name }} for {{ item.name }}">
-              <span class="{{ 'struck' if not item.is_addable and item.points else '' }}">{{ item.points }}</span>
+              {% if item.is_set %}
+              <span class="badge success{{ ' struck' if not item.is_addable }}">{{ item.points }}</span>
+              {% else %}
+              <span class="muted">–</span>
+              {% endif %}
               {{ ui.icon("edit") }}
             </a>
           </td>

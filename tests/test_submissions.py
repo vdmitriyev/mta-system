@@ -463,6 +463,44 @@ def test_admin_sees_files_downloads_and_zips(client, db, exercise, settings):
         assert archive.read(archive.namelist()[0]) == PDF
 
 
+def test_admin_previews_pdfs_in_the_browser(client, db, exercise, student, settings):
+    add_user(db, email=ADMIN_EMAIL, pin="9999", number=2)
+    login(client)
+    upload(
+        client,
+        [
+            ("report.pdf", PDF, "application/pdf"),
+            ("notes.md", b"# Notes\n", "text/markdown"),
+        ],
+    )
+    pdf, note = sorted(
+        active_rows(db), key=lambda row: row.original_name != "report.pdf"
+    )
+    client.cookies.clear()
+    login(client, email=ADMIN_EMAIL, pin="9999")
+
+    detail = page_text(
+        client, f"/mtas-admin/submissions/detail?user={student.itid}&exercise=EX01"
+    )
+    assert f'src="/mtas-admin/submissions/file/{pdf.itid}?inline=true"' in detail
+    assert "Personal deadline" in detail.split("pdf-preview", 1)[1]
+
+    response = client.get(f"/mtas-admin/submissions/file/{pdf.itid}?inline=true")
+    assert response.content == PDF
+    assert response.headers["content-disposition"].startswith("inline")
+    assert response.headers.get_list("x-frame-options") == ["SAMEORIGIN"]
+    assert response.headers.get_list("content-security-policy") == [
+        "frame-ancestors 'self'"
+    ]
+    assert (
+        client.get(f"/mtas-admin/submissions/file/{note.itid}?inline=true").status_code
+        == 404
+    )
+    download = client.get(f"/mtas-admin/submissions/file/{pdf.itid}")
+    assert download.headers["content-disposition"].startswith("attachment")
+    assert download.headers["x-frame-options"] == "DENY"
+
+
 def test_admin_zip_without_files(admin_client, exercise):
     response = admin_client.get(
         "/mtas-admin/submissions/zip/EX01", follow_redirects=False

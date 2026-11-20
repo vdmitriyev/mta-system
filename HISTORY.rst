@@ -2,6 +2,13 @@
 History
 =======
 
+2.5.3 (2026-11-20)
+-------------------
+
+* Admin page of a submission: the list of files has the full width, the personal deadline is below it. PDF files have a **Preview** button and are shown in the page (the first PDF at once), with a link to open them in a new tab.
+* Admin page **Edit review**: new panel **Bonus points** (for exercises with a bonus part). The admin saves the review and the bonus points on one page.
+* Bonus points: a cell without saved points shows `–` (before: `0.0`). Saved points are green, on the admin page and on the page of the user.
+
 2.5.2 (2026-11-20)
 -------------------
 

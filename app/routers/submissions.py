@@ -171,13 +171,31 @@ def download(
     return file_response(row)
 
 
-def file_response(row) -> FileResponse:
-    """The file as a download (never shown in the browser)"""
+PDF_TYPE = "application/pdf"
+# the admin page shows the PDF in a frame; nothing else may embed it
+PREVIEW_HEADERS = {
+    "Content-Security-Policy": "frame-ancestors 'self'",
+    "X-Frame-Options": "SAMEORIGIN",
+}
 
+
+def file_response(row, inline: bool = False) -> FileResponse:
+    """The file as a download. inline: a PDF shown in the browser."""
+
+    if inline and row.content_type != PDF_TYPE:
+        raise HTTPException(status_code=404)
     try:
         path = submissions.file_path(row)
     except submissions.SubmissionError:
         raise HTTPException(status_code=404)
     if not path.is_file():
         raise HTTPException(status_code=404)
+    if inline:
+        return FileResponse(
+            path,
+            media_type=PDF_TYPE,
+            filename=row.original_name,
+            content_disposition_type="inline",
+            headers=PREVIEW_HEADERS,
+        )
     return FileResponse(path, media_type=row.content_type, filename=row.original_name)

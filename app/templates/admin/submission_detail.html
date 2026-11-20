@@ -2,7 +2,7 @@
 {% block title %}Submission{% endblock %}
 {% block admin %}
 {{ ui.page_head("Submission") }}
-<div class="grid two">
+<div class="stack">
   <section class="card">
     <dl class="kv">
       <div><dt>Student</dt><dd>{{ student_name }} <span class="muted small">{{ student.email }}</span></dd></div>
@@ -32,8 +32,11 @@
             <td class="num">{{ format_size(file.size_bytes) }}</td>
             <td>{{ file.created_at.strftime("%d.%m.%Y %H:%M") if file.created_at else "" }}</td>
             <td><code class="small" title="{{ file.sha256 }}">{{ file.sha256[:12] }}…</code></td>
-            <td>
+            <td class="nowrap">
               {% if not file.deleted %}
+              {% if file.content_type == pdf_type %}
+              <a class="btn sm{% if preview and preview.itid == file.itid %} primary{% endif %}" href="{{ detail_url }}&amp;preview={{ file.itid }}#preview">{{ ui.icon("eye") }} Preview</a>
+              {% endif %}
               <form method="post" action="/mtas-admin/submissions/delete" class="inline-form"
                     data-confirm="Delete {{ file.original_name }} of {{ student.email }}? The file is removed from the server.">
                 {{ ui.csrf(csrf_token) }}
@@ -54,6 +57,15 @@
       <a class="btn" href="/mtas-admin/submissions">Back to the submissions</a>
     </div>
   </section>
+  {% if preview %}
+  <section class="card" id="preview">
+    <div class="row between">
+      <h2>Preview: {{ preview.original_name }}</h2>
+      <a class="btn sm" href="/mtas-admin/submissions/file/{{ preview.itid }}?inline=true" target="_blank" rel="noopener">{{ ui.icon("external") }} Open in a new tab</a>
+    </div>
+    <iframe class="pdf-preview" src="/mtas-admin/submissions/file/{{ preview.itid }}?inline=true" title="Preview of {{ preview.original_name }}"></iframe>
+  </section>
+  {% endif %}
   <section class="card">
     <h2>Personal deadline</h2>
     <p class="muted">Deadline of the exercise: {{ exercise.submission_deadline.strftime("%d.%m.%Y %H:%M") if exercise.submission_deadline else "none" }}.

@@ -22,7 +22,7 @@
           <td>{{ loop.index }}</td>
           <td>{{ item.name }}</td>
           <td class="num">
-            {% if item.visible and item.is_addable %}{{ item.points }}{% else %}<span class="muted">–</span>{% endif %}
+            {% if item.visible and item.is_addable %}<span class="badge success">{{ item.points }}</span>{% else %}<span class="muted">–</span>{% endif %}
           </td>
           <td class="num muted">{{ item.max_points if item.max_points is not none else "–" }}</td>
         </tr>

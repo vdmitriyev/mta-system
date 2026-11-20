@@ -899,6 +899,17 @@ textarea.input {
   align-items: flex-start;
 }
 
+.pdf-preview {
+  display: block;
+  width: 100%;
+  height: 80vh;
+  min-height: 24rem;
+  margin-top: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+}
+
 /* ---------- date picker ---------- */
 
 .datepicker {

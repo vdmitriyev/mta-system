@@ -69,9 +69,13 @@ class SecurityHeadersMiddleware:
                 headers = dict(SECURITY_HEADERS)
                 if not scope["path"].startswith(DOCS_PATHS):
                     headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
-                message["headers"] = list(message.get("headers", [])) + [
+                own = list(message.get("headers", []))
+                # a response may set its own value, e.g. the PDF preview
+                present = {name.lower() for name, _ in own}
+                message["headers"] = own + [
                     (name.lower().encode(), value.encode())
                     for name, value in headers.items()
+                    if name.lower().encode() not in present
                 ]
             await send(message)
 

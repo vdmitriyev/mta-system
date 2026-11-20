@@ -176,6 +176,11 @@ def _review_edit(page: Page, user_id, exercise_code: str):
         exercise=exercise,
         review=review,
         preview=render_review_content(review) if review else None,
+        bonus=(
+            get_latest_bonus_points(page.db, student.itid, exercise.itid)
+            if exercise.has_bonus
+            else None
+        ),
     )
 
 
@@ -254,15 +259,22 @@ def bonus_edit(
     points: str = Form(""),
     visible: bool = Form(False),
     is_addable: bool = Form(False),
+    back: str = Form(""),
 ):
     exercise_db = get_exercise(page.db, exercise)
     if exercise_db is None:
         raise HTTPException(status_code=404)
     student = get_course_user(page.db, user)
+    # the form is also on the page of the review
+    page_url = "reviews" if back == "review" else "bonus"
+    target = f"/mtas-admin/{page_url}/edit?user={student.itid}&exercise={exercise}"
 
     try:
         value = float(points.replace(",", "."))
     except ValueError:
+        if back == "review":
+            flash(page.request, "Enter the bonus points as a number.", "danger")
+            return redirect(target)
         return _bonus_edit(
             page, user, exercise, status_code=400, error="Enter the points as a number."
         )
@@ -278,7 +290,7 @@ def bonus_edit(
     )
     page.db.commit()
     flash(page.request, "The bonus points were saved.", "success")
-    return redirect(f"/mtas-admin/bonus/edit?user={student.itid}&exercise={exercise}")
+    return redirect(target)
 
 
 def _managed_service(service: str) -> str:

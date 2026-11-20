@@ -138,11 +138,15 @@ def get_user_bonus_points(db: Session, exercises: list, user_id: int) -> tuple:
             "points": 0.0,
             "visible": False,
             "is_addable": False,
+            "is_set": False,
         }
         entry = get_latest_bonus_points(db, user_id, exercise.itid)
         if entry is not None:
             item.update(
-                points=entry.points, visible=entry.visible, is_addable=entry.is_addable
+                points=entry.points,
+                visible=entry.visible,
+                is_addable=entry.is_addable,
+                is_set=True,
             )
             if entry.is_addable:
                 bonus_total += entry.points

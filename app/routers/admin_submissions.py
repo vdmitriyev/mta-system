@@ -11,7 +11,7 @@ from starlette.background import BackgroundTask
 from app import submissions
 from app.exercises import exercises_csv, get_exercise, get_exercises
 from app.models import Exercises, Users
-from app.routers.submissions import file_response
+from app.routers.submissions import PDF_TYPE, file_response
 from app.security import csrf_protect
 from app.users import course_users, email_to_name
 from app.web import Page, flash, redirect, require_admin
@@ -252,17 +252,27 @@ def _detail_url(user_id: int, code: str) -> str:
 
 
 @router.get("/submissions/detail")
-def submission_detail(user: int, exercise: str, page: Page = Depends()):
+def submission_detail(
+    user: int, exercise: str, page: Page = Depends(), preview: int | None = None
+):
     exercise_db = exercise_or_404(page, exercise)
     student = student_or_404(page, user)
     deadline = submissions.effective_deadline(page.db, exercise_db, student.itid)
     extension = submissions.get_extension(page.db, exercise_db.itid, student.itid)
+    files = submissions.all_submissions(page.db, student.itid, exercise_db.itid)
+    pdfs = [row for row in files if not row.deleted and row.content_type == PDF_TYPE]
+    shown = next(
+        (row for row in pdfs if row.itid == preview), pdfs[0] if pdfs else None
+    )
     return page.render(
         "admin/submission_detail.html",
         student=student,
         student_name=email_to_name(student.email),
         exercise=exercise_db,
-        files=submissions.all_submissions(page.db, student.itid, exercise_db.itid),
+        files=files,
+        preview=shown,
+        pdf_type=PDF_TYPE,
+        detail_url=_detail_url(student.itid, exercise_db.code),
         deadline=deadline,
         is_open=submissions.is_open(deadline),
         extension=extension,
@@ -317,11 +327,11 @@ def submission_delete(page: Page = Depends(), submission_id: int = Form(...)):
 
 
 @router.get("/submissions/file/{submission_id}")
-def submission_file(submission_id: int, page: Page = Depends()):
+def submission_file(submission_id: int, page: Page = Depends(), inline: bool = False):
     row = submissions.get_submission(page.db, submission_id)
     if row is None or row.deleted:
         raise HTTPException(status_code=404)
-    return file_response(row)
+    return file_response(row, inline=inline)
 
 
 @router.get("/submissions/zip/{code}")

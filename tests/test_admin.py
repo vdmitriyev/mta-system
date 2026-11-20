@@ -164,11 +164,12 @@ def test_reviews_overview_without_exercises(admin_client):
 
 
 def test_edit_review(admin_client, db, admin, student):
-    add_exercise(db, "EX1", "Data model")
+    add_exercise(db, "EX1", "Data model", has_bonus=False)
     url = f"/mtas-admin/reviews/edit?user={student.itid}&exercise=EX1"
     page = admin_client.get(url)
     assert page.status_code == 200
     assert "No review is saved yet" in page.text
+    assert 'name="back"' not in page.text
     assert page.text.count("checked") == 3
 
     response = post(
@@ -212,6 +213,32 @@ def test_each_save_adds_a_review_row(admin_client, db, admin, student):
     )
 
 
+def test_bonus_points_on_the_review_page(admin_client, db, admin, student):
+    add_exercise(db, "EX1", bonus_max_points=5.0)
+    url = f"/mtas-admin/reviews/edit?user={student.itid}&exercise=EX1"
+    page = admin_client.get(url).text
+    assert "No bonus points are saved yet" in page
+    assert 'name="back" value="review"' in page and 'value="5.0"' in page
+
+    data = {"user": student.itid, "exercise": "EX1", "back": "review"}
+    response = post(admin_client, "/mtas-admin/bonus/edit", {**data, "points": "x"})
+    assert response.headers["location"] == url
+    assert db.query(ExerciseBonusPoints).count() == 0
+    assert "Enter the bonus points as a number" in admin_client.get(url).text
+
+    response = post(
+        admin_client,
+        "/mtas-admin/bonus/edit",
+        {**data, "points": "2,5", "visible": "on", "is_addable": "on"},
+    )
+    assert response.headers["location"] == url
+    entry = db.query(ExerciseBonusPoints).one()
+    assert (entry.points, entry.visible, entry.is_addable) == (2.5, True, True)
+    page = admin_client.get(url).text
+    assert "The bonus points were saved" in page
+    assert "Saved: <strong>2.5</strong>" in page
+
+
 @pytest.mark.parametrize("kind", ["reviews", "bonus"])
 def test_edit_pages_for_unknown_user_or_exercise(
     admin_client, db, admin, student, kind
@@ -244,6 +271,7 @@ def test_edit_pages_for_unknown_user_or_exercise(
 def test_bonus_overview(admin_client, db, admin, student):
     first = add_exercise(db, "EX1", "Data model")
     second = add_exercise(db, "EX2", "ETL", order=2)
+    add_exercise(db, "EX3", "Without points", order=3)
     db.add(
         ExerciseBonusPoints(user_id=student.itid, exercise_id=first.itid, points=4.0)
     )
@@ -256,8 +284,10 @@ def test_bonus_overview(admin_client, db, admin, student):
 
     text = admin_client.get("/mtas-admin/bonus").text
     assert "<strong>4.0</strong>" in text
-    assert '<span class="struck">2.0</span>' in text
+    assert '<span class="badge success struck">2.0</span>' in text
+    assert '<span class="badge success">4.0</span>' in text
     assert f"/mtas-admin/bonus/edit?user={student.itid}&amp;exercise=EX2" in text
+    assert '<span class="muted">–</span>' in text
 
 
 def test_bonus_overview_without_exercises(admin_client):

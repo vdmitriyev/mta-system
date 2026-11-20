@@ -312,7 +312,7 @@ def test_bonus_page(student_client, db, student):
     text = student_client.get("/bonus").text
     assert "Data model" in text and "ETL process" in text
     assert "No bonus" not in text
-    assert ">4.5<" in text.replace(" ", "").replace("\n", "")
+    assert '<span class="badge success">4.5</span>' in text
     assert "6.5" in text
 
 
