@@ -40,6 +40,8 @@ Then change the values in `envs/webapp-dev-local.env`:
 | `MTAS_DB_PATH` | SQLite file. Default: `data/mta-system.db`. |
 | `SUBMISSIONS_DIR` | Folder of the files that the users submit. Default: `submissions`. |
 | `SUBMISSION_MAX_FILE_MB`, `SUBMISSION_MAX_FILES` | Limit of one upload in MB (1 to 10, default 10) and files of a user per exercise (default 5). |
+| `DOWNLOADS_DIR` | Folder of the files on the admin page **Downloads**. Default: `data/downloads`. |
+| `BACKUP_KEEP` | Backups of each kind that `db-backup` keeps; it deletes the older ones. `0`: keeps all. Default: `14`. |
 | `MAIL_*` | SMTP server for the registration e-mail. The e-mails come from "modular teaching assistance system" (`MAIL_DEFAULT_SENDER`). Their subject starts with `[MTA-SYSTEM]`. |
 | `TARGET_SERVER` | `development` or `production`. |
 | `ENABLE_API_DOCS` | Switches the API docs on or off. See [API docs](#api-and-api-docs). |
@@ -129,7 +131,7 @@ task app:serve    # runs the app on http://127.0.0.1:5353 and reloads on code ch
 | `task app:cli -- <command>` | Runs a command of the app, see [Commands](#commands) |
 | `task app:config` | Checks the settings and shows them without secrets |
 | `task app:create-admins` | Creates the accounts of `SYSTEM_ADMINS`, prints the login data and sends it by e-mail |
-| `task db:backup` | Copies the SQLite database to `.backups/<date>-<time>-<name>` |
+| `task db:backup` | Copies the SQLite database to `.backups/<date>-<time>-<name>`, and the submitted files to `.backups/<date>-<time>-submissions.tar.gz` |
 
 ### Run in Docker for development
 
@@ -166,8 +168,8 @@ python -m app.cli --help
 | `db-upgrade` | Creates or updates the SQLite database |
 | `db-migrate` | Creates a migration from the changes in the models |
 | `export-data-exercises` | Writes all exercises as CSV (format of `setup/initial_exercises.csv`), default `.backups/<date>-<time>-initial_exercises.csv` |
-| `db-backup` | Copies the SQLite database to `.backups/`. Other folder: `--dir <folder>` |
-| `import-data-exercises` | Imports the exercises from the CSV file |
+| `db-backup` | Copies the SQLite database, the submitted files and the downloads (`tar.gz`) to `.backups/`. Other folder: `--dir <folder>`. Only the database: `--no-files`. Keeps the newest `BACKUP_KEEP` backups of each kind (`--keep <n>`) |
+| `import-data-exercises` | Imports the exercises from the CSV file. `--update`: also changes the exercises that exist |
 | `create-demo-db` | Creates the demo database and a read-only user in PostgreSQL |
 | `create-custom-db` | Creates a database with its own user in PostgreSQL |
 | `grant-public-schema` | Lets all users create tables in their database |

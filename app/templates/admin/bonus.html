@@ -13,6 +13,7 @@
         <tr>
           <th data-sort="number">ID</th>
           <th data-sort>Name</th>
+          <th data-sort>E-mail</th>
           <th>Login link</th>
           <th class="num" data-sort="number">Total</th>
           {% for exercise in exercises %}
@@ -24,7 +25,8 @@
         {% for row in rows %}
         <tr>
           <td>{{ row.user.itid }}</td>
-          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.user.email }}</td>
           <td>{{ ui.copy_button(row.access_url) }}</td>
           <td class="num"><strong>{{ row.bonus_total }}</strong></td>
           {% for item in row.bonuses %}

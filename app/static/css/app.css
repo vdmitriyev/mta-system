@@ -364,6 +364,18 @@ main {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr));
 }
 
+/* two columns of the same width, one below the other on small screens */
+.grid.halves {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+}
+
+@media (max-width: 960px) {
+  .grid.halves {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 /* admin: a block of settings with a heading (e.g. Visibility) */
 .settings-category {
   margin-bottom: 2rem;
@@ -636,6 +648,11 @@ a.card h3 {
   font-size: 0.85rem;
 }
 
+.btn[aria-disabled="true"] {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
 .btn:disabled {
   opacity: 0.6;
   cursor: progress;
@@ -897,17 +914,6 @@ textarea.input {
 .card-foot.stacked {
   flex-direction: column;
   align-items: flex-start;
-}
-
-.pdf-preview {
-  display: block;
-  width: 100%;
-  height: 80vh;
-  min-height: 24rem;
-  margin-top: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--surface-2);
 }
 
 /* ---------- date picker ---------- */

@@ -1,7 +1,9 @@
 """SQLite database of the app (users, exercises, reviews, bonus points, settings)."""
 
 import os
+import re
 import sqlite3
+import tarfile
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
@@ -94,4 +96,40 @@ def backup_sqlite(db_file: Path, backup_dir: Path) -> Path:
     finally:
         copy.close()
         source.close()
+    return target
+
+
+def prune_backups(backup_dir: Path, name: str, keep: int) -> list:
+    """Deletes the oldest <YYYYmmdd-HHMMSS>-<name> files, so that keep files stay.
+
+    keep 0: nothing is deleted. Returns the deleted files.
+    """
+
+    if keep <= 0 or not backup_dir.is_dir():
+        return []
+    pattern = re.compile(r"^\d{8}-\d{6}-" + re.escape(name) + "$")
+    files = sorted(
+        (path for path in backup_dir.iterdir() if pattern.match(path.name)),
+        key=lambda path: path.name,
+        reverse=True,
+    )
+    removed = files[keep:]
+    for path in removed:
+        path.unlink()
+    return removed
+
+
+def pack_folder(folder: Path, backup_dir: Path, name: str) -> Path | None:
+    """Writes the folder to <backup_dir>/<YYYYmmdd-HHMMSS>-<name>.tar.gz.
+
+    None: the folder does not exist.
+    """
+
+    if not folder.is_dir():
+        return None
+    backup_dir.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    target = backup_dir / f"{stamp}-{name}.tar.gz"
+    with tarfile.open(target, "w:gz") as archive:
+        archive.add(folder, arcname=name)
     return target

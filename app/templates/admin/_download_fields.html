@@ -1,0 +1,29 @@
+{# Fields of a download (add and edit). item: none for a new download #}
+{% macro download_fields(item, exercises, accept, allowed, max_mb) %}
+<div class="field">
+  <label for="file">{{ "New file (optional)" if item else "File" }}</label>
+  <input class="input" type="file" id="file" name="file" accept="{{ accept }}" {% if not item %}required{% endif %}>
+  <span class="hint">{{ allowed }}, at most {{ max_mb }} MB.{% if item %} Empty: the file stays.{% endif %}</span>
+  <span class="hint" data-upload-error hidden></span>
+</div>
+<div class="field">
+  <label for="title">Title</label>
+  <input class="input" type="text" id="title" name="title" maxlength="200" value="{{ item.title if item else '' }}" {% if item %}required{% endif %}>
+  {% if not item %}<span class="hint">Empty: the name of the file.</span>{% endif %}
+</div>
+<div class="field">
+  <label for="description">Description</label>
+  <input class="input" type="text" id="description" name="description" value="{{ item.description if item and item.description else '' }}">
+</div>
+<div class="field">
+  <label for="exercise">Bonus exercise</label>
+  <select class="input short" id="exercise" name="exercise">
+    <option value="">None</option>
+    {% for exercise in exercises %}
+    <option value="{{ exercise.code }}"{% if item and item.exercise_id == exercise.itid %} selected{% endif %}>{{ exercise.code }} – {{ exercise.name }}</option>
+    {% endfor %}
+  </select>
+  <span class="hint">The users see the exercise, its maximum and their bonus points next to the file. Only exercises with a bonus part.</span>
+</div>
+<label class="check"><input type="checkbox" name="visible" {% if not item or item.visible %}checked{% endif %}> The users can see the file</label>
+{% endmacro %}

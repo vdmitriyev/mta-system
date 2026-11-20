@@ -9,7 +9,8 @@ import requests
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 
-from app import config, provisioning
+from app import config, provisioning, submissions
+from app.admin_log import ACTION_LABELS, log_action, recent_actions
 from app.config import get_settings
 from app.exercises import (
     PART_BONUS,
@@ -54,6 +55,7 @@ from app.users import (
     generate_accounts_task,
     get_user_services,
     login_history,
+    neighbours,
 )
 from app.visibility import change_ui_visibility_settings, grouped_visibility_rows
 from app.web import Page, flash, redirect, require_admin
@@ -147,6 +149,7 @@ def user_delete(page: Page = Depends(), user_id: int = Form(...)):
         flash(page.request, "You cannot delete your own account.", "danger")
         return redirect("/mtas-admin/users")
     email, stopped = delete_user(page.db, student)
+    log_action(page.db, page.user, "user_deleted", student.itid, details=email)
     message = f"{email} was deleted. The e-mail address can register again."
     if stopped:
         message += f" Stopped containers: {', '.join(stopped)}."
@@ -155,12 +158,53 @@ def user_delete(page: Page = Depends(), user_id: int = Form(...)):
 
 
 @router.get("/reviews")
-def reviews_page(page: Page = Depends()):
+def reviews_page(page: Page = Depends(), todo: bool = False):
+    """todo: only the users with files that are not reviewed yet"""
+
     exercises = get_exercises(page.db, part=PART_REVIEW)
+    with_files = submissions.users_with_files(
+        page.db, [exercise.itid for exercise in exercises if exercise.has_submission]
+    )
     rows = user_rows(page.db)
     for row in rows:
         row["reviews"] = get_user_reviews(page.db, exercises, row["user"].itid)
-    return page.render("admin/reviews.html", rows=rows, exercises=exercises)
+        for exercise, item in zip(exercises, row["reviews"]):
+            item["to_review"] = (
+                row["user"].itid,
+                exercise.itid,
+            ) in with_files and not item["reviewed"]
+        row["to_review"] = sum(item["to_review"] for item in row["reviews"])
+    open_reviews = sum(row["to_review"] for row in rows)
+    if todo:
+        rows = [row for row in rows if row["to_review"]]
+    return page.render(
+        "admin/reviews.html",
+        rows=rows,
+        exercises=exercises,
+        todo=todo,
+        open_reviews=open_reviews,
+    )
+
+
+def review_neighbours(page: Page, exercise, user_id: int) -> dict:
+    """Previous and next user in the order of the table Reviews.
+
+    Exercise with submissions: only the users with files.
+    """
+
+    order = [user.itid for user in course_users(page.db)]
+    included = None
+    if exercise.has_submission:
+        included = {
+            itid for itid, _ in submissions.users_with_files(page.db, [exercise.itid])
+        }
+    result = neighbours(order, user_id, included)
+    for key in ("previous", "next"):
+        if result[key] is not None:
+            result[key] = (
+                f"/mtas-admin/reviews/edit?user={result[key]}&exercise={exercise.code}"
+            )
+    return result
 
 
 def _review_edit(page: Page, user_id, exercise_code: str):
@@ -169,6 +213,17 @@ def _review_edit(page: Page, user_id, exercise_code: str):
         raise HTTPException(status_code=404)
     student = get_course_user(page.db, user_id)
     review = get_latest_review(page.db, student.itid, exercise.itid)
+    files = (
+        submissions.active_submissions(page.db, student.itid, exercise.itid)
+        if exercise.has_submission
+        else []
+    )
+    if review is not None:
+        submitted = review.submitted
+    elif exercise.has_submission:
+        submitted = bool(files)
+    else:
+        submitted = True
     return page.render(
         "admin/review_edit.html",
         student=student,
@@ -176,6 +231,10 @@ def _review_edit(page: Page, user_id, exercise_code: str):
         exercise=exercise,
         review=review,
         preview=render_review_content(review) if review else None,
+        submitted=submitted,
+        files=files,
+        neighbours=review_neighbours(page, exercise, student.itid),
+        format_size=submissions.format_size,
         bonus=(
             get_latest_bonus_points(page.db, student.itid, exercise.itid)
             if exercise.has_bonus
@@ -215,6 +274,14 @@ def review_edit(
         )
     )
     page.db.commit()
+    log_action(
+        page.db,
+        page.user,
+        "review",
+        student.itid,
+        exercise_db.code,
+        f"submitted={submitted}, reviewed={reviewed}, visible={visible}",
+    )
     flash(page.request, "The review was saved.", "success")
     return redirect(f"/mtas-admin/reviews/edit?user={student.itid}&exercise={exercise}")
 
@@ -246,6 +313,18 @@ def _bonus_edit(page: Page, user_id, exercise_code: str, status_code=200, error=
     )
 
 
+def bonus_points_error(points: str, max_points: float | None) -> str | None:
+    try:
+        value = float(points.replace(",", "."))
+    except ValueError:
+        return "Enter the bonus points as a number."
+    if value != value or value < 0:
+        return "Enter the bonus points as a number of 0 or more."
+    if max_points is not None and value > max_points:
+        return f"The bonus points can be at most {max_points:g}."
+    return None
+
+
 @router.get("/bonus/edit")
 def bonus_edit_form(user: int, exercise: str, page: Page = Depends()):
     return _bonus_edit(page, user, exercise)
@@ -269,15 +348,13 @@ def bonus_edit(
     page_url = "reviews" if back == "review" else "bonus"
     target = f"/mtas-admin/{page_url}/edit?user={student.itid}&exercise={exercise}"
 
-    try:
-        value = float(points.replace(",", "."))
-    except ValueError:
+    error = bonus_points_error(points, exercise_db.bonus_max_points)
+    if error:
         if back == "review":
-            flash(page.request, "Enter the bonus points as a number.", "danger")
+            flash(page.request, error, "danger")
             return redirect(target)
-        return _bonus_edit(
-            page, user, exercise, status_code=400, error="Enter the points as a number."
-        )
+        return _bonus_edit(page, user, exercise, status_code=400, error=error)
+    value = float(points.replace(",", "."))
 
     page.db.add(
         ExerciseBonusPoints(
@@ -289,6 +366,14 @@ def bonus_edit(
         )
     )
     page.db.commit()
+    log_action(
+        page.db,
+        page.user,
+        "bonus",
+        student.itid,
+        exercise_db.code,
+        f"points={value:g}, visible={visible}, counts={is_addable}",
+    )
     flash(page.request, "The bonus points were saved.", "success")
     return redirect(target)
 
@@ -465,6 +550,18 @@ def logins_page(page: Page = Depends(), user_id: int | None = None):
     )
 
 
+@router.get("/actions")
+def actions_page(page: Page = Depends(), user_id: int | None = None):
+    """What the admins changed: the newest entries, of all users or of one user"""
+
+    return page.render(
+        "admin/actions.html",
+        entries=recent_actions(page.db, user_id=user_id),
+        labels=ACTION_LABELS,
+        filter_user_id=user_id,
+    )
+
+
 @router.get("/monitoring")
 def monitoring_page(page: Page = Depends()):
     return page.render(
@@ -525,6 +622,7 @@ def visibility_change(
     page: Page = Depends(), ui_key: str = Form(...), visible: bool = Form(...)
 ):
     if change_ui_visibility_settings(page.db, ui_key, visible):
+        log_action(page.db, page.user, "visibility", details=f"{ui_key}={visible}")
         state = "shown" if visible else "hidden"
         flash(page.request, f"“{ui_key}” is now {state}.", "success")
     else:
@@ -568,6 +666,7 @@ def auto_creation_change(
     except ServiceSettingError as error:
         flash(page.request, str(error), "danger")
     else:
+        log_action(page.db, page.user, "auto_creation", details=f"{service}={on}")
         name = SERVICE_INFO[service].name
         state = "now creates" if on else "no longer creates"
         flash(

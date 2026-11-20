@@ -386,3 +386,21 @@ def login_history(db: Session, user_id: int | None = None, limit: int = 200) -> 
     if user_id is not None:
         query = query.filter(LoginHistory.user_id == user_id)
     return query.order_by(LoginHistory.itid.desc()).limit(limit).all()
+
+
+def neighbours(order: list, current: int, included=None) -> dict:
+    """Previous and next ID around current in order, only of the included IDs.
+
+    included None: all IDs. Returns {"previous", "next", "number", "count"}.
+    """
+
+    listed = [itid for itid in order if included is None or itid in included]
+    position = order.index(current) if current in order else len(order)
+    before = [itid for itid in listed if order.index(itid) < position]
+    after = [itid for itid in listed if order.index(itid) > position]
+    return {
+        "previous": before[-1] if before else None,
+        "next": after[0] if after else None,
+        "number": listed.index(current) + 1 if current in listed else None,
+        "count": len(listed),
+    }

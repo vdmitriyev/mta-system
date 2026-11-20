@@ -128,7 +128,8 @@ def test_default_visibility_settings_are_added_once(db):
     add_default_ui_visibility_settings(db)
     settings = ui_visibility_settings(db)
     assert len(settings) == len(DEFAULT_UI_VISIBILITY_SETTINGS)
-    assert all(settings.values())
+    # all are shown at the start, only the page Downloads is off
+    assert [key for key, visible in settings.items() if not visible] == ["downloads"]
     assert len(ui_visibility_rows(db)) == len(settings)
 
 

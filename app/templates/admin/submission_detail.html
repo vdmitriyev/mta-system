@@ -1,7 +1,10 @@
 {% extends "admin/base.html" %}
 {% block title %}Submission{% endblock %}
+{% from "admin/_files.html" import file_link, file_buttons %}
 {% block admin %}
 {{ ui.page_head("Submission") }}
+{% set step_text = ("Submission " ~ neighbours.number ~ " of " ~ neighbours.count ~ " for " ~ exercise.code) if neighbours.number else (neighbours.count ~ " users with files for " ~ exercise.code) %}
+{{ ui.prev_next(neighbours, step_text, "Submissions of " ~ exercise.code) }}
 <div class="stack">
   <section class="card">
     <dl class="kv">
@@ -17,7 +20,7 @@
     {% if files %}
     <div class="table-wrap">
       <table class="table">
-        <thead><tr><th>File</th><th class="num">Size</th><th>Uploaded</th><th>SHA-256</th><th></th></tr></thead>
+        <thead><tr><th>File</th><th>Path on the server</th><th class="num">Size</th><th>Uploaded</th><th>SHA-256</th><th></th></tr></thead>
         <tbody>
           {% for file in files %}
           <tr{% if file.deleted %} class="muted"{% endif %}>
@@ -25,18 +28,20 @@
               {% if file.deleted %}
                 <s>{{ file.original_name }}</s><br><span class="small">deleted {{ file.deleted_at.strftime("%d.%m.%Y %H:%M") if file.deleted_at else "" }}</span>
               {% else %}
-                <a href="/mtas-admin/submissions/file/{{ file.itid }}">{{ ui.icon("download") }} {{ file.original_name }}</a>
-                <br><span class="muted small">{{ file.folder }}/{{ file.stored_name }}</span>
+                {{ file_link(file) }}
+                {% for match in same_files.get(file.itid, []) %}
+                <br><a class="badge danger" href="/mtas-admin/submissions/detail?user={{ match.user.itid }}&amp;exercise={{ match.exercise.code | urlencode }}"
+                       title="The same file (same SHA-256) as {{ match.file.original_name }}">Same file as {{ match.user.email }} ({{ match.exercise.code }})</a>
+                {% endfor %}
               {% endif %}
             </td>
+            <td>{% if not file.deleted %}<code class="small">{{ file.folder }}/{{ file.stored_name }}</code>{% endif %}</td>
             <td class="num">{{ format_size(file.size_bytes) }}</td>
             <td>{{ file.created_at.strftime("%d.%m.%Y %H:%M") if file.created_at else "" }}</td>
             <td><code class="small" title="{{ file.sha256 }}">{{ file.sha256[:12] }}…</code></td>
             <td class="nowrap">
               {% if not file.deleted %}
-              {% if file.content_type == pdf_type %}
-              <a class="btn sm{% if preview and preview.itid == file.itid %} primary{% endif %}" href="{{ detail_url }}&amp;preview={{ file.itid }}#preview">{{ ui.icon("eye") }} Preview</a>
-              {% endif %}
+              {{ file_buttons(file) }}
               <form method="post" action="/mtas-admin/submissions/delete" class="inline-form"
                     data-confirm="Delete {{ file.original_name }} of {{ student.email }}? The file is removed from the server.">
                 {{ ui.csrf(csrf_token) }}
@@ -57,15 +62,6 @@
       <a class="btn" href="/mtas-admin/submissions">Back to the submissions</a>
     </div>
   </section>
-  {% if preview %}
-  <section class="card" id="preview">
-    <div class="row between">
-      <h2>Preview: {{ preview.original_name }}</h2>
-      <a class="btn sm" href="/mtas-admin/submissions/file/{{ preview.itid }}?inline=true" target="_blank" rel="noopener">{{ ui.icon("external") }} Open in a new tab</a>
-    </div>
-    <iframe class="pdf-preview" src="/mtas-admin/submissions/file/{{ preview.itid }}?inline=true" title="Preview of {{ preview.original_name }}"></iframe>
-  </section>
-  {% endif %}
   <section class="card">
     <h2>Personal deadline</h2>
     <p class="muted">Deadline of the exercise: {{ exercise.submission_deadline.strftime("%d.%m.%Y %H:%M") if exercise.submission_deadline else "none" }}.

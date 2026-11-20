@@ -27,7 +27,14 @@ from app.users import (
     register_user_task,
 )
 from app.visibility import ui_visibility_settings
-from tests.conftest import STUDENT_EMAIL, add_exercise, add_postgresql, add_user, post
+from tests.conftest import (
+    ADMIN_EMAIL,
+    STUDENT_EMAIL,
+    add_exercise,
+    add_postgresql,
+    add_user,
+    post,
+)
 
 ADMIN_PAGES = [
     "/mtas-admin/",
@@ -310,6 +317,30 @@ def test_edit_bonus_points(admin_client, db, admin, student):
     entry = db.query(ExerciseBonusPoints).one()
     assert (entry.points, entry.visible, entry.is_addable) == (3.5, True, False)
     assert 'value="3.5"' in admin_client.get(url).text
+
+
+@pytest.mark.parametrize(
+    "points, message",
+    [("6", "at most 5"), ("-1", "0 or more"), ("nan", "0 or more")],
+)
+def test_bonus_points_within_the_maximum(
+    admin_client, db, admin, student, points, message
+):
+    add_exercise(db, "EX1", bonus_max_points=5.0)
+    response = post(
+        admin_client,
+        "/mtas-admin/bonus/edit",
+        {"user": student.itid, "exercise": "EX1", "points": points},
+    )
+    assert response.status_code == 400
+    assert message in response.text
+    assert db.query(ExerciseBonusPoints).count() == 0
+    response = post(
+        admin_client,
+        "/mtas-admin/bonus/edit",
+        {"user": student.itid, "exercise": "EX1", "points": "5"},
+    )
+    assert response.status_code == 303
 
 
 def test_bonus_points_must_be_a_number(admin_client, db, admin, student):
@@ -742,7 +773,16 @@ def test_unknown_visibility_keys_are_in_other(db):
     groups = grouped_visibility_rows(db)
     assert list(groups) == ["Services", "Menu", "Other"]
     assert [label for _row, label in groups["Other"]["Other"]] == ["Old part"]
-    assert list(groups["Services"])[:3] == ["PostgreSQL", "pgAdmin 4", "Metabase"]
+    assert list(groups["Services"])[:8] == [
+        "PostgreSQL",
+        "pgAdmin 4",
+        "sqlmate",
+        "Metabase",
+        "OpenRefine",
+        "MariaDB",
+        "WordPress",
+        "SurveyLite",
+    ]
 
 
 def test_visibility_columns_line_up(admin_client):
@@ -855,3 +895,49 @@ def test_delete_user_stops_the_containers(admin_client, db, admin, student, dock
         "Stopped containers: metabase-3001"
         in admin_client.get("/mtas-admin/users").text
     )
+
+
+def test_services_are_in_the_same_order_in_the_admin_ui():
+    from app.models import SERVICE_MODELS
+    from app.service_settings import SERVICES
+
+    order = [
+        "postgresql",
+        "pgadmin4",
+        "sqlmate",
+        "metabase",
+        "openrefine",
+        "mariadb",
+        "wordpress",
+        "surveylite",
+    ]
+    assert [s.key for s in SERVICES if not s.deprecated] == order
+    assert list(SERVICE_MODELS)[: len(order)] == order
+
+
+def test_admin_log_lists_the_changes(admin_client, db, admin, student):
+    from app.models import AdminActions
+
+    add_exercise(db, "EX1", bonus_max_points=5.0)
+    post(
+        admin_client,
+        "/mtas-admin/reviews/edit",
+        {"user": student.itid, "exercise": "EX1", "content": "ok", "reviewed": "on"},
+    )
+    post(
+        admin_client,
+        "/mtas-admin/bonus/edit",
+        {"user": student.itid, "exercise": "EX1", "points": "4"},
+    )
+    post(
+        admin_client, "/mtas-admin/visibility", {"ui_key": "bonus", "visible": "false"}
+    )
+    actions = db.query(AdminActions).order_by(AdminActions.itid).all()
+    assert [entry.action for entry in actions] == ["review", "bonus", "visibility"]
+    assert {entry.admin_email for entry in actions} == {ADMIN_EMAIL}
+    assert actions[1].details.startswith("points=4")
+
+    page = admin_client.get("/mtas-admin/actions").text
+    assert "Bonus points saved" in page and "Review saved" in page
+    only = admin_client.get(f"/mtas-admin/actions?user_id={student.itid}").text
+    assert "Visibility changed" not in only and "Review saved" in only

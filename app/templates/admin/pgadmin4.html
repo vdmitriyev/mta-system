@@ -20,6 +20,7 @@
         <tr>
           <th data-sort="number">ID</th>
           <th data-sort>Name</th>
+          <th data-sort>E-mail</th>
           <th data-sort>Login</th>
           <th data-sort>Account</th>
           <th data-sort title="Is the login with the stored password in the login file?">Login file</th>
@@ -32,7 +33,8 @@
         {% set entry = row.entry %}
         <tr>
           <td>{{ row.user.itid }}</td>
-          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.user.email }}</td>
           <td><code>{{ entry.pgadmin4_user if entry else "–" }}</code></td>
           <td>
             {% if not entry %}<span class="badge">none</span>

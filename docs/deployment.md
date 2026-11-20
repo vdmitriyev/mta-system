@@ -28,7 +28,7 @@ Before you go live:
 1. Use new random values for `SECRET_KEY`, `HASH_KEY_LINKS`, `HASH_KEY_HIDDEN` and all passwords in `envs/`.
 2. Set `SERVER_FQDN`, `SYSTEM_ADMINS`, `ALLOWED_FQDN_FOR_EMAILS` and `MAIL_*`.
 3. Only nginx (`80`, `443`) and PostgreSQL (`5432`, or `POSTGRESQL_PUBLIC_PORT`) are open to all networks. Use a strong `POSTGRES_PASSWORD` in `envs/postgresql-service.env`. Open `5432` in the firewall only for the networks that need it.
-4. Back up `.backups/` (see [Backup of the database](#backup-of-the-database)), `submissions/` and `.htpasswd_nginx/`.
+4. Back up `.backups/` (see [Backup of the database](#backup-of-the-database)) and `.htpasswd_nginx/`.
 
 `TARGET_SERVER=production` switches off the debug pages and the API docs. The session cookie then works only over HTTPS.
 
@@ -40,7 +40,8 @@ Before you go live:
 | `task prod:logs -- <service>` | Shows the logs. Without `-- <service>`: all services. |
 | `task prod:build` | Builds the images of the app and nginx. |
 | `task prod:migrate` | Applies the migrations to the database of the app. |
-| `task prod:backup` | Copies the database of the app to `.backups/`. |
+| `task prod:backup` | Copies the database of the app, the submitted files and the downloads to `.backups/`, and deletes the oldest backups (`BACKUP_KEEP`, default 14 of each kind). Only the database: `task prod:backup -- --no-files`. |
+| `task prod:import-exercises` | Imports `setup/initial_exercises.csv`. With `-- --update` it also changes the exercises that exist. |
 | `task prod:export-exercises` | Writes the exercises as CSV to `.backups/`. |
 | `task prod:create-admins` | Creates the accounts of `SYSTEM_ADMINS`. Prints the login data and sends it by e-mail. |
 | `task prod:cert` | Gets a Let's Encrypt certificate for `SERVER_FQDN` and restarts nginx. |
@@ -117,7 +118,11 @@ To update a server from pgAdmin 8.x (mta-system 2.4.2 or older):
 
 ### Backup of the database
 
-`task prod:backup` copies the SQLite database of the app to `.backups/`, for example `.backups/20261113-201500-mta-system.db`. The name starts with the date and time.
+`task prod:backup` copies the SQLite database of the app to `.backups/`, for example `.backups/20261113-201500-mta-system.db`. It also packs the folder `submissions/` into `.backups/20261113-201500-submissions.tar.gz`. The names start with the date and time.
+
+* It also packs the files of the admin page **Downloads** (`data/downloads/`) into `<date>-<time>-downloads.tar.gz`.
+* Only the database: `task prod:backup -- --no-files`.
+* It keeps the newest 14 backups of each kind and deletes the older ones. Change the number with `BACKUP_KEEP` in the env file (`0`: keep all), or once with `task prod:backup -- --keep 30`. Other files in `.backups/`, e.g. the CSV of the exercises, stay.
 
 * The copy is complete also while the app runs.
 * Git and the Docker image do not include `.backups/`.
@@ -134,8 +139,23 @@ Students upload their reports on the page **Submissions**: PDF, TXT, MD or DOCX 
 * The files are in `submissions/` on the host (`SUBMISSIONS_DIR` in the container): `<user-id>_<name>/<EXERCISE_CODE>/<file>`, for example `submissions/0007_sam.student/EX01/report.pdf`.
 * One upload has at most 10 MB. The app checks it, and nginx rejects larger uploads (`client_max_body_size 11M` for `/submissions/<code>/upload`).
 * The deadline is the local time of the server (`TZ` in `compose.prod.yaml`).
-* `task prod:backup` does not copy `submissions/`. Back up this folder on its own.
+* `task prod:backup` packs `submissions/` into `.backups/<date>-<time>-submissions.tar.gz`.
+* The admin page **Submissions** shows the size of the files, in total and per exercise, and the free space on the disk.
 * The page needs the menu entry **Submissions** on the admin page **Visibility** (on by default).
+
+### Downloads
+
+The admin page **Downloads** offers files to the users: PDF, ZIP, MD, TXT or SQL, at most 50 MB per file.
+
+* The users do not see the page at first. Switch it on at **Visibility** → **Menu: Downloads**.
+* The users see the files in the order of the admin page. ↑ and ↓ change it.
+* A file can belong to an exercise with a bonus part. The users then see the exercise, its maximum and their own bonus points (if visible) next to the file.
+* A file that is not visible stays on the server, e.g. the solution until the deadline.
+* The files are in `data/downloads/` (`DOWNLOADS_DIR`), in the folder of the database. `task prod:backup` packs them.
+
+### Admin log
+
+The admin page **Admin log** lists the newest 300 changes of the admins: reviews, bonus points, personal deadlines, deleted files, exercises, downloads, visibility and auto creation. A click on a user ID shows only the changes for this user.
 
 ### Exercises as CSV
 
@@ -143,7 +163,7 @@ Changes on the admin page **Exercises** are stored in the database only. **Downl
 
 * Keep the file as a backup, or save it as `setup/initial_exercises.csv` for a new deployment.
 * On the server: `task prod:export-exercises` writes the file to `.backups/<date>-<time>-initial_exercises.csv`.
-* The import adds only exercises with a new code. It does not change existing exercises. Use the file for a new (empty) database.
+* The import adds only exercises with a new code. To change the exercises that exist to the values of the file: save it as `setup/initial_exercises.csv` and run `task prod:import-exercises -- --update`.
 
 ### Login history
 

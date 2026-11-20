@@ -1,0 +1,44 @@
+{% extends "admin/base.html" %}
+{% block title %}Admin log{% endblock %}
+{% block admin %}
+{{ ui.page_head("Admin log", "The newest 300 changes of the admins: reviews, bonus points, deadlines, deleted files, exercises, downloads and settings. The ID is the user ID on the page Users.") }}
+{% if filter_user_id is not none %}
+<p class="row">
+  <span>Only user_id <strong>{{ filter_user_id }}</strong>.</span>
+  <a href="/mtas-admin/actions">Show all users</a>
+</p>
+{% endif %}
+{{ ui.table_filter("actions-table", entries | length) }}
+<div class="card flush">
+  {% if not entries %}
+    <div class="empty">No changes yet.</div>
+  {% else %}
+  <div class="table-wrap">
+    <table class="table" id="actions-table">
+      <thead>
+        <tr>
+          <th data-sort>Time (UTC)</th>
+          <th data-sort>Admin</th>
+          <th data-sort>Action</th>
+          <th data-sort="number">user_id</th>
+          <th data-sort>Exercise</th>
+          <th>Details</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for entry in entries %}
+        <tr>
+          <td class="nowrap">{{ entry.created_at.strftime("%d.%m.%Y %H:%M:%S") if entry.created_at else "" }}</td>
+          <td>{{ entry.admin_email }}</td>
+          <td>{{ labels.get(entry.action, entry.action) }}</td>
+          <td>{% if entry.user_id is not none %}<a href="/mtas-admin/actions?user_id={{ entry.user_id }}">{{ entry.user_id }}</a>{% else %}–{% endif %}</td>
+          <td>{% if entry.exercise_code %}<span class="badge">{{ entry.exercise_code }}</span>{% endif %}</td>
+          <td class="small">{{ entry.details or "" }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

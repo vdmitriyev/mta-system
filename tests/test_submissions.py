@@ -446,6 +446,9 @@ def test_admin_sees_files_downloads_and_zips(client, db, exercise, settings):
 
     overview = page_text(client, "/mtas-admin/submissions")
     assert "1 of 2" in overview
+    head, foot = overview.split("<tfoot>")
+    assert "/mtas-admin/submissions/zip/EX01" in foot
+    assert "/mtas-admin/submissions/zip/EX01" not in head
     assert f"/mtas-admin/submissions/detail?user={student.itid}&amp;exercise=EX01" in (
         overview
     )
@@ -463,7 +466,7 @@ def test_admin_sees_files_downloads_and_zips(client, db, exercise, settings):
         assert archive.read(archive.namelist()[0]) == PDF
 
 
-def test_admin_previews_pdfs_in_the_browser(client, db, exercise, student, settings):
+def test_admin_opens_pdfs_in_a_new_tab(client, db, exercise, student, settings):
     add_user(db, email=ADMIN_EMAIL, pin="9999", number=2)
     login(client)
     upload(
@@ -482,23 +485,22 @@ def test_admin_previews_pdfs_in_the_browser(client, db, exercise, student, setti
     detail = page_text(
         client, f"/mtas-admin/submissions/detail?user={student.itid}&exercise=EX01"
     )
-    assert f'src="/mtas-admin/submissions/file/{pdf.itid}?inline=true"' in detail
-    assert "Personal deadline" in detail.split("pdf-preview", 1)[1]
+    assert "<iframe" not in detail
+    inline = (
+        f'href="/mtas-admin/submissions/file/{pdf.itid}?inline=true" target="_blank"'
+    )
+    assert detail.count(inline) == 2  # the name and Preview
+    assert f'href="/mtas-admin/submissions/file/{note.itid}?inline=true"' not in detail
+    assert detail.count("Download</a>") == 2
 
     response = client.get(f"/mtas-admin/submissions/file/{pdf.itid}?inline=true")
     assert response.content == PDF
     assert response.headers["content-disposition"].startswith("inline")
-    assert response.headers.get_list("x-frame-options") == ["SAMEORIGIN"]
-    assert response.headers.get_list("content-security-policy") == [
-        "frame-ancestors 'self'"
-    ]
-    assert (
-        client.get(f"/mtas-admin/submissions/file/{note.itid}?inline=true").status_code
-        == 404
-    )
+    assert response.headers["x-frame-options"] == "DENY"
+    url = f"/mtas-admin/submissions/file/{note.itid}?inline=true"
+    assert client.get(url).status_code == 404
     download = client.get(f"/mtas-admin/submissions/file/{pdf.itid}")
     assert download.headers["content-disposition"].startswith("attachment")
-    assert download.headers["x-frame-options"] == "DENY"
 
 
 def test_admin_zip_without_files(admin_client, exercise):
@@ -597,3 +599,118 @@ def test_exercise_form_shows_european_deadline(admin_client, db, exercise):
     text = admin_client.get("/mtas-admin/exercises/edit?code=EX01").text
     assert 'value="30.11.2026 23:59"' in text
     assert "data-datepicker" in text
+
+
+def test_review_page_shows_the_files_and_ticks_submitted(client, db, exercise, student):
+    exercise.has_review = True
+    db.commit()
+    add_user(db, email=ADMIN_EMAIL, pin="9999", number=2)
+    url = f"/mtas-admin/reviews/edit?user={student.itid}&exercise=EX01"
+
+    login(client, email=ADMIN_EMAIL, pin="9999")
+    page = client.get(url).text
+    assert "The user has not uploaded files" in page
+    assert 'name="submitted" >' in page
+
+    client.cookies.clear()
+    login(client)
+    upload(client, [("report.pdf", PDF, "application/pdf")])
+    row = active_rows(db)[0]
+    client.cookies.clear()
+    login(client, email=ADMIN_EMAIL, pin="9999")
+
+    page = client.get(url).text
+    assert 'name="submitted" checked' in page
+    assert "Preview of the review (HTML)" in page
+    assert f'href="/mtas-admin/submissions/file/{row.itid}"' in page
+    assert f'href="/mtas-admin/submissions/file/{row.itid}?inline=true"' in page
+    assert "<iframe" not in page
+
+
+def test_admin_page_shows_the_storage(client, db, exercise, student):
+    add_user(db, email=ADMIN_EMAIL, pin="9999", number=2)
+    login(client)
+    upload(client, [("report.pdf", PDF, "application/pdf")])
+    client.cookies.clear()
+    login(client, email=ADMIN_EMAIL, pin="9999")
+    text = page_text(client, "/mtas-admin/submissions")
+    assert "Files: <strong>0.1 KB</strong>" in text
+    assert "free on the disk" in text
+
+
+def test_admin_goes_to_the_previous_and_next_submission(client, db, exercise, student):
+    second = add_user(db, email="tom.student@uni.example", pin="2222", number=3)
+    add_user(db, email=ADMIN_EMAIL, pin="9999", number=2)
+    login(client)
+    upload(client, [("report.pdf", PDF, "application/pdf")])
+    client.cookies.clear()
+    login(client, email="tom.student@uni.example", pin="2222")
+    upload(client, [("notes.md", b"# Notes\n", "text/markdown")])
+    client.cookies.clear()
+    login(client, email=ADMIN_EMAIL, pin="9999")
+
+    first_url = f"/mtas-admin/submissions/detail?user={student.itid}&exercise=EX01"
+    second_url = f"/mtas-admin/submissions/detail?user={second.itid}&exercise=EX01"
+    first = page_text(client, first_url)
+    assert "Submission 1 of 2 for EX01" in first
+    assert f'href="{second_url.replace("&", "&amp;")}" rel="next"' in first
+    assert 'rel="prev"' not in first
+    assert "Path on the server" in first
+    assert f"{student.itid:04d}_sam.student/EX01/report.pdf" in first
+
+    last = page_text(client, second_url)
+    assert "Submission 2 of 2 for EX01" in last
+    assert f'href="{first_url.replace("&", "&amp;")}" rel="prev"' in last
+    assert 'rel="next"' not in last
+
+
+def test_same_file_of_two_users_is_marked(client, db, exercise, student):
+    other = add_user(db, email="tom.student@uni.example", pin="2222", number=3)
+    add_user(db, email=ADMIN_EMAIL, pin="9999", number=2)
+    login(client)
+    upload(client, [("report.pdf", PDF, "application/pdf")])
+    client.cookies.clear()
+    login(client, email="tom.student@uni.example", pin="2222")
+    upload(client, [("copy.pdf", PDF, "application/pdf")])
+    client.cookies.clear()
+    login(client, email=ADMIN_EMAIL, pin="9999")
+
+    overview = page_text(client, "/mtas-admin/submissions")
+    assert overview.count(">same file</span>") == 2
+    detail = page_text(
+        client, f"/mtas-admin/submissions/detail?user={student.itid}&exercise=EX01"
+    )
+    assert "Same file as tom.student@uni.example (EX01)" in detail
+    assert f"user={other.itid}&amp;exercise=EX01" in detail
+
+
+def test_to_review_and_previous_next_on_the_review_page(client, db, exercise, student):
+    exercise.has_review = True
+    db.commit()
+    second = add_user(db, email="tom.student@uni.example", pin="2222", number=3)
+    add_user(db, email=ADMIN_EMAIL, pin="9999", number=2)
+    for email, pin in ((STUDENT_EMAIL, "1234"), ("tom.student@uni.example", "2222")):
+        client.cookies.clear()
+        login(client, email=email, pin=pin)
+        upload(client, [("notes.md", f"# {email}\n".encode(), "text/markdown")])
+    client.cookies.clear()
+    login(client, email=ADMIN_EMAIL, pin="9999")
+
+    reviews = page_text(client, "/mtas-admin/reviews")
+    assert "To review: <strong>2</strong>" in reviews
+    assert reviews.count(">to review</span>") == 2
+    post(
+        client,
+        "/mtas-admin/reviews/edit",
+        {"user": student.itid, "exercise": "EX01", "reviewed": "on"},
+    )
+    todo = page_text(client, "/mtas-admin/reviews?todo=true")
+    assert "tom.student@uni.example" in todo
+    assert STUDENT_EMAIL not in todo.split("<tbody>")[1]
+
+    url = "/mtas-admin/reviews/edit?user={}&exercise=EX01"
+    first = page_text(client, url.format(student.itid))
+    assert "Review 1 of 2 users with files for EX01" in first
+    assert f'href="{url.format(second.itid).replace("&", "&amp;")}" rel="next"' in first
+    last = page_text(client, url.format(second.itid))
+    assert f'href="{url.format(student.itid).replace("&", "&amp;")}" rel="prev"' in last

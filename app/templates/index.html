@@ -20,6 +20,12 @@
         <p class="muted">Your bonus points for each exercise and the total.</p>
       </a>
       {% endif %}
+      {% if visibility.get("downloads") %}
+      <a class="card" href="/downloads">
+        <h3>Downloads</h3>
+        <p class="muted">Files for the course, e.g. the tasks of the bonus exercises.</p>
+      </a>
+      {% endif %}
     </div>
   </div>
 {% else %}

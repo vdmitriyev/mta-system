@@ -12,12 +12,14 @@ OTHER = "Other"
 
 @dataclass(frozen=True)
 class VisibilityItem:
-    """A part of the UI that the admin can show or hide (all are shown at the start)"""
+    """A part of the UI that the admin can show or hide"""
 
     ui_key: str
     category: str
     group: str
     label: str
+    # shown at the start
+    default: bool = True
 
 
 SERVICE_CARD = "Service on the services page"
@@ -41,6 +43,7 @@ VISIBILITY_ITEMS = [
         "Dataset importer: AdventureWorks",
     ),
     VisibilityItem("pgadmin4", SERVICES_CATEGORY, "pgAdmin 4", SERVICE_CARD),
+    VisibilityItem("sqlmate", SERVICES_CATEGORY, "sqlmate", SERVICE_CARD),
     VisibilityItem("metabase", SERVICES_CATEGORY, "Metabase", SERVICE_CARD),
     VisibilityItem(
         "metabase_self_managment", SERVICES_CATEGORY, "Metabase", SELF_START
@@ -55,7 +58,6 @@ VISIBILITY_ITEMS = [
     VisibilityItem(
         "wordpress_self_managment", SERVICES_CATEGORY, "WordPress", SELF_START
     ),
-    VisibilityItem("sqlmate", SERVICES_CATEGORY, "sqlmate", SERVICE_CARD),
     VisibilityItem("surveylite", SERVICES_CATEGORY, "SurveyLite", SERVICE_CARD),
     VisibilityItem("nifi", SERVICES_CATEGORY, "NiFi", SERVICE_CARD),
     VisibilityItem("nifi_self_managment", SERVICES_CATEGORY, "NiFi", SELF_START),
@@ -68,12 +70,20 @@ VISIBILITY_ITEMS = [
     VisibilityItem(
         "submissions", MENU_CATEGORY, "Menu entries", "Submissions of the exercises"
     ),
+    VisibilityItem(
+        "downloads",
+        MENU_CATEGORY,
+        "Menu entries",
+        "Downloads (files for the users)",
+        default=False,
+    ),
 ]
 VISIBILITY_INFO = {item.ui_key: item for item in VISIBILITY_ITEMS}
 
 # (ui_key, visible, description) for the database
 DEFAULT_UI_VISIBILITY_SETTINGS = [
-    (item.ui_key, True, f"{item.group}: {item.label}") for item in VISIBILITY_ITEMS
+    (item.ui_key, item.default, f"{item.group}: {item.label}")
+    for item in VISIBILITY_ITEMS
 ]
 
 

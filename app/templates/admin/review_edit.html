@@ -1,8 +1,15 @@
 {% extends "admin/base.html" %}
 {% block title %}Edit review{% endblock %}
+{% from "admin/_files.html" import file_link, file_buttons %}
 {% block admin %}
 {{ ui.page_head("Edit review") }}
-<div class="grid two">
+{% if exercise.has_submission %}
+{% set step_text = ("Review " ~ neighbours.number ~ " of " ~ neighbours.count ~ " users with files for " ~ exercise.code) if neighbours.number else (neighbours.count ~ " users with files for " ~ exercise.code) %}
+{% else %}
+{% set step_text = "User " ~ neighbours.number ~ " of " ~ neighbours.count ~ " for " ~ exercise.code %}
+{% endif %}
+{{ ui.prev_next(neighbours, step_text, "Reviews of " ~ exercise.code) }}
+<div class="grid halves">
   <div class="stack">
   <section class="card">
     <dl class="kv">
@@ -13,7 +20,7 @@
       {{ ui.csrf(csrf_token) }}
       <input type="hidden" name="user" value="{{ student.itid }}">
       <input type="hidden" name="exercise" value="{{ exercise.code }}">
-      <label class="check"><input type="checkbox" name="submitted" {% if not review or review.submitted %}checked{% endif %}> The solution was submitted</label>
+      <label class="check"><input type="checkbox" name="submitted" {% if submitted %}checked{% endif %}> The solution was submitted</label>
       <label class="check"><input type="checkbox" name="reviewed" {% if not review or review.reviewed %}checked{% endif %}> The solution was reviewed</label>
       <label class="check"><input type="checkbox" name="visible" {% if not review or review.visible %}checked{% endif %}> The user can see the review</label>
       <div class="field">
@@ -49,14 +56,45 @@
     </form>
   </section>
   {% endif %}
-  </div>
+  {% if exercise.has_submission %}
   <section class="card">
-    <h2>Saved review, as the user sees it</h2>
+    <div class="row between">
+      <h2>Submitted files</h2>
+      <a class="btn sm" href="/mtas-admin/submissions/detail?user={{ student.itid }}&amp;exercise={{ exercise.code | urlencode }}">Files and deadline</a>
+    </div>
+    {% if files %}
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>Upload</th><th class="num">Size</th><th>Uploaded</th><th></th></tr></thead>
+        <tbody>
+          {% for file in files %}
+          <tr>
+            <td>{{ file_link(file) }}</td>
+            <td class="num">{{ format_size(file.size_bytes) }}</td>
+            <td>{{ file.created_at.strftime("%d.%m.%Y %H:%M") if file.created_at else "" }}</td>
+            <td>
+              {{ file_buttons(file) }}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% else %}
+      <p class="muted">The user has not uploaded files.</p>
+    {% endif %}
+  </section>
+  {% endif %}
+  </div>
+  <div class="stack">
+  <section class="card">
+    <h2>Preview of the review (HTML)</h2>
     {% if preview %}
       <div class="prose">{{ preview }}</div>
     {% else %}
       <p class="muted">No review is saved yet.</p>
     {% endif %}
   </section>
+  </div>
 </div>
 {% endblock %}

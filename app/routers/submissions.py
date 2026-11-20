@@ -172,15 +172,10 @@ def download(
 
 
 PDF_TYPE = "application/pdf"
-# the admin page shows the PDF in a frame; nothing else may embed it
-PREVIEW_HEADERS = {
-    "Content-Security-Policy": "frame-ancestors 'self'",
-    "X-Frame-Options": "SAMEORIGIN",
-}
 
 
 def file_response(row, inline: bool = False) -> FileResponse:
-    """The file as a download. inline: a PDF shown in the browser."""
+    """The file as a download. inline: a PDF shown in the browser (own tab)."""
 
     if inline and row.content_type != PDF_TYPE:
         raise HTTPException(status_code=404)
@@ -196,6 +191,5 @@ def file_response(row, inline: bool = False) -> FileResponse:
             media_type=PDF_TYPE,
             filename=row.original_name,
             content_disposition_type="inline",
-            headers=PREVIEW_HEADERS,
         )
     return FileResponse(path, media_type=row.content_type, filename=row.original_name)

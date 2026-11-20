@@ -9,11 +9,12 @@ from fastapi.responses import FileResponse, Response
 from starlette.background import BackgroundTask
 
 from app import submissions
+from app.admin_log import log_action
 from app.exercises import exercises_csv, get_exercise, get_exercises
 from app.models import Exercises, Users
-from app.routers.submissions import PDF_TYPE, file_response
+from app.routers.submissions import file_response
 from app.security import csrf_protect
-from app.users import course_users, email_to_name
+from app.users import course_users, email_to_name, neighbours
 from app.web import Page, flash, redirect, require_admin
 
 CODE_PATTERN = re.compile(r"^[A-Za-z0-9_-]{1,20}$")
@@ -212,6 +213,7 @@ def exercise_save(
     for key, value in parsed.items():
         setattr(exercise, key, value)
     page.db.commit()
+    log_action(page.db, page.user, "exercise", exercise_code=exercise.code)
     flash(page.request, f"Exercise {exercise.code} was saved.", "success")
     return redirect("/mtas-admin/exercises")
 
@@ -244,6 +246,8 @@ def submissions_page(page: Page = Depends()):
         rows=rows,
         totals=totals,
         folder=str(submissions.root_dir()),
+        storage=submissions.storage_summary(page.db, exercises),
+        format_size=submissions.format_size,
     )
 
 
@@ -251,28 +255,35 @@ def _detail_url(user_id: int, code: str) -> str:
     return f"/mtas-admin/submissions/detail?user={user_id}&exercise={code}"
 
 
+def submission_neighbours(page: Page, exercise: Exercises, user_id: int) -> dict:
+    """Previous and next user with files for the exercise, in the order of the table"""
+
+    with_files = {
+        itid for itid, _ in submissions.users_with_files(page.db, [exercise.itid])
+    }
+    order = [user.itid for user in course_users(page.db)]
+    result = neighbours(order, user_id, with_files)
+    for key in ("previous", "next"):
+        if result[key] is not None:
+            result[key] = _detail_url(result[key], exercise.code)
+    return result
+
+
 @router.get("/submissions/detail")
-def submission_detail(
-    user: int, exercise: str, page: Page = Depends(), preview: int | None = None
-):
+def submission_detail(user: int, exercise: str, page: Page = Depends()):
     exercise_db = exercise_or_404(page, exercise)
     student = student_or_404(page, user)
     deadline = submissions.effective_deadline(page.db, exercise_db, student.itid)
     extension = submissions.get_extension(page.db, exercise_db.itid, student.itid)
     files = submissions.all_submissions(page.db, student.itid, exercise_db.itid)
-    pdfs = [row for row in files if not row.deleted and row.content_type == PDF_TYPE]
-    shown = next(
-        (row for row in pdfs if row.itid == preview), pdfs[0] if pdfs else None
-    )
     return page.render(
         "admin/submission_detail.html",
         student=student,
         student_name=email_to_name(student.email),
         exercise=exercise_db,
         files=files,
-        preview=shown,
-        pdf_type=PDF_TYPE,
-        detail_url=_detail_url(student.itid, exercise_db.code),
+        neighbours=submission_neighbours(page, exercise_db, student.itid),
+        same_files=submissions.same_files(page.db, files),
         deadline=deadline,
         is_open=submissions.is_open(deadline),
         extension=extension,
@@ -294,6 +305,9 @@ def submission_extension(
     student = student_or_404(page, user)
     if remove:
         if submissions.remove_extension(page.db, exercise_db, student.itid):
+            log_action(
+                page.db, page.user, "extension_removed", student.itid, exercise_db.code
+            )
             flash(page.request, "The extension was removed.", "success")
         return redirect(_detail_url(student.itid, exercise_db.code))
     try:
@@ -304,6 +318,14 @@ def submission_extension(
         flash(page.request, "Enter the new deadline as date and time.", "danger")
         return redirect(_detail_url(student.itid, exercise_db.code))
     submissions.set_extension(page.db, exercise_db, student.itid, parsed, note)
+    log_action(
+        page.db,
+        page.user,
+        "extension",
+        student.itid,
+        exercise_db.code,
+        f"{parsed:%d.%m.%Y %H:%M}" + (f", {note.strip()}" if note.strip() else ""),
+    )
     flash(
         page.request,
         f"New deadline for {student.email}: {parsed:%d.%m.%Y %H:%M}.",
@@ -320,6 +342,14 @@ def submission_delete(page: Page = Depends(), submission_id: int = Form(...)):
     exercise = page.db.get(Exercises, row.exercise_id)
     try:
         submissions.delete_submission(page.db, row)
+        log_action(
+            page.db,
+            page.user,
+            "file_deleted",
+            row.user_id,
+            exercise.code,
+            f"{row.original_name} (SHA-256 {row.sha256[:12]})",
+        )
         flash(page.request, f"Deleted: {row.original_name}", "success")
     except submissions.SubmissionError as error:
         flash(page.request, str(error), "danger")

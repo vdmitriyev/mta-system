@@ -56,6 +56,8 @@ MAX_USERS_NGINX_GENERATE = 100
 
 # Upper limit of an upload of the users (nginx allows a bit more, for the form data)
 MAX_UPLOAD_MB = 10
+# Upper limit of a file on the admin page Downloads (nginx allows 64 MB)
+DOWNLOAD_MAX_MB = 50
 
 DEFAULT_SERVICES_UI = [
     "pgadmin4",
@@ -133,6 +135,11 @@ class Settings(BaseSettings):
     )
     # files of a user per exercise
     submission_max_files: PositiveInt = 5
+    # files that the users can download (admin page Downloads)
+    downloads_dir: Path = Path("data", "downloads")
+
+    # backups of db-backup (task prod:backup) of each kind that stay; 0: all stay
+    backup_keep: Annotated[int, Field(ge=0)] = 14
 
     # ---- e-mail ----
     mail_server: str = "localhost"
@@ -256,7 +263,7 @@ class Settings(BaseSettings):
     def _clean_domains(cls, value: list[str]) -> list[str]:
         return [domain.lower().lstrip("@") for domain in value]
 
-    @field_validator("mtas_db_path", "submissions_dir")
+    @field_validator("mtas_db_path", "submissions_dir", "downloads_dir")
     @classmethod
     def _db_path_in_project(cls, value: Path) -> Path:
         return value if value.is_absolute() else BASE_DIR / value

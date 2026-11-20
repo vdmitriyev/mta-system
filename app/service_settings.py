@@ -26,11 +26,11 @@ class ServiceInfo:
 SERVICES = [
     ServiceInfo("postgresql", "PostgreSQL", SHARED_SERVER),
     ServiceInfo("pgadmin4", "pgAdmin 4", SHARED_SERVICE, "Needs PostgreSQL"),
+    ServiceInfo("sqlmate", "sqlmate", SHARED_SERVICE, "SQL exercises"),
     ServiceInfo("metabase", "Metabase", OWN_CONTAINER),
     ServiceInfo("openrefine", "OpenRefine", OWN_CONTAINER),
     ServiceInfo("mariadb", "MariaDB", SHARED_SERVER),
     ServiceInfo("wordpress", "WordPress", OWN_CONTAINER, "Needs MariaDB"),
-    ServiceInfo("sqlmate", "sqlmate", SHARED_SERVICE, "SQL exercises"),
     ServiceInfo(
         "surveylite",
         "SurveyLite",

@@ -36,6 +36,7 @@ def make_settings(tmp_path, **overrides) -> Settings:
     env["MTAS_DB_PATH"] = str(tmp_path / "test.db")
     env["NGINX_BASIC_AUTH_DIR_ABSOLUTE"] = str(tmp_path / "htpasswd")
     env["SUBMISSIONS_DIR"] = str(tmp_path / "submissions")
+    env["DOWNLOADS_DIR"] = str(tmp_path / "downloads")
     env.update(overrides)
     return Settings.from_env(env)
 

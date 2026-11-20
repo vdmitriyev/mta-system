@@ -215,15 +215,15 @@ class ServiceRequirement(Base):
 SERVICE_MODELS = {
     "postgresql": PostgreSQLService,
     "pgadmin4": PGAdmin4Service,
+    "sqlmate": SqlmateService,
     "metabase": MetabaseService,
     "openrefine": OpenRefineService,
-    "jupyterhub": JupyterHubService,
-    "nifi": NiFiService,
-    "superset": SupersetService,
     "mariadb": MariaDBService,
     "wordpress": WordpressService,
-    "sqlmate": SqlmateService,
     "surveylite": SurveyliteService,
+    "nifi": NiFiService,
+    "superset": SupersetService,
+    "jupyterhub": JupyterHubService,
 }
 
 # Services that run in an own Docker container per user: "<service>-<port>"
@@ -329,6 +329,41 @@ class SubmissionExtensions(Base):
     note = Column(String(200))
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class Downloads(Base):
+    """A file that the users can download, e.g. the task of a bonus exercise"""
+
+    __tablename__ = "downloads"
+
+    itid = Column(Integer, primary_key=True)
+    title = Column(String(200), nullable=False)
+    description = Column(Text)
+    # an exercise with bonus points that the file belongs to
+    exercise_id = Column(Integer, ForeignKey("exercises.itid"), index=True)
+    sort_order = Column(Integer, nullable=False, default=0)
+    visible = Column(Boolean, nullable=False, default=True)
+    original_name = Column(String(255), nullable=False)
+    stored_name = Column(String(255), nullable=False)
+    size_bytes = Column(Integer, nullable=False)
+    sha256 = Column(String(64), nullable=False)
+    content_type = Column(String(100), nullable=False)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class AdminActions(Base):
+    """What an admin changed: who, when, what and for which user"""
+
+    __tablename__ = "admin_actions"
+
+    itid = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    admin_email = Column(String(255), nullable=False)
+    action = Column(String(50), nullable=False)
+    user_id = Column(Integer, index=True)
+    exercise_code = Column(String(20))
+    details = Column(Text)
 
 
 class UIVisibilitySettings(Base):

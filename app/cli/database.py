@@ -10,7 +10,7 @@ from alembic.config import Config
 from sqlalchemy.orm import Session
 
 from app.config import BASE_DIR, get_settings
-from app.database import backup_sqlite, session_scope
+from app.database import backup_sqlite, pack_folder, prune_backups, session_scope
 from app.exercises import EXERCISE_COLUMNS, exercises_csv, get_exercises
 from app.models import Exercises
 from app.services import postgresql
@@ -42,14 +42,45 @@ def db_upgrade():
     default=str(BACKUP_DIR),
     show_default=True,
 )
-def db_backup(backup_dir: str):
-    """Copies the SQLite database to the backup folder, with date and time in front"""
+@click.option(
+    "--no-files", is_flag=True, help="Only the database, not the folders with files"
+)
+@click.option(
+    "--keep",
+    type=click.IntRange(min=0),
+    default=None,
+    help="Backups of each kind that stay, the oldest are deleted. 0: all stay. "
+    "Default: BACKUP_KEEP",
+)
+def db_backup(backup_dir: str, no_files: bool, keep: int | None):
+    """Copies the SQLite database and the folders with files to the backup folder"""
 
+    settings = get_settings()
+    target_dir = Path(backup_dir)
     try:
-        target = backup_sqlite(get_settings().mtas_db_path, Path(backup_dir))
+        target = backup_sqlite(settings.mtas_db_path, target_dir)
     except (OSError, sqlite3.Error) as error:
         raise click.ClickException(f"No backup: {error}")
     click.echo(f"[i] backup: {target}")
+    names = [settings.mtas_db_path.name]
+    if not no_files:
+        for folder, name in (
+            (settings.submissions_dir, "submissions"),
+            (settings.downloads_dir, "downloads"),
+        ):
+            try:
+                archive = pack_folder(folder, target_dir, name)
+            except OSError as error:
+                raise click.ClickException(f"No backup of {name}: {error}")
+            if archive is None:
+                click.echo(f"[i] no folder {folder}, nothing to back up")
+            else:
+                click.echo(f"[i] backup: {archive}")
+                names.append(f"{name}.tar.gz")
+    keep = settings.backup_keep if keep is None else keep
+    for name in names:
+        for path in prune_backups(target_dir, name, keep):
+            click.echo(f"[i] old backup deleted: {path.name}")
 
 
 @click.command("db-migrate")
@@ -82,7 +113,12 @@ def db_migrate(message: str):
 @click.option(
     "--file", "-f", "fname_csv", default=DEFAULT_EXERCISES_FILE, show_default=True
 )
-def import_data_exercises(fname_csv: str):
+@click.option(
+    "--update",
+    is_flag=True,
+    help="Also change the exercises that exist, to the values of the file",
+)
+def import_data_exercises(fname_csv: str, update: bool):
     """Imports the exercises (with their review, bonus and submission parts) from the CSV file"""
 
     if not os.path.exists(fname_csv):
@@ -97,8 +133,10 @@ def import_data_exercises(fname_csv: str):
         )
         return
     with session_scope() as db:
-        added = import_exercises(db, fname_csv)
+        added, updated = import_exercises(db, fname_csv, update=update)
     click.echo(f"[i] new exercises: {added}")
+    if update:
+        click.echo(f"[i] changed exercises: {updated}")
 
 
 @click.command("export-data-exercises")
@@ -130,8 +168,12 @@ def missing_exercise_columns(fname_csv: str) -> list:
     return [column for column in EXERCISE_COLUMNS if column not in header]
 
 
-def import_exercises(db: Session, fname_csv: str) -> int:
-    """Adds the exercises from the CSV file that are not in the database yet"""
+def import_exercises(db: Session, fname_csv: str, update: bool = False) -> tuple:
+    """Adds the exercises from the CSV file that are not in the database yet.
+
+    update: also sets the values of the file on the exercises that exist.
+    Returns (added, updated).
+    """
 
     def to_bool(value: str) -> bool:
         return (value or "").strip().lower() == "true"
@@ -140,33 +182,39 @@ def import_exercises(db: Session, fname_csv: str) -> int:
         value = (value or "").strip()
         return convert(value) if value else None
 
-    added = 0
+    added = updated = 0
     with open(fname_csv, newline="", encoding="utf-8") as csvfile:
         for row in csv.DictReader(csvfile, delimiter=";"):
             code = (row["code"] or "").strip()
-            if not code or db.query(Exercises).filter_by(code=code).first():
+            if not code:
                 continue
-            db.add(
-                Exercises(
-                    code=code,
-                    name=row["name"].strip(),
-                    description=row["description"].strip() or None,
-                    year=to_value(row["year"], int),
-                    visible=to_bool(row["visible"]),
-                    exercise_order=to_value(row["exercise_order"], int),
-                    submission_deadline=to_value(
-                        row["submission_deadline"], datetime.fromisoformat
-                    ),
-                    has_review=to_bool(row["has_review"]),
-                    has_bonus=to_bool(row["has_bonus"]),
-                    bonus_max_points=to_value(row["bonus_max_points"], float),
-                    has_submission=to_bool(row["has_submission"]),
-                    submission_email=to_bool(row["submission_email"]),
-                )
-            )
-            added += 1
+            exercise = db.query(Exercises).filter_by(code=code).first()
+            if exercise is not None and not update:
+                continue
+            values = {
+                "name": row["name"].strip(),
+                "description": row["description"].strip() or None,
+                "year": to_value(row["year"], int),
+                "visible": to_bool(row["visible"]),
+                "exercise_order": to_value(row["exercise_order"], int),
+                "submission_deadline": to_value(
+                    row["submission_deadline"], datetime.fromisoformat
+                ),
+                "has_review": to_bool(row["has_review"]),
+                "has_bonus": to_bool(row["has_bonus"]),
+                "bonus_max_points": to_value(row["bonus_max_points"], float),
+                "has_submission": to_bool(row["has_submission"]),
+                "submission_email": to_bool(row["submission_email"]),
+            }
+            if exercise is None:
+                db.add(Exercises(code=code, **values))
+                added += 1
+            else:
+                for key, value in values.items():
+                    setattr(exercise, key, value)
+                updated += 1
     db.commit()
-    return added
+    return added, updated
 
 
 @click.command("create-demo-db")

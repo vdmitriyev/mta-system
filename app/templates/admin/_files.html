@@ -1,0 +1,18 @@
+{% import "_macros.html" as ui %}
+{# A submitted file: a PDF opens in a new tab, the other files are downloaded #}
+{% macro file_url(file, inline=false) -%}
+/mtas-admin/submissions/file/{{ file.itid }}{% if inline %}?inline=true{% endif %}
+{%- endmacro %}
+
+{% macro file_link(file) -%}
+{% if file.content_type == "application/pdf" -%}
+<a href="{{ file_url(file, true) }}" target="_blank" rel="noopener" title="Open the PDF in a new tab">{{ ui.icon("external") }} {{ file.original_name }}</a>
+{%- else -%}
+<a href="{{ file_url(file) }}" title="Download">{{ ui.icon("download") }} {{ file.original_name }}</a>
+{%- endif %}
+{%- endmacro %}
+
+{% macro file_buttons(file) -%}
+{% if file.content_type == "application/pdf" %}<a class="btn sm" href="{{ file_url(file, true) }}" target="_blank" rel="noopener">{{ ui.icon("eye") }} Preview</a>{% endif %}
+<a class="btn sm" href="{{ file_url(file) }}">{{ ui.icon("download") }} Download</a>
+{%- endmacro %}

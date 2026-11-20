@@ -1,0 +1,18 @@
+{% extends "admin/base.html" %}
+{% from "admin/_download_fields.html" import download_fields %}
+{% block title %}Edit download{% endblock %}
+{% block admin %}
+{{ ui.page_head("Edit download") }}
+<section class="card narrow">
+  <p class="muted">File: <a href="/mtas-admin/downloads/file/{{ item.itid }}">{{ item.original_name }}</a> ({{ format_size(item.size_bytes) }})</p>
+  <form class="form" method="post" action="/mtas-admin/downloads/edit" enctype="multipart/form-data" data-max-upload="{{ max_mb * 1024 * 1024 }}">
+    {{ ui.csrf(csrf_token) }}
+    <input type="hidden" name="id" value="{{ item.itid }}">
+    {{ download_fields(item, exercises, accept, allowed, max_mb) }}
+    <div class="row">
+      <button type="submit" class="btn primary">Save</button>
+      <a class="btn" href="/mtas-admin/downloads">Back to the downloads</a>
+    </div>
+  </form>
+</section>
+{% endblock %}

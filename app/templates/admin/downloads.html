@@ -1,0 +1,68 @@
+{% extends "admin/base.html" %}
+{% from "admin/_download_fields.html" import download_fields %}
+{% block title %}Downloads{% endblock %}
+{% block admin %}
+{{ ui.page_head("Downloads", "Files that the users can download on the page Downloads, e.g. the tasks of the bonus exercises. The users see them in this order.") }}
+<p class="row">
+  {% if enabled %}
+    <span class="badge success">on</span><span>The users see the page Downloads.</span>
+  {% else %}
+    <span class="badge">off</span><span>The users do not see the page Downloads yet.</span>
+  {% endif %}
+  <a class="btn sm" href="/mtas-admin/visibility">Change at Visibility (Menu: Downloads)</a>
+</p>
+<div class="grid halves">
+  <section class="card">
+    <h2>Add a file</h2>
+    <form class="form" method="post" action="/mtas-admin/downloads/add" enctype="multipart/form-data" data-max-upload="{{ max_mb * 1024 * 1024 }}">
+      {{ ui.csrf(csrf_token) }}
+      {{ download_fields(none, exercises, accept, allowed, max_mb) }}
+      <div class="row">
+        <button type="submit" class="btn primary">{{ ui.icon("download") }} Add the file</button>
+      </div>
+    </form>
+  </section>
+  <section class="card flush">
+    <div class="table-wrap">
+      <table class="table" id="downloads-table">
+        <thead>
+          <tr>
+            <th class="num">#</th>
+            <th>Title</th>
+            <th>File</th>
+            <th>Bonus exercise</th>
+            <th class="center">Visible</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in items %}
+          <tr{% if not item.visible %} class="muted"{% endif %}>
+            <td class="num">{{ loop.index }}</td>
+            <td>{{ item.title }}{% if item.description %}<br><span class="muted small">{{ item.description }}</span>{% endif %}</td>
+            <td><a href="/mtas-admin/downloads/file/{{ item.itid }}">{{ item.original_name }}</a><br><span class="muted small">{{ format_size(item.size_bytes) }}</span></td>
+            <td>{% set exercise = exercise_of.get(item.exercise_id) %}{% if exercise %}<span class="badge">{{ exercise.code }}</span>{% else %}–{% endif %}</td>
+            <td class="center">{{ ui.yes_no(item.visible) }}</td>
+            <td class="nowrap">
+              <form method="post" action="/mtas-admin/downloads/move" class="inline-form">
+                {{ ui.csrf(csrf_token) }}
+                <input type="hidden" name="id" value="{{ item.itid }}">
+                <button type="submit" name="direction" value="up" class="btn sm" title="Up" aria-label="Move {{ item.title }} up"{% if loop.first %} disabled{% endif %}>↑</button>
+                <button type="submit" name="direction" value="down" class="btn sm" title="Down" aria-label="Move {{ item.title }} down"{% if loop.last %} disabled{% endif %}>↓</button>
+              </form>
+              <a class="btn sm" href="/mtas-admin/downloads/edit?id={{ item.itid }}">{{ ui.icon("edit") }} Edit</a>
+              <form method="post" action="/mtas-admin/downloads/delete" class="inline-form" data-confirm="Delete {{ item.title }}? The file is removed from the server.">
+                {{ ui.csrf(csrf_token) }}
+                <input type="hidden" name="id" value="{{ item.itid }}">
+                <button type="submit" class="btn sm danger">{{ ui.icon("trash") }} Delete</button>
+              </form>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% if not items %}<div class="empty">No files yet.</div>{% endif %}
+  </section>
+</div>
+{% endblock %}

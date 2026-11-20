@@ -2,6 +2,31 @@
 History
 =======
 
+2.6.0 (2026-11-20)
+-------------------
+
+* New admin page **Downloads**: files (PDF, ZIP, MD, TXT, SQL; max. 50 MB) in a set order, optionally linked to a bonus exercise. Users see them on **Downloads** once the admin switches it on at **Visibility**. Folder: `data/downloads/`.
+* New admin page **Admin log**: who changed reviews, bonus points, deadlines, files, exercises, downloads and settings.
+* **Edit review**: **Previous** and **Next** buttons.
+* **Reviews**: cells with files that are not reviewed show **to review**; filter **Only users to review**.
+* Submissions: files with the same content as another user's file are marked **same file**.
+* `task prod:backup` also packs `data/downloads/` and keeps the newest 14 backups of each kind (`BACKUP_KEEP`, `--keep`).
+* Database: new tables `downloads` and `admin_actions` (migration runs on start).
+
+2.5.4 (2026-11-20)
+-------------------
+
+* **Edit review**: two equal columns; the submitted files are on the left, **Preview of the review (HTML)** on the right.
+* **Edit review**: **The solution was submitted** is ticked only if the user uploaded files.
+* Bonus points must be between 0 and the maximum of the exercise.
+* `task prod:backup` also packs `submissions/` (`-- --no-files`: only the database).
+* `import-data-exercises --update` (`task prod:import-exercises -- --update`) also changes existing exercises.
+* **Submissions**: size of the files and free disk space; **ZIP** buttons in a row at the bottom.
+* Submitted PDFs open in a new tab; each file has a **Download** button.
+* Submission page: **Previous** and **Next** buttons, and the file path in its own column.
+* Admin tables show the e-mail in its own column.
+* Services are in one order in the admin UI: PostgreSQL, pgAdmin 4, sqlmate, Metabase, OpenRefine, MariaDB, WordPress, SurveyLite.
+
 2.5.3 (2026-11-20)
 -------------------
 

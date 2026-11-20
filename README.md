@@ -12,7 +12,7 @@ Documentation: [vdmitriyev.github.io/mta-system](https://vdmitriyev.github.io/mt
 | Guide | Content |
 | --- | --- |
 | [docs/development.md](docs/development.md) | Install, settings, run the app, Docker for development, commands, API, tests |
-| [docs/deployment.md](docs/deployment.md) | Server, HTTPS certificate, pgAdmin 4 login, admin accounts, backups, submissions, login history, delete users, sqlmate, SurveyLite, versions of the services |
+| [docs/deployment.md](docs/deployment.md) | Server, HTTPS certificate, pgAdmin 4 login, admin accounts, backups, submissions, downloads, admin log, login history, delete users, sqlmate, SurveyLite, versions of the services |
 | [HISTORY.rst](HISTORY.rst) | Changes of each version. Read it before you update a server. |
 
 ## Architecture
@@ -87,7 +87,7 @@ Before `task app:serve`, change the secrets in `envs/webapp-dev-local.env`. See 
 | `app:` | `app:serve`, `app:test`, `app:config`, `app:init-env`, `app:create-admins`, `app:cli -- <command>` | [development](docs/development.md) |
 | `db:` | `db:init`, `db:upgrade`, `db:migrate`, `db:backup` | [development](docs/development.md#create-the-database-and-run-the-app) |
 | `dev:` | `dev:up`, `dev:init`, `dev:logs`, `dev:down`, `dev:app-recreate`, `dev:nginx-recreate` | [development](docs/development.md#run-in-docker-for-development) |
-| `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate`, `prod:app-recreate`, `prod:backup`, `prod:create-admins` | [deployment](docs/deployment.md#production) |
+| `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate`, `prod:app-recreate`, `prod:backup`, `prod:import-exercises`, `prod:create-admins` | [deployment](docs/deployment.md#production) |
 | `prod:` nginx | `prod:cert`, `prod:cert-renew`, `prod:nginx-reload`, `prod:nginx-recreate` | [deployment](docs/deployment.md#https-certificate-lets-encrypt) |
 | `sqlmate:` | `sqlmate:up`, `sqlmate:init`, `sqlmate:logs`, `sqlmate:down` | [deployment](docs/deployment.md#sqlmate-optional) |
 | `surveylite:` | `surveylite:up`, `surveylite:logs`, `surveylite:down` | [deployment](docs/deployment.md#surveylite-optional) |

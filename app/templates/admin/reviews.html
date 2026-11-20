@@ -6,6 +6,15 @@
   <div class="card empty">There are no exercises with a review part. Import them with <code>task db:init</code>.</div>
 {% else %}
 {{ ui.table_filter("reviews-table", rows | length) }}
+<p class="row">
+  {% if todo %}
+    <span><strong>{{ rows | length }}</strong> users with files to review.</span>
+    <a class="btn sm" href="/mtas-admin/reviews">Show all users</a>
+  {% else %}
+    <span>To review: <strong>{{ open_reviews }}</strong> (files uploaded, not reviewed yet).</span>
+    {% if open_reviews %}<a class="btn sm primary" href="/mtas-admin/reviews?todo=true">Only users to review</a>{% endif %}
+  {% endif %}
+</p>
 <p class="legend">
   <span>The four dots show:</span>
   <span>1. review text</span><span>2. submitted</span><span>3. reviewed</span><span>4. visible to the user</span>
@@ -17,6 +26,7 @@
         <tr>
           <th data-sort="number">ID</th>
           <th data-sort>Name</th>
+          <th data-sort>E-mail</th>
           <th>Login link</th>
           {% for exercise in exercises %}
           <th class="center" title="{{ exercise.name }}">{{ exercise.code }}</th>
@@ -27,7 +37,8 @@
         {% for row in rows %}
         <tr>
           <td>{{ row.user.itid }}</td>
-          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.user.email }}</td>
           <td>{{ ui.copy_button(row.access_url) }}</td>
           {% for item in row.reviews %}
           <td class="center">
@@ -39,6 +50,7 @@
                 <span class="dot{{ ' on' if item.reviewed }}"></span>
                 <span class="dot{{ ' on' if item.visible }}"></span>
               </span>
+              {% if item.to_review %}<span class="badge warning">to review</span>{% endif %}
               {{ ui.icon("edit") }}
               <span class="sr-only">Edit: text {{ "yes" if item.has_content else "no" }}, submitted {{ "yes" if item.submitted else "no" }}, reviewed {{ "yes" if item.reviewed else "no" }}, visible {{ "yes" if item.visible else "no" }}</span>
             </a>

@@ -104,6 +104,7 @@
         <tr>
           <th data-sort="number">ID</th>
           <th data-sort>Name</th>
+          <th data-sort>E-mail</th>
           <th data-sort>Participant</th>
           <th>Surveys</th>
           <th>Actions</th>
@@ -114,7 +115,8 @@
         {% set entry = row.entry %}
         <tr>
           <td>{{ row.user.itid }}</td>
-          <td>{{ row.name }}<br><span class="muted small">{{ row.user.email }}</span></td>
+          <td>{{ row.name }}</td>
+          <td>{{ row.user.email }}</td>
           <td>{% if entry %}<code>{{ entry.surveylite_login }}</code>{% if not entry.surveylite_login_url %} <span class="badge" title="Read on the next visit of the services page, or with “Read the status”">no login link</span>{% endif %}{% else %}<span class="badge">none</span>{% endif %}</td>
           <td>
             {% for item in row.assignments %}

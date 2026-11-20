@@ -15,9 +15,11 @@ from app.routers import (
     account,
     admin,
     admin_databases,
+    admin_downloads,
     admin_submissions,
     admin_surveys,
     api,
+    downloads,
     public,
     submissions,
 )
@@ -69,13 +71,9 @@ class SecurityHeadersMiddleware:
                 headers = dict(SECURITY_HEADERS)
                 if not scope["path"].startswith(DOCS_PATHS):
                     headers["Content-Security-Policy"] = CONTENT_SECURITY_POLICY
-                own = list(message.get("headers", []))
-                # a response may set its own value, e.g. the PDF preview
-                present = {name.lower() for name, _ in own}
-                message["headers"] = own + [
+                message["headers"] = list(message.get("headers", [])) + [
                     (name.lower().encode(), value.encode())
                     for name, value in headers.items()
-                    if name.lower().encode() not in present
                 ]
             await send(message)
 
@@ -157,7 +155,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         public.router,
         account.router,
         submissions.router,
+        downloads.router,
         admin_databases.router,
+        admin_downloads.router,
         admin_submissions.router,
         admin_surveys.router,
         admin.router,

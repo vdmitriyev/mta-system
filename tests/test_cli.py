@@ -142,7 +142,7 @@ def test_sample_exercises_have_all_columns():
 
 
 def test_import_exercises_function(db, exercises_file):
-    assert import_exercises(db, exercises_file) == 2
+    assert import_exercises(db, exercises_file) == (2, 0)
 
 
 def test_create_demo_db(runner, monkeypatch):
@@ -326,7 +326,7 @@ def test_export_and_import_give_the_same_exercises(runner, tmp_path, monkeypatch
         before = [exercise_csv_row(e) for e in db.query(Exercises).all()]
         db.query(Exercises).delete()
         db.commit()
-        assert import_exercises(db, str(path)) == 2
+        assert import_exercises(db, str(path)) == (2, 0)
         after = [exercise_csv_row(e) for e in db.query(Exercises).all()]
     assert sorted(after, key=lambda r: r["code"]) == sorted(
         before, key=lambda r: r["code"]
@@ -338,3 +338,96 @@ def test_export_and_import_give_the_same_exercises(runner, tmp_path, monkeypatch
     assert result.exit_code == 0, result.output
     [backup] = (tmp_path / "backups").glob("*-initial_exercises.csv")
     assert backup.read_text(encoding="utf-8") == path.read_text(encoding="utf-8")
+
+
+def test_import_with_update_changes_existing_exercises(
+    runner, exercises_file, tmp_path
+):
+    runner.invoke(cli, ["db-upgrade"])
+    runner.invoke(cli, ["import-data-exercises", "--file", exercises_file])
+    changed = tmp_path / "changed.csv"
+    changed.write_text(
+        EXERCISES_CSV.replace("Data model;First exercise", "Data model 2;Changed")
+        + "EX3;New;;2026;true;3;;true;false;;false;false\n",
+        encoding="utf-8",
+    )
+
+    plain = runner.invoke(cli, ["import-data-exercises", "--file", str(changed)])
+    assert "new exercises: 1" in plain.output
+    with session_scope() as db:
+        assert db.query(Exercises).filter_by(code="EX1").one().name == "Data model"
+
+    result = runner.invoke(
+        cli, ["import-data-exercises", "--file", str(changed), "--update"]
+    )
+    assert result.exit_code == 0, result.output
+    assert "new exercises: 0" in result.output
+    assert "changed exercises: 3" in result.output
+    with session_scope() as db:
+        first = db.query(Exercises).filter_by(code="EX1").one()
+        assert (first.name, first.description) == ("Data model 2", "Changed")
+
+
+def test_db_backup_also_saves_the_submitted_files(runner, settings, tmp_path):
+    import tarfile
+
+    runner.invoke(cli, ["db-upgrade"])
+    report = settings.submissions_dir / "0001_sam" / "EX1" / "report.pdf"
+    report.parent.mkdir(parents=True)
+    report.write_bytes(b"%PDF-1.7")
+
+    target = tmp_path / "backups"
+    result = runner.invoke(cli, ["db-backup", "--dir", str(target)])
+    assert result.exit_code == 0, result.output
+    [archive] = target.glob("*-submissions.tar.gz")
+    with tarfile.open(archive) as tar:
+        assert "submissions/0001_sam/EX1/report.pdf" in tar.getnames()
+    assert len(list(target.glob("*-test.db"))) == 1
+
+    only_db = tmp_path / "only-db"
+    result = runner.invoke(cli, ["db-backup", "--dir", str(only_db), "--no-files"])
+    assert result.exit_code == 0, result.output
+    assert not list(only_db.glob("*.tar.gz"))
+
+
+def test_db_backup_without_submissions_folder(runner, tmp_path):
+    runner.invoke(cli, ["db-upgrade"])
+    result = runner.invoke(cli, ["db-backup", "--dir", str(tmp_path / "b")])
+    assert result.exit_code == 0, result.output
+    assert "nothing to back up" in result.output
+
+
+def test_prune_backups_keeps_the_newest(tmp_path):
+    from app.database import prune_backups
+
+    names = [f"2026110{day}-120000-test.db" for day in range(1, 6)]
+    for name in names + ["20261101-120000-submissions.tar.gz", "notes.txt"]:
+        (tmp_path / name).write_text("x")
+    removed = prune_backups(tmp_path, "test.db", keep=2)
+    assert sorted(path.name for path in removed) == names[:3]
+    left = sorted(path.name for path in tmp_path.iterdir())
+    assert left == [
+        "20261101-120000-submissions.tar.gz",
+        names[3],
+        names[4],
+        "notes.txt",
+    ]
+    assert prune_backups(tmp_path, "test.db", keep=0) == []
+
+
+def test_db_backup_deletes_old_backups(runner, settings, tmp_path):
+    runner.invoke(cli, ["db-upgrade"])
+    settings.submissions_dir.mkdir(parents=True)
+    target = tmp_path / "backups"
+    target.mkdir()
+    for day in range(1, 4):
+        (target / f"2026010{day}-120000-test.db").write_text("old")
+        (target / f"2026010{day}-120000-submissions.tar.gz").write_text("old")
+    (target / "20260101-120000-initial_exercises.csv").write_text("keep")
+
+    result = runner.invoke(cli, ["db-backup", "--dir", str(target), "--keep", "2"])
+    assert result.exit_code == 0, result.output
+    assert len(list(target.glob("*-test.db"))) == 2
+    assert len(list(target.glob("*-submissions.tar.gz"))) == 2
+    assert (target / "20260101-120000-initial_exercises.csv").exists()
+    assert "old backup deleted: 20260102-120000-test.db" in result.output

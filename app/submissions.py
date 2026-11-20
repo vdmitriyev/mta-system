@@ -8,12 +8,14 @@ import hashlib
 import logging
 import os
 import re
+import shutil
 import tempfile
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
@@ -220,7 +222,7 @@ def all_submissions(db: Session, user_id: int, exercise_id: int) -> list:
     )
 
 
-def _store(folder: Path, upload: Upload, ext: str, limit: int) -> tuple:
+def store_upload(folder: Path, upload: Upload, ext: str, limit: int) -> tuple:
     """Writes the upload into a temporary file of the folder.
 
     Returns:
@@ -282,7 +284,7 @@ def save_uploads(
             continue
         folder.mkdir(parents=True, exist_ok=True)
         try:
-            temp_path, size, sha256 = _store(folder, upload, ext, budget)
+            temp_path, size, sha256 = store_upload(folder, upload, ext, budget)
         except SubmissionError as error:
             errors.append(
                 str(error)
@@ -376,12 +378,15 @@ def submission_matrix(db: Session, exercises: list, user_ids: list) -> dict:
         )
         .all()
     )
+    duplicates = duplicate_hashes(db)
     for row in rows:
         cell = cells.setdefault(
             (row.user_id, row.exercise_id),
             {"count": 0, "last": None, "extension": None},
         )
         cell["count"] += 1
+        if row.sha256 in duplicates:
+            cell["same_file"] = True
         if row.created_at and (cell["last"] is None or row.created_at > cell["last"]):
             cell["last"] = row.created_at
     extensions = (
@@ -396,6 +401,65 @@ def submission_matrix(db: Session, exercises: list, user_ids: list) -> dict:
         )
         cell["extension"] = extension.deadline
     return cells
+
+
+def users_with_files(db: Session, exercise_ids: list) -> set:
+    """(user_id, exercise_id) of the users with files that are not deleted"""
+
+    rows = (
+        db.query(ExerciseSubmissions.user_id, ExerciseSubmissions.exercise_id)
+        .filter(
+            ExerciseSubmissions.deleted.is_(False),
+            ExerciseSubmissions.exercise_id.in_(exercise_ids),
+        )
+        .distinct()
+        .all()
+    )
+    return {(user_id, exercise_id) for user_id, exercise_id in rows}
+
+
+def duplicate_hashes(db: Session) -> set:
+    """SHA-256 of the files that more than one user uploaded (not deleted)"""
+
+    rows = (
+        db.query(ExerciseSubmissions.sha256)
+        .filter(ExerciseSubmissions.deleted.is_(False))
+        .group_by(ExerciseSubmissions.sha256)
+        .having(func.count(func.distinct(ExerciseSubmissions.user_id)) > 1)
+        .all()
+    )
+    return {sha256 for (sha256,) in rows}
+
+
+def same_files(db: Session, rows: list) -> dict:
+    """submission itid -> files of other users with the same content (not deleted)"""
+
+    hashes = {row.sha256 for row in rows if not row.deleted}
+    if not hashes:
+        return {}
+    others = (
+        db.query(ExerciseSubmissions, Users, Exercises)
+        .join(Users, Users.itid == ExerciseSubmissions.user_id)
+        .join(Exercises, Exercises.itid == ExerciseSubmissions.exercise_id)
+        .filter(
+            ExerciseSubmissions.deleted.is_(False),
+            ExerciseSubmissions.sha256.in_(hashes),
+        )
+        .order_by(Users.email)
+        .all()
+    )
+    result = {}
+    for row in rows:
+        if row.deleted:
+            continue
+        matches = [
+            {"user": user, "exercise": exercise, "file": other}
+            for other, user, exercise in others
+            if other.sha256 == row.sha256 and other.user_id != row.user_id
+        ]
+        if matches:
+            result[row.itid] = matches
+    return result
 
 
 def zip_exercise(db: Session, exercise: Exercises) -> tuple[Path, int]:
@@ -429,10 +493,39 @@ def zip_exercise(db: Session, exercise: Exercises) -> tuple[Path, int]:
     return Path(temp_name), count
 
 
+# ---- storage and backup ----
+
+
+def storage_summary(db: Session, exercises: list) -> dict:
+    """Size of the files that are not deleted: in total and per exercise, and the disk"""
+
+    sizes = dict(
+        db.query(
+            ExerciseSubmissions.exercise_id, func.sum(ExerciseSubmissions.size_bytes)
+        )
+        .filter(ExerciseSubmissions.deleted.is_(False))
+        .group_by(ExerciseSubmissions.exercise_id)
+        .all()
+    )
+    summary = {
+        "total": sum(int(size or 0) for size in sizes.values()),
+        "per_exercise": [int(sizes.get(exercise.itid) or 0) for exercise in exercises],
+        "disk_free": None,
+        "disk_total": None,
+    }
+    folder = root_dir()
+    if folder.is_dir():
+        usage = shutil.disk_usage(folder)
+        summary["disk_free"], summary["disk_total"] = usage.free, usage.total
+    return summary
+
+
 # ---- e-mail ----
 
 
 def format_size(size: int) -> str:
+    if size >= 1024 * MB:
+        return f"{size / (1024 * MB):.1f} GB"
     if size >= MB:
         return f"{size / MB:.1f} MB"
     return f"{max(size / 1024, 0.1):.1f} KB"

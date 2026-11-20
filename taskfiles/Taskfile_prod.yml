@@ -81,14 +81,19 @@ tasks:
       - "{{.PROD_COMPOSE}} exec webapp python -m app.cli db-upgrade"
 
   backup:
-    desc: copies the production database to .backups/<date>-<time>-<name>
+    desc: copies the production database and the submitted files (tar.gz) to .backups/<date>-<time>-<name>
     cmds:
-      - "{{.PROD_COMPOSE}} exec webapp python -m app.cli db-backup"
+      - "{{.PROD_COMPOSE}} exec webapp python -m app.cli db-backup {{.CLI_ARGS}}"
 
   export-exercises:
     desc: "writes the exercises as CSV to .backups/<date>-<time>-initial_exercises.csv"
     cmds:
       - "{{.PROD_COMPOSE}} exec webapp python -m app.cli export-data-exercises"
+
+  import-exercises:
+    desc: "imports setup/initial_exercises.csv; '-- --update' also changes the exercises that exist"
+    cmds:
+      - "{{.PROD_COMPOSE}} exec webapp python -m app.cli import-data-exercises {{.CLI_ARGS}}"
 
   create-admins:
     desc: "creates the accounts of SYSTEM_ADMINS, prints and e-mails the login data (-- --no-mail)"
