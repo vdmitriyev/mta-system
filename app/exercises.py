@@ -6,7 +6,12 @@ import markdown
 from markupsafe import Markup
 from sqlalchemy.orm import Session
 
-from app.models import ExerciseBonusPoints, ExerciseReviews, Exercises
+from app.models import (
+    ExerciseBonusPoints,
+    ExerciseReviews,
+    Exercises,
+    ExerciseSubmissions,
+)
 from app.timeutil import to_local
 
 PART_REVIEW = "review"
@@ -97,8 +102,21 @@ def render_review_content(review: ExerciseReviews):
 
 
 def get_user_reviews(db: Session, exercises: list, user_id: int) -> list:
-    """Gets the review state of a user for each of the given exercises"""
+    """Gets the review state of a user for each of the given exercises.
 
+    An exercise with submissions counts as submitted while the user has files
+    for it that are not deleted; the saved review does not change that.
+    """
+
+    with_files = {
+        exercise_id
+        for (exercise_id,) in db.query(ExerciseSubmissions.exercise_id)
+        .filter(
+            ExerciseSubmissions.user_id == user_id,
+            ExerciseSubmissions.deleted.is_(False),
+        )
+        .distinct()
+    }
     reviews = []
     for exercise in exercises:
         item = {
@@ -119,6 +137,8 @@ def get_user_reviews(db: Session, exercises: list, user_id: int) -> list:
                 visible=review.visible,
                 content=render_review_content(review),
             )
+        if exercise.has_submission:
+            item["submitted"] = exercise.itid in with_files
         reviews.append(item)
     return reviews
 

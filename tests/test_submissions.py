@@ -743,3 +743,34 @@ def test_old_temporary_files_are_removed_at_the_start(settings):
         pass
     assert not old.exists() and new.exists() and kept.exists()
     assert not (downloads / ".upload-x.zip").exists()
+
+
+def test_review_shows_submitted_while_there_are_files(
+    student_client, db, exercise, student
+):
+    from app.models import ExerciseReviews
+
+    exercise.has_review = True
+    db.add(
+        ExerciseReviews(
+            user_id=student.itid,
+            exercise_id=exercise.itid,
+            submitted=False,
+            visible=True,
+        )
+    )
+    db.commit()
+
+    def badge() -> str:
+        text = page_text(student_client, "/reviews")
+        return "not submitted" if "not submitted" in text else "submitted"
+
+    assert badge() == "not submitted"
+    upload(student_client, [("report.pdf", PDF, "application/pdf")])
+    upload(student_client, [("notes.md", b"# Notes\n", "text/markdown")])
+    assert badge() == "submitted"  # the files count, not the saved review
+
+    for row in active_rows(db):
+        post(student_client, "/submissions/EX01/delete", {"submission_id": row.itid})
+        expected = "submitted" if active_rows(db) else "not submitted"
+        assert badge() == expected

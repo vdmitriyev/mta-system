@@ -2,6 +2,11 @@
 History
 =======
 
+2.6.3 (2026-11-20)
+-------------------
+
+* **Reviews**: an exercise with submissions shows **submitted** while the user has files for it, and **not submitted** when all files are deleted (also the second dot on the admin page).
+
 2.6.2 (2026-11-20)
 -------------------
 
