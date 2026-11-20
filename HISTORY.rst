@@ -9,6 +9,7 @@ History
 * All pages and the confirmation e-mail show date and time in European format: `30.11.2026 23:59`. The CSV file of the exercises keeps the ISO format (`2026-11-30T23:59:00`).
 * Page **Services**: the sample dataset buttons are now below the text, larger and blue.
 * Page **Submissions**: the table column **File** is now **Upload**.
+* Pages **Submissions** and **Reviews**: the header of each exercise has a grey background, so it stands apart from the open panel below it.
 
 2.5.1 (2026-11-20)
 -------------------

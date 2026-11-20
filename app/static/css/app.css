@@ -1116,8 +1116,18 @@ details.item > summary {
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.85rem 1rem;
+  border-radius: calc(var(--radius) - 1px);
+  background: var(--surface-2);
   font-weight: 600;
   cursor: pointer;
+}
+
+details.item > summary:hover {
+  color: var(--primary);
+}
+
+details.item[open] > summary {
+  border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0;
 }
 
 details.item > .body {
