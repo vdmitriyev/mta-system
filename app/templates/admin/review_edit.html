@@ -71,7 +71,7 @@
           <tr>
             <td>{{ file_link(file) }}</td>
             <td class="num">{{ format_size(file.size_bytes) }}</td>
-            <td>{{ file.created_at.strftime("%d.%m.%Y %H:%M") if file.created_at else "" }}</td>
+            <td>{{ file.created_at | local }}</td>
             <td>
               {{ file_buttons(file) }}
             </td>

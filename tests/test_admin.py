@@ -934,10 +934,46 @@ def test_admin_log_lists_the_changes(admin_client, db, admin, student):
     )
     actions = db.query(AdminActions).order_by(AdminActions.itid).all()
     assert [entry.action for entry in actions] == ["review", "bonus", "visibility"]
-    assert {entry.admin_email for entry in actions} == {ADMIN_EMAIL}
+    assert {entry.admin_id for entry in actions} == {admin.itid}
     assert actions[1].details.startswith("points=4")
 
     page = admin_client.get("/mtas-admin/actions").text
     assert "Bonus points saved" in page and "Review saved" in page
+    assert (
+        f"<td>{admin.itid}</td>" in page and ADMIN_EMAIL not in page.split("<tbody>")[1]
+    )
     only = admin_client.get(f"/mtas-admin/actions?user_id={student.itid}").text
     assert "Visibility changed" not in only and "Review saved" in only
+
+
+def test_migration_turns_the_admin_email_into_the_id(settings):
+    from alembic import command
+    from sqlalchemy import text
+
+    from app.cli.database import alembic_config
+    from app.database import get_engine, init_engine
+
+    init_engine(settings.database_url)
+    config = alembic_config()
+    command.upgrade(config, "a7c3e9f1b5d2")
+    with get_engine().begin() as connection:
+        connection.execute(
+            text(
+                "INSERT INTO users (itid, email, internal_email, url_hash, pin, "
+                "pin_hash, active, is_user_assigned, deleted) VALUES "
+                "(7, 'ada.admin@uni.example', 'x', 'h', '1', 'p', 1, 1, 0)"
+            )
+        )
+        connection.execute(
+            text(
+                "INSERT INTO admin_actions (admin_email, action) VALUES "
+                "('ada.admin@uni.example', 'review'), ('gone@uni.example', 'bonus')"
+            )
+        )
+    command.upgrade(config, "head")
+    with get_engine().connect() as connection:
+        rows = connection.execute(
+            text("SELECT admin_id, action FROM admin_actions ORDER BY itid")
+        ).all()
+    assert [tuple(row) for row in rows] == [(7, "review"), (None, "bonus")]
+    command.downgrade(config, "a7c3e9f1b5d2")

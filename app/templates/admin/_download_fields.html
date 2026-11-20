@@ -23,7 +23,7 @@
     <option value="{{ exercise.code }}"{% if item and item.exercise_id == exercise.itid %} selected{% endif %}>{{ exercise.code }} – {{ exercise.name }}</option>
     {% endfor %}
   </select>
-  <span class="hint">The users see the exercise, its maximum and their bonus points next to the file. Only exercises with a bonus part.</span>
+  <span class="hint">The users see the exercise next to the file. Only exercises with a bonus part.</span>
 </div>
 <label class="check"><input type="checkbox" name="visible" {% if not item or item.visible %}checked{% endif %}> The users can see the file</label>
 {% endmacro %}

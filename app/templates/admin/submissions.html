@@ -19,7 +19,7 @@
           {% for exercise in exercises %}
           <th class="center" title="{{ exercise.name }}">
             {{ exercise.code }}
-            <br><span class="muted small">{{ exercise.submission_deadline.strftime("%d.%m.%Y %H:%M") if exercise.submission_deadline else "no deadline" }}</span>
+            <br><span class="muted small">{{ (exercise.submission_deadline | local) if exercise.submission_deadline else "no deadline" }}</span>
             <br><span class="muted small">{{ totals[loop.index0] }} of {{ rows | length }}</span>
             <br><span class="muted small">{{ format_size(storage.per_exercise[loop.index0]) if storage.per_exercise[loop.index0] else "0 KB" }}</span>
           </th>
@@ -46,7 +46,7 @@
                 <span class="badge danger" title="Another user uploaded a file with the same content">same file</span>
               {% endif %}
               {% if cell and cell.extension %}
-                <span class="badge warning" title="Personal deadline">{{ cell.extension.strftime("%d.%m. %H:%M") }}</span>
+                <span class="badge warning" title="Personal deadline">{{ cell.extension | local("%d.%m. %H:%M") }}</span>
               {% endif %}
             </a>
           </td>

@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.models import PGAdmin4Service, PostgreSQLService
+from app.models import AdminActions, PGAdmin4Service, PostgreSQLService
 from app.routers import admin as admin_router
 from app.services import basic_auth, postgresql
 from tests.conftest import STUDENT_EMAIL, add_postgresql, add_user, post
@@ -62,6 +62,16 @@ def test_postgresql_access_check(admin_client, db, student, mate, monkeypatch):
     assert "NO SERVICE" in text  # the admin has no database
 
 
+def logged(db) -> list:
+    """(action, user_id) of the admin log"""
+
+    db.expire_all()
+    return [
+        (entry.action, entry.user_id)
+        for entry in db.query(AdminActions).order_by(AdminActions.itid)
+    ]
+
+
 def test_create_database_for_a_user_without_account(admin_client, db, student, mate):
     response = post(
         admin_client,
@@ -83,6 +93,7 @@ def test_create_database_for_a_user_without_account(admin_client, db, student, m
     )
     text = admin_client.get("/mtas-admin/services/postgresql").text
     assert "The database bicourse_db_01 was created for" in text
+    assert logged(db) == [("postgresql_created", student.itid)]
 
 
 def test_missing_database_is_created_again_with_the_stored_login(
@@ -138,6 +149,7 @@ def test_set_password(admin_client, db, student, mate):
     assert mate.calls[-1] == ("set_user_password", "bicourse_user_01", "pg-secret-11")
     text = admin_client.get("/mtas-admin/services/postgresql").text
     assert f"on the services page of {STUDENT_EMAIL}" in text
+    assert logged(db) == [("postgresql_password", student.itid)]
 
 
 def test_set_password_without_account(admin_client, db, student, mate):
@@ -150,6 +162,7 @@ def test_set_password_without_account(admin_client, db, student, mate):
         "has no PostgreSQL account"
         in admin_client.get("/mtas-admin/services/postgresql").text
     )
+    assert logged(db) == []  # nothing changed
 
 
 # ---------- pgAdmin 4 ----------

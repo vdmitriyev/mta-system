@@ -20,12 +20,10 @@
         {% for row in rows %}
         {% set item = row.item %}
         <tr>
-          <td><strong>{{ item.title }}</strong>{% if item.description %}<br><span class="muted small">{{ item.description }}</span>{% endif %}<br><span class="muted small">{{ item.original_name }}</span></td>
+          <td><strong>{{ item.title }}</strong>{% if item.description %}<br><span class="muted small">{{ item.description }}</span>{% endif %}</td>
           <td>
             {% if row.exercise %}
               {{ row.exercise.name or row.exercise.code }} <span class="badge">{{ row.exercise.code }}</span>
-              {% if row.exercise.bonus_max_points is not none %}<br><span class="muted small">up to {{ row.exercise.bonus_max_points }} points</span>{% endif %}
-              {% if row.points is not none %}<br><span class="badge success">your points: {{ row.points }}</span>{% endif %}
             {% else %}–{% endif %}
           </td>
           <td class="num">{{ format_size(item.size_bytes) }}</td>

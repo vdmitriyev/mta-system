@@ -33,12 +33,12 @@
     <div class="table-wrap">
       <table class="table">
         <thead>
-          <tr><th>Created (UTC)</th><th>Task</th><th>State</th><th>Result</th></tr>
+          <tr><th>Created</th><th>Task</th><th>State</th><th>Result</th></tr>
         </thead>
         <tbody>
           {% for task in tasks %}
           <tr>
-            <td class="nowrap">{{ task.created_at.strftime("%d.%m.%Y %H:%M:%S") if task.created_at else "" }}</td>
+            <td class="nowrap">{{ task.created_at | local("%d.%m.%Y %H:%M:%S") }}</td>
             <td><code>{{ task.kind }}</code></td>
             <td>{{ ui.task_badge(task.status) }}</td>
             <td>{% if task.about_user_id %}<span class="badge">user_id {{ task.about_user_id }}</span> {% endif %}{{ task.message or "" }}</td>

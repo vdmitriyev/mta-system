@@ -10,7 +10,6 @@ participant is the table SurveyliteService of this app.
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
 from sqlalchemy.orm import Session
@@ -19,6 +18,7 @@ from app.config import get_settings
 from app.models import ServiceRequirement, SurveyAssignment, SurveyliteService
 from app.services import surveylite_api
 from app.services.surveylite_api import COMPLETED, SurveyliteError
+from app.timeutil import utc_now
 
 logger = logging.getLogger(__name__)
 
@@ -118,7 +118,7 @@ def _set_link(row: SurveyAssignment, link) -> None:
 
 def _set_status(row: SurveyAssignment, status: str) -> None:
     if status == COMPLETED and row.status != COMPLETED:
-        row.completed_at = datetime.now(timezone.utc).replace(tzinfo=None)
+        row.completed_at = utc_now()
     row.status = status
 
 

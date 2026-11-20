@@ -15,10 +15,6 @@
     {% if open_reviews %}<a class="btn sm primary" href="/mtas-admin/reviews?todo=true">Only users to review</a>{% endif %}
   {% endif %}
 </p>
-<p class="legend">
-  <span>The four dots show:</span>
-  <span>1. review text</span><span>2. submitted</span><span>3. reviewed</span><span>4. visible to the user</span>
-</p>
 <div class="card flush">
   <div class="table-wrap">
     <table class="table" id="reviews-table">
@@ -63,5 +59,9 @@
   </div>
   {% if not rows %}<div class="empty">No users yet.</div>{% endif %}
 </div>
+<p class="legend end">
+  <span>The four dots show:</span>
+  <span>1. review text</span><span>2. submitted</span><span>3. reviewed</span><span>4. visible to the user</span>
+</p>
 {% endif %}
 {% endblock %}

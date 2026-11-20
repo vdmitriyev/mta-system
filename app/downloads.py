@@ -6,12 +6,10 @@ import zipfile
 from dataclasses import dataclass
 from pathlib import Path
 
-from fastapi import HTTPException
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.config import DOWNLOAD_MAX_MB, get_settings
-from app.exercises import get_latest_bonus_points
 from app.models import Downloads, Exercises
 from app.submissions import (
     MB,
@@ -20,6 +18,7 @@ from app.submissions import (
 )
 from app.submissions import check_content as check_text_or_pdf
 from app.submissions import split_filename, store_upload, unique_name
+from app.web import send_file
 
 logger = logging.getLogger(__name__)
 
@@ -71,10 +70,8 @@ def file_response(item: Downloads) -> FileResponse:
     try:
         path = file_path(item)
     except DownloadError:
-        raise HTTPException(status_code=404)
-    if not path.is_file():
-        raise HTTPException(status_code=404)
-    return FileResponse(path, media_type=item.content_type, filename=item.original_name)
+        path = None
+    return send_file(path, item.content_type, item.original_name)
 
 
 def check_content(ext: str, path: Path) -> bool:
@@ -205,17 +202,11 @@ def delete_download(db: Session, item: Downloads) -> None:
     remove_file(stored_name)
 
 
-def user_downloads(db: Session, user_id: int) -> list:
-    """The visible downloads with their exercise and the bonus points of the user"""
+def user_downloads(db: Session) -> list:
+    """The visible downloads with their exercise"""
 
     exercises = {exercise.itid: exercise for exercise in bonus_exercises(db)}
-    rows = []
-    for item in list_downloads(db, only_visible=True):
-        exercise = exercises.get(item.exercise_id)
-        points = None
-        if exercise is not None:
-            entry = get_latest_bonus_points(db, user_id, exercise.itid)
-            if entry is not None and entry.visible:
-                points = entry.points
-        rows.append({"item": item, "exercise": exercise, "points": points})
-    return rows
+    return [
+        {"item": item, "exercise": exercises.get(item.exercise_id)}
+        for item in list_downloads(db, only_visible=True)
+    ]

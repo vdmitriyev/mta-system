@@ -2,6 +2,23 @@
 History
 =======
 
+2.6.2 (2026-11-20)
+-------------------
+
+* Times are stored in UTC and shown in the local time of the server (`TZ`), also on **Admin log**, **Logins** and **Users**. Deadlines are entered in local time.
+* **Admin log** also lists accounts and containers of the services (created, started, stopped, passwords, logins) and surveys.
+* Temporary files of stopped uploads (older than 1 hour) are deleted when the app starts.
+* Code: reviews and bonus points in `app/routers/admin_grading.py`; one upload limit and one file download helper (`app/web.py`).
+* Database: new migration: deadlines, deleted files and task times from local time to UTC.
+
+2.6.1 (2026-11-20)
+-------------------
+
+* **Downloads** (users): no file name and no points under the entries; only the title, the description and the exercise.
+* **Admin log**: shows the user ID of the admin instead of the e-mail.
+* **Reviews** (admin): the legend of the four dots is below the table, on the right.
+* Database: new migration: `admin_actions.admin_email` → `admin_id` (existing entries get the ID of the admin, if found).
+
 2.6.0 (2026-11-20)
 -------------------
 

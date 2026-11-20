@@ -6,10 +6,9 @@ from app import downloads
 from app.admin_log import log_action
 from app.config import DOWNLOAD_MAX_MB
 from app.models import Downloads
-from app.routers.submissions import FORM_OVERHEAD_BYTES
 from app.security import csrf_protect
 from app.submissions import Upload, format_size
-from app.web import Page, flash, redirect, require_admin
+from app.web import Page, flash, limit_upload, redirect, require_admin
 
 router = APIRouter(
     prefix="/mtas-admin/downloads",
@@ -18,12 +17,7 @@ router = APIRouter(
 )
 
 
-async def limit_download_size(request: Request) -> None:
-    """Rejects a too large upload before the form is read"""
-
-    length = request.headers.get("content-length", "")
-    if length.isdigit() and int(length) > downloads.max_bytes() + FORM_OVERHEAD_BYTES:
-        raise HTTPException(status_code=413)
+limit_download_size = limit_upload(lambda: downloads.max_bytes())
 
 
 async def download_form(request: Request) -> dict:

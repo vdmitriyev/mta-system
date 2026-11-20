@@ -14,6 +14,7 @@ from app.exercises import exercises_csv, get_exercise, get_exercises
 from app.models import Exercises, Users
 from app.routers.submissions import file_response
 from app.security import csrf_protect
+from app.timeutil import local_text, to_utc
 from app.users import course_users, email_to_name, neighbours
 from app.web import Page, flash, redirect, require_admin
 
@@ -28,7 +29,10 @@ DEADLINE_FORMAT = "%d.%m.%Y %H:%M"
 
 
 def parse_deadline(value: str) -> datetime | None:
-    """30.11.2026 23:59, 30.11.2026 (until 23:59) or ISO 2026-11-30T23:59. Empty: None."""
+    """Local time of the form: 30.11.2026 23:59, 30.11.2026 (until 23:59) or ISO.
+
+    Empty: None. Stays in local time; to_utc() before it is saved.
+    """
 
     value = " ".join((value or "").split())
     if not value:
@@ -43,7 +47,9 @@ def parse_deadline(value: str) -> datetime | None:
 
 
 def deadline_input(value: datetime | None) -> str:
-    return value.strftime(DEADLINE_FORMAT) if value else ""
+    """UTC of the database -> local time of the form"""
+
+    return local_text(value, DEADLINE_FORMAT)
 
 
 def exercise_or_404(page: Page, code: str) -> Exercises:
@@ -198,7 +204,9 @@ def exercise_save(
     except ValueError:
         return invalid("Enter the year, the order and the bonus points as numbers.")
     try:
-        parsed["submission_deadline"] = parse_deadline(values["submission_deadline"])
+        parsed["submission_deadline"] = to_utc(
+            parse_deadline(values["submission_deadline"])
+        )
     except ValueError:
         return invalid("Enter the deadline as date and time.")
 
@@ -317,7 +325,7 @@ def submission_extension(
     if parsed is None:
         flash(page.request, "Enter the new deadline as date and time.", "danger")
         return redirect(_detail_url(student.itid, exercise_db.code))
-    submissions.set_extension(page.db, exercise_db, student.itid, parsed, note)
+    submissions.set_extension(page.db, exercise_db, student.itid, to_utc(parsed), note)
     log_action(
         page.db,
         page.user,

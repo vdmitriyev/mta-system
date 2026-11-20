@@ -16,6 +16,7 @@ from app.routers import (
     admin,
     admin_databases,
     admin_downloads,
+    admin_grading,
     admin_submissions,
     admin_surveys,
     api,
@@ -24,6 +25,7 @@ from app.routers import (
     submissions,
 )
 from app.service_settings import add_default_service_settings
+from app.submissions import remove_old_temp_files
 from app.tasks import fail_stale_tasks
 from app.visibility import add_default_ui_visibility_settings
 from app.web import NotAuthenticated, Page, get_current_user, redirect
@@ -114,6 +116,11 @@ async def lifespan(_app: FastAPI):
         except Exception:
             # the table is missing until the migrations ran
             logger.warning("Background tasks were not checked: run the migrations")
+    settings = get_settings()
+    for folder in (settings.submissions_dir, settings.downloads_dir):
+        removed = remove_old_temp_files(folder)
+        if removed:
+            logger.info("Deleted %s temporary files of stopped uploads", removed)
     yield
 
 
@@ -158,6 +165,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         downloads.router,
         admin_databases.router,
         admin_downloads.router,
+        admin_grading.router,
         admin_submissions.router,
         admin_surveys.router,
         admin.router,

@@ -195,7 +195,7 @@ def test_one_upload_has_at_most_10_mb(
     student_client, db, exercise, folder, monkeypatch
 ):
     # without the check of the Content-Length (e.g. a chunked request)
-    monkeypatch.setattr("app.routers.submissions.FORM_OVERHEAD_BYTES", 100 * MB)
+    monkeypatch.setattr("app.web.FORM_OVERHEAD_BYTES", 100 * MB)
     part = b"%PDF-" + b"0" * (4 * MB)
     upload(
         student_client,
@@ -714,3 +714,32 @@ def test_to_review_and_previous_next_on_the_review_page(client, db, exercise, st
     assert f'href="{url.format(second.itid).replace("&", "&amp;")}" rel="next"' in first
     last = page_text(client, url.format(second.itid))
     assert f'href="{url.format(student.itid).replace("&", "&amp;")}" rel="prev"' in last
+
+
+def test_old_temporary_files_are_removed_at_the_start(settings):
+    import os
+    import time
+
+    from fastapi.testclient import TestClient
+
+    from app.app import create_app
+
+    folder = settings.submissions_dir / "0001_sam" / "EX01"
+    folder.mkdir(parents=True)
+    old = folder / ".upload-abc.pdf"
+    new = folder / ".upload-def.pdf"
+    kept = folder / "report.pdf"
+    for path in (old, new, kept):
+        path.write_bytes(b"x")
+    two_hours_ago = time.time() - 7200
+    os.utime(old, (two_hours_ago, two_hours_ago))
+    os.utime(kept, (two_hours_ago, two_hours_ago))
+    downloads = settings.downloads_dir
+    downloads.mkdir(parents=True)
+    (downloads / ".upload-x.zip").write_bytes(b"x")
+    os.utime(downloads / ".upload-x.zip", (two_hours_ago, two_hours_ago))
+
+    with TestClient(create_app(settings)):
+        pass
+    assert not old.exists() and new.exists() and kept.exists()
+    assert not (downloads / ".upload-x.zip").exists()

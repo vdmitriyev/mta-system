@@ -1,11 +1,13 @@
 import csv
 import io
+from datetime import datetime
 
 import markdown
 from markupsafe import Markup
 from sqlalchemy.orm import Session
 
 from app.models import ExerciseBonusPoints, ExerciseReviews, Exercises
+from app.timeutil import to_local
 
 PART_REVIEW = "review"
 PART_BONUS = "bonus"
@@ -162,8 +164,9 @@ def _csv_value(value) -> str:
         return "true" if value else "false"
     if isinstance(value, float) and value.is_integer():
         return str(int(value))
-    if hasattr(value, "isoformat"):
-        return value.isoformat()
+    if isinstance(value, datetime):
+        # the CSV file is written by people: local time
+        return to_local(value).isoformat()
     return str(value)
 
 

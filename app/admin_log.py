@@ -18,6 +18,19 @@ ACTION_LABELS = {
     "download_changed": "Download changed",
     "download_moved": "Download moved",
     "download_deleted": "Download deleted",
+    "accounts_generated": "Accounts prepared",
+    "service_created": "Service created",
+    "service_start": "Container started",
+    "service_stop": "Container stopped",
+    "postgresql_created": "PostgreSQL database created",
+    "postgresql_password": "PostgreSQL password set",  # nosec B105: a label
+    "pgadmin4_login": "pgAdmin 4 login written",
+    "pgadmin4_created": "pgAdmin 4 set up",
+    "sqlmate_created": "sqlmate set up",
+    "surveylite_created": "SurveyLite set up",
+    "surveylite_login_link": "SurveyLite login link renewed",
+    "survey_assigned": "Survey given",
+    "survey_requirement": "Survey needed for a service",
 }
 
 
@@ -33,7 +46,7 @@ def log_action(
 
     db.add(
         AdminActions(
-            admin_email=admin.email,
+            admin_id=admin.itid,
             action=action,
             user_id=user_id,
             exercise_code=exercise_code,

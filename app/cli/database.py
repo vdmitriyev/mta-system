@@ -14,6 +14,7 @@ from app.database import backup_sqlite, pack_folder, prune_backups, session_scop
 from app.exercises import EXERCISE_COLUMNS, exercises_csv, get_exercises
 from app.models import Exercises
 from app.services import postgresql
+from app.timeutil import to_utc
 from app.users import course_users, get_user_services
 
 DEFAULT_EXERCISES_FILE = os.path.join("setup", "initial_exercises.csv")
@@ -197,8 +198,8 @@ def import_exercises(db: Session, fname_csv: str, update: bool = False) -> tuple
                 "year": to_value(row["year"], int),
                 "visible": to_bool(row["visible"]),
                 "exercise_order": to_value(row["exercise_order"], int),
-                "submission_deadline": to_value(
-                    row["submission_deadline"], datetime.fromisoformat
+                "submission_deadline": to_utc(
+                    to_value(row["submission_deadline"], datetime.fromisoformat)
                 ),
                 "has_review": to_bool(row["has_review"]),
                 "has_bonus": to_bool(row["has_bonus"]),

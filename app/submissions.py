@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import tempfile
+import time
 import zipfile
 from dataclasses import dataclass
 from datetime import datetime
@@ -21,12 +22,17 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.emails import send_email
 from app.models import Exercises, ExerciseSubmissions, SubmissionExtensions, Users
+from app.timeutil import local_text, utc_now
 
 logger = logging.getLogger(__name__)
 
 MB = 1024 * 1024
 CHUNK_SIZE = 256 * 1024
 MAX_NAME_LENGTH = 100
+# temporary file of an upload, until it is checked
+TEMP_PREFIX = ".upload-"
+# older temporary files are left over from a stopped upload
+TEMP_MAX_AGE_SECONDS = 3600
 # extension -> media type of the download
 ALLOWED_TYPES = {
     ".pdf": "application/pdf",
@@ -87,9 +93,9 @@ def effective_deadline(db: Session, exercise: Exercises, user_id: int):
 
 
 def is_open(deadline: datetime | None, now: datetime | None = None) -> bool:
-    """Deadlines are local times of the server (TZ), as the admin enters them"""
+    """Deadline and now in UTC"""
 
-    return deadline is None or (now or datetime.now()) <= deadline
+    return deadline is None or (now or utc_now()) <= deadline
 
 
 def set_extension(
@@ -222,6 +228,23 @@ def all_submissions(db: Session, user_id: int, exercise_id: int) -> list:
     )
 
 
+def remove_old_temp_files(folder: Path) -> int:
+    """Deletes the temporary files of stopped uploads in the folder and below it"""
+
+    if not folder.is_dir():
+        return 0
+    limit = time.time() - TEMP_MAX_AGE_SECONDS
+    removed = 0
+    for path in folder.rglob(TEMP_PREFIX + "*"):
+        try:
+            if path.is_file() and path.stat().st_mtime < limit:
+                path.unlink()
+                removed += 1
+        except OSError:
+            logger.warning("Temporary file not deleted: %s", path)
+    return removed
+
+
 def store_upload(folder: Path, upload: Upload, ext: str, limit: int) -> tuple:
     """Writes the upload into a temporary file of the folder.
 
@@ -231,7 +254,7 @@ def store_upload(folder: Path, upload: Upload, ext: str, limit: int) -> tuple:
 
     digest = hashlib.sha256()
     size = 0
-    handle, temp_name = tempfile.mkstemp(dir=folder, prefix=".upload-", suffix=ext)
+    handle, temp_name = tempfile.mkstemp(dir=folder, prefix=TEMP_PREFIX, suffix=ext)
     temp_path = Path(temp_name)
     try:
         with os.fdopen(handle, "wb") as target:
@@ -337,7 +360,7 @@ def delete_submission(db: Session, submission: ExerciseSubmissions) -> None:
         logger.error("File %s was not deleted: %s", submission.stored_name, error)
         raise SubmissionError("The file was not deleted. Try again later.")
     submission.deleted = True
-    submission.deleted_at = datetime.now()
+    submission.deleted_at = utc_now()
     db.commit()
     logger.info(
         "Submission %s of user %s was deleted", submission.itid, submission.user_id
@@ -548,9 +571,9 @@ def confirmation_text(
     if deadline:
         lines += [
             "",
-            f"Deadline: {deadline:%d.%m.%Y %H:%M}. Until then you can upload and delete files.",
+            f"Deadline: {local_text(deadline)}. Until then you can upload and delete files.",
         ]
-    lines += ["", "Time of this e-mail: " + datetime.now().strftime("%d.%m.%Y %H:%M")]
+    lines += ["", "Time of this e-mail: " + local_text(utc_now())]
     return "\n".join(lines)
 
 

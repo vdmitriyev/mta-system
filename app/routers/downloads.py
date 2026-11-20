@@ -21,7 +21,7 @@ def require_visible(page: Page = Depends()) -> None:
 def downloads_page(page: Page = Depends(), user: Users = Depends(require_user)):
     return page.render(
         "downloads.html",
-        rows=downloads.user_downloads(page.db, user.itid),
+        rows=downloads.user_downloads(page.db),
         format_size=format_size,
     )
 

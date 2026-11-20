@@ -138,7 +138,7 @@ Students upload their reports on the page **Submissions**: PDF, TXT, MD or DOCX 
 * The admin page **Submissions** shows the number of files per user and exercise. A click on a cell lists the files (also the deleted ones), and sets or removes a personal deadline for this user. **ZIP** downloads all files of an exercise.
 * The files are in `submissions/` on the host (`SUBMISSIONS_DIR` in the container): `<user-id>_<name>/<EXERCISE_CODE>/<file>`, for example `submissions/0007_sam.student/EX01/report.pdf`.
 * One upload has at most 10 MB. The app checks it, and nginx rejects larger uploads (`client_max_body_size 11M` for `/submissions/<code>/upload`).
-* The deadline is the local time of the server (`TZ` in `compose.prod.yaml`).
+* The admin enters deadlines in the local time of the server (`TZ` in `compose.prod.yaml`). The app stores all times in UTC and shows them in this local time.
 * `task prod:backup` packs `submissions/` into `.backups/<date>-<time>-submissions.tar.gz`.
 * The admin page **Submissions** shows the size of the files, in total and per exercise, and the free space on the disk.
 * The page needs the menu entry **Submissions** on the admin page **Visibility** (on by default).
@@ -149,13 +149,13 @@ The admin page **Downloads** offers files to the users: PDF, ZIP, MD, TXT or SQL
 
 * The users do not see the page at first. Switch it on at **Visibility** → **Menu: Downloads**.
 * The users see the files in the order of the admin page. ↑ and ↓ change it.
-* A file can belong to an exercise with a bonus part. The users then see the exercise, its maximum and their own bonus points (if visible) next to the file.
+* A file can belong to an exercise with a bonus part. The users then see the name and code of the exercise next to the file.
 * A file that is not visible stays on the server, e.g. the solution until the deadline.
 * The files are in `data/downloads/` (`DOWNLOADS_DIR`), in the folder of the database. `task prod:backup` packs them.
 
 ### Admin log
 
-The admin page **Admin log** lists the newest 300 changes of the admins: reviews, bonus points, personal deadlines, deleted files, exercises, downloads, visibility and auto creation. A click on a user ID shows only the changes for this user.
+The admin page **Admin log** lists the newest 300 changes of the admins: reviews, bonus points, personal deadlines, deleted files, exercises, downloads, accounts and containers of the services, surveys, visibility and auto creation. A click on a user ID shows only the changes for this user.
 
 ### Exercises as CSV
 

@@ -359,7 +359,7 @@ class AdminActions(Base):
 
     itid = Column(Integer, primary_key=True)
     created_at = Column(DateTime, server_default=func.now(), index=True)
-    admin_email = Column(String(255), nullable=False)
+    admin_id = Column(Integer)
     action = Column(String(50), nullable=False)
     user_id = Column(Integer, index=True)
     exercise_code = Column(String(20))

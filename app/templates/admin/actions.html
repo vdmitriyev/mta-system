@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
 {% block title %}Admin log{% endblock %}
 {% block admin %}
-{{ ui.page_head("Admin log", "The newest 300 changes of the admins: reviews, bonus points, deadlines, deleted files, exercises, downloads and settings. The ID is the user ID on the page Users.") }}
+{{ ui.page_head("Admin log", "The newest 300 changes of the admins: reviews, bonus points, deadlines, deleted files, exercises, downloads and settings. The IDs of the admin and of the user are the user IDs on the page Users.") }}
 {% if filter_user_id is not none %}
 <p class="row">
   <span>Only user_id <strong>{{ filter_user_id }}</strong>.</span>
@@ -17,8 +17,8 @@
     <table class="table" id="actions-table">
       <thead>
         <tr>
-          <th data-sort>Time (UTC)</th>
-          <th data-sort>Admin</th>
+          <th data-sort>Time</th>
+          <th data-sort="number">Admin ID</th>
           <th data-sort>Action</th>
           <th data-sort="number">user_id</th>
           <th data-sort>Exercise</th>
@@ -28,8 +28,8 @@
       <tbody>
         {% for entry in entries %}
         <tr>
-          <td class="nowrap">{{ entry.created_at.strftime("%d.%m.%Y %H:%M:%S") if entry.created_at else "" }}</td>
-          <td>{{ entry.admin_email }}</td>
+          <td class="nowrap">{{ entry.created_at | local("%d.%m.%Y %H:%M:%S") }}</td>
+          <td>{{ entry.admin_id if entry.admin_id is not none else "–" }}</td>
           <td>{{ labels.get(entry.action, entry.action) }}</td>
           <td>{% if entry.user_id is not none %}<a href="/mtas-admin/actions?user_id={{ entry.user_id }}">{{ entry.user_id }}</a>{% else %}–{% endif %}</td>
           <td>{% if entry.exercise_code %}<span class="badge">{{ entry.exercise_code }}</span>{% endif %}</td>

@@ -5,6 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, Form
 
 from app import provisioning, surveys
+from app.admin_log import log_action
 from app.config import get_settings
 from app.models import SurveyAssignment
 from app.routers.admin import get_course_user, user_rows
@@ -84,6 +85,7 @@ def sqlmate_create(page: Page = Depends(), user_id: int = Form(...)):
         student.internal_email,
         force_create=True,
     ):
+        log_action(page.db, page.user, "sqlmate_created", student.itid)
         flash(page.request, f"sqlmate was set up for {student.email}.", "success")
     else:
         flash(
@@ -162,6 +164,7 @@ def surveylite_create(page: Page = Depends(), user_id: int = Form(...)):
         return redirect(SURVEYLITE_PAGE)
     _mark_deleted(page.db, get_user_services(page.db, student.itid).get("surveylite"))
     if provisioning.surveylite_participant(page.db, student.itid, force_create=True):
+        log_action(page.db, page.user, "surveylite_created", student.itid)
         flash(page.request, f"SurveyLite was set up for {student.email}.", "success")
     else:
         flash(
@@ -183,6 +186,7 @@ def surveylite_login_link(page: Page = Depends(), user_id: int = Form(...)):
         flash(page.request, f"The login link was not renewed: {error}", "danger")
         return redirect(SURVEYLITE_PAGE)
     if renewed:
+        log_action(page.db, page.user, "surveylite_login_link", student.itid)
         flash(
             page.request,
             f"{student.email} has a new login link. The old links stop working.",
@@ -213,6 +217,13 @@ def surveylite_assign(
         flash(page.request, f"The survey was not given: {error}", "danger")
         return redirect(SURVEYLITE_PAGE)
 
+    log_action(
+        page.db,
+        page.user,
+        "survey_assigned",
+        None if user_id == "all" else user_ids[0],
+        details=f"{survey.title}: {result.assigned} users",
+    )
     message = f"“{survey.title}” was given to {result.assigned} users."
     if result.without_participant:
         message += (
@@ -244,6 +255,7 @@ def surveylite_requirement(
     name = SERVICE_INFO[service].name
     if not survey_id:
         surveys.set_requirement(page.db, service, None)
+        log_action(page.db, page.user, "survey_requirement", details=f"{service}: none")
         flash(page.request, f"{name} needs no survey now.", "success")
         return redirect(SURVEYLITE_PAGE)
 
@@ -256,6 +268,9 @@ def surveylite_requirement(
         flash(page.request, f"There is no survey {survey_id}.", "danger")
         return redirect(SURVEYLITE_PAGE)
     surveys.set_requirement(page.db, service, survey)
+    log_action(
+        page.db, page.user, "survey_requirement", details=f"{service}: {survey.title}"
+    )
     flash(
         page.request,
         f"{name} opens for a user after the survey “{survey.title}”. "

@@ -8,7 +8,7 @@ import logging
 import os
 import uuid
 from contextvars import ContextVar
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Callable
 
 import psutil
@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.database import session_scope
 from app.models import BackgroundTask
+from app.timeutil import utc_now
 
 QUEUED, RUNNING, DONE, FAILED = "queued", "running", "done", "failed"
 ACTIVE = (QUEUED, RUNNING)
@@ -80,7 +81,7 @@ def run_task(public_id: str, func: Callable, *args) -> None:
             db,
             public_id,
             status=RUNNING,
-            started_at=datetime.now(),
+            started_at=utc_now(),
             worker_pid=os.getpid(),
         )
         try:
@@ -93,9 +94,7 @@ def run_task(public_id: str, func: Callable, *args) -> None:
             db.rollback()
             logger.exception("Background task failed: %s", public_id)
             message, status = "The task failed with an error on the server", FAILED
-        _set_state(
-            db, public_id, status=status, message=message, finished_at=datetime.now()
-        )
+        _set_state(db, public_id, status=status, message=message, finished_at=utc_now())
 
 
 def _set_state(db: Session, public_id: str, **values) -> None:
@@ -143,7 +142,7 @@ def fail_stale_tasks(db: Session) -> int:
     """
 
     # created_at is set by SQLite, in UTC
-    limit = datetime.now(timezone.utc).replace(tzinfo=None) - STALE_AFTER
+    limit = utc_now() - STALE_AFTER
     lost, stale = [], []
     active = db.query(
         BackgroundTask.itid,
@@ -165,7 +164,7 @@ def fail_stale_tasks(db: Session) -> int:
             db.execute(
                 update(BackgroundTask)
                 .where(BackgroundTask.itid.in_(ids), BackgroundTask.status.in_(ACTIVE))
-                .values(status=FAILED, message=message, finished_at=datetime.now())
+                .values(status=FAILED, message=message, finished_at=utc_now())
             )
     db.commit()
     count = len(lost) + len(stale)

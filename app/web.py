@@ -1,9 +1,11 @@
 """Shared parts of the HTML pages: templates, login state, messages"""
 
+from collections.abc import Callable
 from functools import cached_property
+from pathlib import Path
 
 from fastapi import Depends, HTTPException, Request
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -12,6 +14,7 @@ from app.config import BASE_DIR, get_settings
 from app.database import get_db
 from app.models import Users
 from app.security import csrf_token
+from app.timeutil import local_text
 from app.users import find_user_by_hash, is_admin
 from app.visibility import ui_visibility_settings
 
@@ -20,6 +23,8 @@ SESSION_FLASH_KEY = "flashes"
 FLASH_LEVELS = ("info", "success", "warning", "danger")
 
 templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
+# {{ value | local }}: a UTC time of the database in local time
+templates.env.filters["local"] = local_text
 STATIC_DIR = BASE_DIR / "app" / "static"
 
 
@@ -118,3 +123,33 @@ class Page:
         return templates.TemplateResponse(
             self.request, template, context, status_code=status_code
         )
+
+
+# room for the other fields and the headers of an upload form
+FORM_OVERHEAD_BYTES = 256 * 1024
+
+
+def limit_upload(max_bytes: Callable[[], int]):
+    """Dependency: rejects a too large upload (413) before the form is read"""
+
+    async def check(request: Request) -> None:
+        length = request.headers.get("content-length", "")
+        if length.isdigit() and int(length) > max_bytes() + FORM_OVERHEAD_BYTES:
+            raise HTTPException(status_code=413)
+
+    return check
+
+
+def send_file(
+    path: Path | None, media_type: str, filename: str, inline: bool = False
+) -> FileResponse:
+    """The file as a download (inline: shown in the browser). None or missing: 404."""
+
+    if path is None or not path.is_file():
+        raise HTTPException(status_code=404)
+    return FileResponse(
+        path,
+        media_type=media_type,
+        filename=filename,
+        content_disposition_type="inline" if inline else "attachment",
+    )

@@ -1,4 +1,6 @@
+import os
 import re
+import time
 
 import pytest
 from docker.errors import ImageNotFound, NotFound
@@ -12,6 +14,10 @@ from app.models import Exercises, PostgreSQLService, Users
 from app.routers.public import login_limiter
 from app.service_settings import set_creates_accounts
 from app.users import email_hash, pin_hash
+
+# the same results on every computer; the fixture "berlin" tests local times
+os.environ["TZ"] = "UTC"
+time.tzset()
 
 ADMIN_EMAIL = "ada.admin@uni.example"
 STUDENT_EMAIL = "sam.student@uni.example"
@@ -296,3 +302,14 @@ def no_docker(monkeypatch):
         raise OSError("no docker socket")
 
     monkeypatch.setattr("app.services.docker_ctl.get_client", fail)
+
+
+@pytest.fixture
+def berlin():
+    """Local time of the server: Europe/Berlin (UTC+1 in winter, +2 in summer)"""
+
+    os.environ["TZ"] = "Europe/Berlin"
+    time.tzset()
+    yield
+    os.environ["TZ"] = "UTC"
+    time.tzset()

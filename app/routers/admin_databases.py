@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, Depends, Form
 
 from app import config, provisioning
+from app.admin_log import log_action
 from app.config import get_settings
 from app.models import PostgreSQLService
 from app.routers.admin import (
@@ -138,6 +139,7 @@ def postgresql_create(page: Page = Depends(), user_id: int = Form(...)):
     student = get_course_user(page.db, user_id)
     try:
         flash(page.request, create_postgresql_account(page.db, student), "success")
+        log_action(page.db, page.user, "postgresql_created", student.itid)
     except postgresql.PostgreSQLError as error:
         flash(page.request, f"Not created: {error}", "danger")
     return redirect("/mtas-admin/services/postgresql")
@@ -154,6 +156,7 @@ def postgresql_password(page: Page = Depends(), user_id: int = Form(...)):
         return redirect("/mtas-admin/services/postgresql")
     try:
         postgresql.set_password(entry.postgresql_user, entry.postgresql_password)
+        log_action(page.db, page.user, "postgresql_password", student.itid)
         flash(
             page.request,
             f"The password of {entry.postgresql_user} in PostgreSQL is now the one "
@@ -225,6 +228,7 @@ def pgadmin4_login(page: Page = Depends(), user_id: int = Form(...)):
         )
         entry.created = True
         page.db.commit()
+        log_action(page.db, page.user, "pgadmin4_login", student.itid)
         flash(
             page.request,
             f"The pgAdmin 4 login of {student.email} was written.",
@@ -250,5 +254,6 @@ def pgadmin4_login(page: Page = Depends(), user_id: int = Form(...)):
         password,
         force_create=True,
     )
+    log_action(page.db, page.user, "pgadmin4_created", student.itid)
     flash(page.request, f"pgAdmin 4 was set up for {student.email}.", "success")
     return redirect("/mtas-admin/services/pgadmin4")

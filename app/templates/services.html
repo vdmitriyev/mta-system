@@ -120,7 +120,7 @@
       <tbody>
         {% for task in finished_imports %}
         <tr>
-          <td class="nowrap">{{ task.finished_at.strftime("%d.%m.%Y %H:%M") if task.finished_at else "" }}</td>
+          <td class="nowrap">{{ task.finished_at | local }}</td>
           <td>{{ ui.task_badge(task.status) }}</td>
           <td>{{ task.message }}</td>
         </tr>

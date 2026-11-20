@@ -89,7 +89,7 @@ def test_wrong_files_are_rejected(admin_client, db, settings, name, content, mes
 
 def test_too_large_upload_gets_413(admin_client, monkeypatch):
     monkeypatch.setattr(downloads, "max_bytes", lambda: 10)
-    monkeypatch.setattr("app.routers.admin_downloads.FORM_OVERHEAD_BYTES", 0)
+    monkeypatch.setattr("app.web.FORM_OVERHEAD_BYTES", 0)
     response = add_file(admin_client, "task.pdf", PDF)
     assert response.status_code == 413
 
@@ -174,7 +174,9 @@ def test_users_download_the_visible_files(client, db, student):
 
     page = client.get("/downloads").text
     assert "Task 2" in page and "Solution" not in page
-    assert "up to 5.0 points" in page and "your points: 3.5" in page
+    assert "ETL" in page and ">EX2<" in page
+    assert "task.pdf" not in page
+    assert "your points" not in page and "up to" not in page
 
     response = client.get(f"/downloads/file/{task.itid}")
     assert response.content == PDF

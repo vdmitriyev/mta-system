@@ -7,22 +7,12 @@ from app import submissions
 from app.config import get_settings
 from app.models import Exercises, Users
 from app.security import csrf_protect
-from app.web import Page, flash, redirect, require_user
-
-# room for the other fields and the headers of the form
-FORM_OVERHEAD_BYTES = 256 * 1024
+from app.web import Page, flash, limit_upload, redirect, require_user, send_file
 
 router = APIRouter(prefix="/submissions", include_in_schema=False)
 
 
-async def limit_upload_size(request: Request) -> None:
-    """Rejects a too large upload before the form is read"""
-
-    length = request.headers.get("content-length", "")
-    if length.isdigit() and int(length) > (
-        submissions.max_bytes() + FORM_OVERHEAD_BYTES
-    ):
-        raise HTTPException(status_code=413)
+limit_upload_size = limit_upload(lambda: submissions.max_bytes())
 
 
 async def uploaded_files(request: Request) -> list:
@@ -182,14 +172,5 @@ def file_response(row, inline: bool = False) -> FileResponse:
     try:
         path = submissions.file_path(row)
     except submissions.SubmissionError:
-        raise HTTPException(status_code=404)
-    if not path.is_file():
-        raise HTTPException(status_code=404)
-    if inline:
-        return FileResponse(
-            path,
-            media_type=PDF_TYPE,
-            filename=row.original_name,
-            content_disposition_type="inline",
-        )
-    return FileResponse(path, media_type=row.content_type, filename=row.original_name)
+        path = None
+    return send_file(path, row.content_type, row.original_name, inline)

@@ -16,7 +16,7 @@
     <table class="table" id="logins-table">
       <thead>
         <tr>
-          <th data-sort>Time (UTC)</th>
+          <th data-sort>Time</th>
           <th data-sort="number">user_id</th>
           <th data-sort>Method</th>
           <th data-sort>Result</th>
@@ -25,7 +25,7 @@
       <tbody>
         {% for entry in entries %}
         <tr>
-          <td class="nowrap">{{ entry.created_at.strftime("%d.%m.%Y %H:%M:%S") if entry.created_at else "" }}</td>
+          <td class="nowrap">{{ entry.created_at | local("%d.%m.%Y %H:%M:%S") }}</td>
           <td>{% if entry.user_id is not none %}<a href="/mtas-admin/logins?user_id={{ entry.user_id }}">{{ entry.user_id }}</a>{% else %}–{% endif %}</td>
           <td>{{ {"form": "e-mail and PIN", "link": "login link"}.get(entry.method, entry.method) }}</td>
           <td><span class="badge {{ {'success': 'success', 'failed': 'danger', 'blocked': 'warning'}.get(entry.result, '') }}">{{ entry.result }}</span></td>

@@ -1114,6 +1114,11 @@ textarea.input {
   font-size: 0.85rem;
 }
 
+.legend.end {
+  justify-content: flex-end;
+  margin-top: 0.75rem;
+}
+
 /* ---------- details / accordion ---------- */
 
 details.item {
