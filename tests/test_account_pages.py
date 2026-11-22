@@ -191,6 +191,30 @@ def test_start_button_is_grey_while_the_container_runs(
     assert ">Exited</strong>" in openrefine
 
 
+def test_hint_that_the_containers_stop_each_night(
+    student_client, db, student, no_docker, use_settings
+):
+    add_all_services(db, student)
+    change_ui_visibility_settings(db, "openrefine_self_managment", False)
+    text = student_client.get("/services").text
+
+    def card(name):
+        start = text.index(f'id="service-{name}"')
+        return text[start : text.index("</section>", start)]
+
+    assert "stopped each night" in card("metabase")
+    assert "Start it again with “Start service” below." in card("metabase")
+    assert "ask your instructor" in card("openrefine")
+    assert "stopped each night" not in card("wordpress")
+    use_settings(NIGHT_STOP_SERVICES="openrefine")
+    assert (
+        "stopped each night"
+        not in student_client.get("/services")
+        .text.split('id="service-metabase"')[1]
+        .split("</section>")[0]
+    )
+
+
 def test_start_fails_without_container(student_client, db, student, docker):
     add_all_services(db, student)
     post(student_client, "/services/metabase/start")

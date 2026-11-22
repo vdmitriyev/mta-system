@@ -82,13 +82,24 @@ def service_cards(page: Page, user: Users) -> list:
         url = settings.container_url(name, getattr(entry, f"{name}_docker_port"))
         if name == "nifi":
             url += "nifi/"
-        return {
+        can_start = bool(visibility.get(f"{name}_self_managment"))
+        card = {
             "name": name,
             "title": title,
             "fields": [_field("URL", url, copy=False, link=True), *fields],
             "status": statuses.get(container, docker_ctl.UNKNOWN),
-            "can_start": bool(visibility.get(f"{name}_self_managment")),
+            "can_start": can_start,
         }
+        if name in settings.night_stop_services:
+            card["note"] = (
+                "The service is stopped each night to save server resources. "
+                + (
+                    "Start it again with “Start service” below."
+                    if can_start
+                    else "If it does not answer, ask your instructor."
+                )
+            )
+        return card
 
     builders = {
         "postgresql": lambda entry: {

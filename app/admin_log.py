@@ -23,6 +23,7 @@ ACTION_LABELS = {
     "service_created": "Service created",
     "service_start": "Container started",
     "service_stop": "Container stopped",
+    "service_stop_night": "Container stopped (night)",
     "postgresql_created": "PostgreSQL database created",
     "postgresql_password": "PostgreSQL password set",  # nosec B105: a label
     "pgadmin4_login": "pgAdmin 4 login written",
@@ -37,17 +38,17 @@ ACTION_LABELS = {
 
 def log_action(
     db: Session,
-    admin: Users,
+    admin: Users | None,
     action: str,
     user_id: int | None = None,
     exercise_code: str | None = None,
     details: str = "",
 ) -> None:
-    """Saves the entry. Call it after the change was saved."""
+    """Saves the entry. Call it after the change was saved. admin None: a job of the app."""
 
     db.add(
         AdminActions(
-            admin_id=admin.itid,
+            admin_id=admin.itid if admin is not None else None,
             action=action,
             user_id=user_id,
             exercise_code=exercise_code,

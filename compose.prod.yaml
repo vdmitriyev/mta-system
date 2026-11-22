@@ -86,6 +86,28 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Cron jobs (provision/ofelia/config.ini): ofelia runs commands in the app container.
+  # An internal service of the app: its version is pinned here, not in versions.env.
+  cronjobs-ofelia:
+    image: mcuadros/ofelia:0.3.22
+    container_name: mta-system-cronjobs-ofelia
+    command: daemon --config=/etc/ofelia/config.ini
+    restart: unless-stopped
+    depends_on:
+      - webapp
+    environment:
+      TZ: Europe/Berlin
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./provision/ofelia/config.ini:/etc/ofelia/config.ini:ro
+    # needs only the Docker socket
+    network_mode: none
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # PostgreSQL of the students: reachable from outside, e.g. from their SQL clients.
   # The login of each user needs a password. Use a strong POSTGRES_PASSWORD in
   # envs/postgresql-service.env and allow the port in the firewall only if needed.

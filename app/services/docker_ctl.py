@@ -88,8 +88,11 @@ def container_statuses(names: list) -> dict:
     return statuses
 
 
-def run_action(container_name: str, action: str) -> bool:
-    """Starts or stops a container. Returns True if the container was found."""
+def run_action(container_name: str, action: str, timeout: int | None = None) -> bool:
+    """Starts or stops a container. Returns True if the container was found.
+
+    timeout (stop only): seconds until Docker kills the container (Docker's default: 10).
+    """
 
     if action not in ("start", "stop"):
         raise ValueError(f"Action is not supported: {action}")
@@ -99,7 +102,10 @@ def run_action(container_name: str, action: str) -> bool:
         return False
     try:
         container = client.containers.get(container_name)
-        getattr(container, action)()
+        if action == "stop" and timeout is not None:
+            container.stop(timeout=timeout)
+        else:
+            getattr(container, action)()
         logger.info("Container %s: %s", container_name, action)
         return True
     except Exception as error:

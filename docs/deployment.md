@@ -82,6 +82,16 @@ task services:pull-metabase
 task services:build-openrefine
 ```
 
+### Cron jobs (ofelia)
+
+The service `cronjobs-ofelia` runs the jobs in `provision/ofelia/config.ini`. Each night at 03:15 it stops the users' Metabase and OpenRefine containers to save RAM and CPU (setting `NIGHT_STOP_SERVICES`). The users start them again with **Start service**: switch it on at **Visibility**. The **Admin log** lists each stopped container; ofelia logs to the console (`docker logs mta-system-cronjobs-ofelia`).
+
+```bash
+task prod:start-cronjobs                    # start ofelia (task prod:up starts it too)
+task prod:restart-cronjobs                  # after a change in provision/ofelia/config.ini
+task prod:stop-containers -- --dry-run      # by hand; without --dry-run it stops them
+```
+
 ### pgAdmin 4
 
 pgAdmin 4 runs at `https://<SERVER_FQDN>/pgadmin4/`. nginx asks for the login of the user. nginx then sends the user name and a secret to pgAdmin. pgAdmin logs the user in.

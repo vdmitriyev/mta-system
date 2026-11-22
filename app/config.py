@@ -123,6 +123,10 @@ class Settings(BaseSettings):
         default_factory=lambda: list(DEFAULT_SERVICES_UI)
     )
     max_user_accounts_to_create: PositiveInt = 5
+    # containers that the nightly job stops (python -m app.cli stop-containers, ofelia)
+    night_stop_services: SemicolonList = Field(
+        default_factory=lambda: ["metabase", "openrefine"]
+    )
 
     # ---- database of the app (relative paths start at the project folder) ----
     mtas_db_path: Path = Path("data", "mta-system.db")
@@ -240,7 +244,11 @@ class Settings(BaseSettings):
         return value
 
     @field_validator(
-        "system_admins", "allowed_fqdn_for_emails", "services_ui", mode="before"
+        "system_admins",
+        "allowed_fqdn_for_emails",
+        "services_ui",
+        "night_stop_services",
+        mode="before",
     )
     @classmethod
     def _split_list(cls, value):

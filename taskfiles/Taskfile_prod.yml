@@ -79,6 +79,21 @@ tasks:
     cmds:
       - "{{.PROD_COMPOSE}} exec webapp python -m app.cli db-upgrade"
 
+  start-cronjobs:
+    desc: starts the cron jobs (ofelia, provision/ofelia/config.ini)
+    cmds:
+      - "{{.PROD_COMPOSE}} up -d cronjobs-ofelia"
+
+  restart-cronjobs:
+    desc: restarts the cron jobs, after a change in provision/ofelia/config.ini
+    cmds:
+      - "{{.PROD_COMPOSE}} restart cronjobs-ofelia"
+
+  stop-containers:
+    desc: stops the running Metabase and OpenRefine containers of the users (as ofelia does at night)
+    cmds:
+      - "{{.PROD_COMPOSE}} exec webapp python -m app.cli stop-containers {{.CLI_ARGS}}"
+
   backup:
     desc: copies the production database and the submitted files (tar.gz) to .backups/<date>-<time>-<name>
     cmds:

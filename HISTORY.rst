@@ -2,6 +2,12 @@
 History
 =======
 
+2.6.7 (2026-11-22)
+-------------------
+
+* Cron jobs: the new service `cronjobs-ofelia` (`compose.prod.yaml`, jobs in `provision/ofelia/config.ini`) runs commands of the app at fixed times. Tasks `prod:start-cronjobs` and `prod:restart-cronjobs`.
+* Each night, the running Metabase and OpenRefine containers of the users are stopped (command `stop-containers`, code in `app/cronjobs.py`): frees RAM and CPU. The **Admin log** notes each stopped container ("Container stopped (night)"). The users start them again with **Start service**; the page **Services** says so. New setting `NIGHT_STOP_SERVICES` (default `metabase;openrefine`); by hand: `task prod:stop-containers`.
+
 2.6.6 (2026-11-22)
 -------------------
 

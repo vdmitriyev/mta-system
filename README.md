@@ -89,6 +89,7 @@ Before `task app:serve`, change the secrets in `envs/webapp-dev-local.env`. See 
 | `dev:` | `dev:up`, `dev:init`, `dev:logs`, `dev:down`, `dev:app-recreate`, `dev:nginx-recreate` | [development](docs/development.md#run-in-docker-for-development) |
 | `prod:` | `prod:up`, `prod:down`, `prod:logs`, `prod:migrate`, `prod:app-recreate`, `prod:backup`, `prod:import-exercises`, `prod:create-admins` | [deployment](docs/deployment.md#production) |
 | `prod:` nginx | `prod:cert`, `prod:cert-renew`, `prod:nginx-reload`, `prod:nginx-recreate` | [deployment](docs/deployment.md#https-certificate-lets-encrypt) |
+| `prod:` cron jobs | `prod:start-cronjobs`, `prod:restart-cronjobs`, `prod:stop-containers` | [deployment](docs/deployment.md#cron-jobs-ofelia) |
 | `sqlmate:` | `sqlmate:up`, `sqlmate:init`, `sqlmate:logs`, `sqlmate:down` | [deployment](docs/deployment.md#sqlmate-optional) |
 | `surveylite:` | `surveylite:up`, `surveylite:logs`, `surveylite:down` | [deployment](docs/deployment.md#surveylite-optional) |
 | `services:` | `services:versions`, `services:update-all`, `services:build-sqlmate`, `services:build-surveylite` | [deployment](docs/deployment.md#versions-of-the-services) |

@@ -229,8 +229,9 @@ class FakeContainer:
     def start(self):
         self.status = "running"
 
-    def stop(self):
+    def stop(self, timeout=None):
         self.status = "exited"
+        self.stop_timeout = timeout
 
     def rename(self, new_name):
         self.name = new_name

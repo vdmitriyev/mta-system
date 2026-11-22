@@ -5,6 +5,7 @@ import click
 from app.cli.admins import create_admins
 from app.cli.auto_creation import auto_creation
 from app.cli.config import show_config
+from app.cli.containers import stop_containers
 from app.cli.database import (
     create_custom_db,
     create_demo_db,
@@ -38,5 +39,6 @@ for command in (
     check_mail,
     auto_creation,
     create_admins,
+    stop_containers,
 ):
     cli.add_command(command)
