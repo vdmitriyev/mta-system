@@ -182,6 +182,7 @@ def test_start_button_is_grey_while_the_container_runs(
     metabase = start_part("metabase")
     # the text first, then the button, then the status
     assert metabase.index("does not answer") < metabase.index("Start service")
+    assert 'class="btn primary start-service"' in metabase
     assert 'data-start-button="metabase" disabled>' in metabase
     assert '<strong class="container-state running"' in metabase
     assert ">Running</strong>" in metabase

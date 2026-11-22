@@ -402,6 +402,11 @@ def auto_creation_page(page: Page = Depends()):
         rows=service_setting_rows(page.db),
         info=SERVICE_INFO,
         images=container_images(),
+        # position of the service on the page Services of the users (SERVICES_UI)
+        display_order={
+            name: position
+            for position, name in enumerate(get_settings().services_ui, start=1)
+        },
     )
 
 

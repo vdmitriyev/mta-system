@@ -6,13 +6,14 @@
   <div class="table-wrap">
     <table class="table">
       <thead>
-        <tr><th>Service</th><th>How it runs</th><th>Version</th><th>Note</th><th>Key</th><th>New users get an account</th><th>Action</th></tr>
+        <tr><th>Service</th><th>Display order</th><th>How it runs</th><th>Version</th><th>Note</th><th>Key</th><th>New users get an account</th><th>Action</th></tr>
       </thead>
       <tbody>
         {% for row in rows %}
         {% set service = info.get(row.service) %}
         <tr>
           <td><strong>{{ service.name if service else row.service }}</strong>{% if service and service.deprecated %} <span class="badge warning">deprecated</span>{% endif %}</td>
+          <td>{% if row.service in display_order %}{{ display_order[row.service] }}{% else %}<span class="muted">not shown</span>{% endif %}</td>
           <td>{{ service.runs if service else "–" }}</td>
           <td>
             {% if images.get(row.service) %}
@@ -41,5 +42,5 @@
     </table>
   </div>
 </div>
-<p class="page-note">The versions come from the file <code>versions.env</code> in the project folder.</p>
+<p class="page-note">The versions come from the file <code>versions.env</code> in the project folder. The display order is the order on the page <strong>Services</strong> of the users; it comes from the setting <code>SERVICES_UI</code>. The page <strong>Visibility</strong> can still hide a service.</p>
 {% endblock %}

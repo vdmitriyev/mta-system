@@ -661,6 +661,7 @@ a.card h3 {
 /* "Start service" while the container runs: grey, nothing to do */
 .btn.start-service:disabled {
   opacity: 1;
+  border-color: var(--border);
   background: var(--neutral-soft);
   color: var(--muted);
   cursor: not-allowed;

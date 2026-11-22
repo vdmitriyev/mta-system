@@ -47,6 +47,22 @@ def test_deprecated_services_cannot_be_switched_on(db, service):
     set_creates_accounts(db, service, False)
 
 
+def test_auto_creation_page_shows_the_display_order(admin_client, use_settings):
+    use_settings(SERVICES_UI="metabase;postgresql;pgadmin4")
+    text = admin_client.get("/mtas-admin/auto-creation").text
+    assert "<th>Display order</th>" in text
+
+    def order(name):
+        start = text.index(f"<strong>{name}</strong>")
+        row = text[start : text.index("</tr>", start)]
+        return row.split("<td>")[1].split("</td>")[0]
+
+    assert order("Metabase") == "1"
+    assert order("PostgreSQL") == "2"
+    assert order("pgAdmin 4") == "3"
+    assert order("OpenRefine") == '<span class="muted">not shown</span>'
+
+
 def test_auto_creation_page_shows_deprecated_services(admin_client, db):
     text = admin_client.get("/mtas-admin/auto-creation").text
     for name, key in (

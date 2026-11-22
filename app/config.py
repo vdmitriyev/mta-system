@@ -62,11 +62,11 @@ DOWNLOAD_MAX_MB = 50
 DEFAULT_SERVICES_UI = [
     "pgadmin4",
     "postgresql",
+    "sqlmate",
     "metabase",
     "openrefine",
     "mariadb",
     "wordpress",
-    "sqlmate",
     "surveylite",
     "nifi",
     "superset",

@@ -2,6 +2,12 @@
 History
 =======
 
+2.6.6 (2026-11-22)
+-------------------
+
+* **Services creation**: new column **Display order**, the position of the service on the page **Services** of the users (from `SERVICES_UI`). Services that are not in `SERVICES_UI` show "not shown".
+* **Services** (users): the button "Start service" has the same style as the import buttons of PostgreSQL (blue). While the service runs, it stays grey.
+
 2.6.5 (2026-11-22)
 -------------------
 
