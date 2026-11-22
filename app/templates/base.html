@@ -24,10 +24,10 @@
       <nav class="nav" id="main-nav" aria-label="Main">
         {% if user %}
           {{ nav_link("/services", "Services") }}
+          {% if visibility.get("downloads") %}{{ nav_link("/downloads", "Downloads") }}{% endif %}
           {% if visibility.get("submissions") %}{{ nav_link("/submissions", "Submissions") }}{% endif %}
           {% if visibility.get("reviews") %}{{ nav_link("/reviews", "Reviews") }}{% endif %}
           {% if visibility.get("bonus") %}{{ nav_link("/bonus", "Bonus points") }}{% endif %}
-          {% if visibility.get("downloads") %}{{ nav_link("/downloads", "Downloads") }}{% endif %}
         {% endif %}
         {{ nav_link("/about", "About") }}
         <span class="spacer"></span>

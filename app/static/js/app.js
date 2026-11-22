@@ -444,6 +444,16 @@
             badge.textContent = status;
             badge.className = "badge " + (STATUS_CLASSES[status] || "");
           });
+          document.querySelectorAll("[data-container-state]").forEach(function (state) {
+            const status = statuses[state.dataset.containerState];
+            if (!status) return;
+            state.textContent = status.charAt(0).toUpperCase() + status.slice(1);
+            state.className = "container-state " + status;
+          });
+          document.querySelectorAll("[data-start-button]").forEach(function (button) {
+            const status = statuses[button.dataset.startButton];
+            if (status) button.disabled = status === "running";
+          });
         })
         .catch(function () {});
     }, STATUS_POLL_MS);

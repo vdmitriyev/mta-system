@@ -377,7 +377,7 @@ class UIVisibilitySettings(Base):
 
 
 class ServiceSettings(Base):
-    """Per service: does the app create an account for each new user? (admin page "Auto creation")"""
+    """Per service: does the app create an account for each new user? (admin page "Services creation")"""
 
     __tablename__ = "service_settings"
 

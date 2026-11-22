@@ -55,12 +55,11 @@ def create_docker_container(port: int) -> bool:
     if port is None:
         return False
     try:
-        container = docker_ctl.get_client().containers.run(
+        container = docker_ctl.run_container(
             image=image(),
             detach=True,
             name=docker_ctl.container_name("openrefine", port),
             ports=docker_ctl.published_ports("80/tcp", port),
-            network=get_settings().docker_network_name,
             restart_policy={"Name": "unless-stopped", "MaximumRetryCount": 0},
         )
         logger.info("Created OpenRefine container: %s", container.short_id)

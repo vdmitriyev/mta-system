@@ -3,7 +3,7 @@ import re
 import time
 
 import pytest
-from docker.errors import ImageNotFound, NotFound
+from docker.errors import APIError, ImageNotFound, NotFound
 from fastapi.testclient import TestClient
 
 from app import config
@@ -105,7 +105,7 @@ def no_email(monkeypatch):
 
 
 def switch_on(db, *services):
-    """Lets the app create accounts in these services (admin page "Auto creation")"""
+    """Lets the app create accounts in these services (admin page "Services creation")"""
 
     for service in services:
         set_creates_accounts(db, service, True)
@@ -235,6 +235,9 @@ class FakeContainer:
     def rename(self, new_name):
         self.name = new_name
 
+    def remove(self):
+        self.status = "removed"
+
     def exec_run(self, command):
         self.commands.append(command)
 
@@ -243,6 +246,7 @@ class FakeContainers:
     def __init__(self):
         self.items = []
         self.runs = []
+        self.fail_start = False
 
     def add(self, name, status="running", **kwargs):
         container = FakeContainer(name, status, **kwargs)
@@ -250,17 +254,25 @@ class FakeContainers:
         return container
 
     def list(self, all=False):
-        return [c for c in self.items if all or c.status == "running"]
+        return [
+            c
+            for c in self.items
+            if c.status != "removed" and (all or c.status == "running")
+        ]
 
     def get(self, name):
-        for container in self.items:
+        for container in self.list(all=True):
             if container.name == name or container.id == name:
                 return container
         raise LookupError(f"No such container: {name}")
 
     def run(self, **kwargs):
         self.runs.append(kwargs)
-        return self.add(kwargs["name"])
+        container = self.add(kwargs["name"])
+        if self.fail_start:
+            container.status = "created"
+            raise APIError("failed to start the container")
+        return container
 
 
 class FakeImages:
@@ -281,10 +293,23 @@ class FakeImages:
         return {"name": name}
 
 
+class FakeNetworks:
+    """All networks exist, except the ones in "missing" """
+
+    def __init__(self):
+        self.missing = set()
+
+    def get(self, name):
+        if name in self.missing:
+            raise NotFound(f"network {name} not found")
+        return name
+
+
 class FakeDocker:
     def __init__(self):
         self.containers = FakeContainers()
         self.images = FakeImages()
+        self.networks = FakeNetworks()
 
 
 @pytest.fixture

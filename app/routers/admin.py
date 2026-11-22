@@ -10,7 +10,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 
 from app import config, provisioning
-from app.admin_log import ACTION_LABELS, log_action, recent_actions
+from app.admin_log import ACTION_LABELS, log_action, recent_actions, versions
 from app.config import get_settings
 from app.models import SERVICE_MODELS, Users
 from app.security import csrf_protect, random_string
@@ -18,17 +18,12 @@ from app.service_settings import (
     DEPRECATED_SERVICES,
     SERVICE_INFO,
     ServiceSettingError,
+    container_images,
+    creates_accounts,
     service_setting_rows,
     set_creates_accounts,
 )
-from app.services import (
-    docker_ctl,
-    metabase_api,
-    nifi_api,
-    openrefine_api,
-    postgresql,
-    wordpress_api,
-)
+from app.services import docker_ctl, metabase_api, openrefine_api
 from app.tasks import TaskError, enqueue, recent_tasks
 from app.users import (
     access_url,
@@ -111,7 +106,13 @@ def generate_accounts(background_tasks: BackgroundTasks, page: Page = Depends())
         count,
         user_id=page.user.itid,
     )
-    log_action(page.db, page.user, "accounts_generated", details=f"{count} accounts")
+    switched_on = [s for s in container_images() if creates_accounts(page.db, s)]
+    log_action(
+        page.db,
+        page.user,
+        "accounts_generated",
+        details=f"{count} accounts: {versions(*switched_on) or 'no services'}",
+    )
     flash(page.request, f"{count} accounts are prepared in the background.", "success")
     return redirect("/mtas-admin/")
 
@@ -263,7 +264,13 @@ def service_action(
             user_id=page.user.itid,
             about_user_id=student.itid,
         )
-        log_action(page.db, page.user, "service_created", student.itid, details=title)
+        log_action(
+            page.db,
+            page.user,
+            "service_created",
+            student.itid,
+            details=f"{title}: {versions(service)}",
+        )
         flash(
             page.request,
             f"{title} is created for {student.email} in the background. "
@@ -366,13 +373,6 @@ def settings_page(page: Page = Depends()):
     return page.render("admin/settings.html", groups=grouped_settings())
 
 
-@router.get("/configs")
-def old_settings_address():
-    """Old address of the settings page"""
-
-    return redirect("/mtas-admin/settings")
-
-
 @router.get("/visibility")
 def visibility_page(page: Page = Depends()):
     return page.render(
@@ -405,23 +405,6 @@ def auto_creation_page(page: Page = Depends()):
     )
 
 
-def container_images() -> dict:
-    """Images of the services whose version is known (versions.env): service -> images"""
-
-    settings = get_settings()
-    return {
-        "postgresql": [postgresql.image()],
-        "pgadmin4": [f"dpage/pgadmin4:{settings.pgadmin4_version}"],
-        "metabase": [metabase_api.image()],
-        "openrefine": [openrefine_api.image()],
-        "mariadb": [f"mariadb:{settings.mariadb_version}"],
-        "wordpress": [wordpress_api.image(), wordpress_api.cli_image()],
-        "sqlmate": [f"sqlmate:{settings.sqlmate_version}"],
-        "surveylite": [f"surveylite:{settings.surveylite_version}"],
-        "nifi": [nifi_api.IMAGE],
-    }
-
-
 @router.post("/auto-creation", dependencies=[Depends(csrf_protect)])
 def auto_creation_change(
     page: Page = Depends(), service: str = Form(...), on: bool = Form(...)
@@ -439,13 +422,6 @@ def auto_creation_change(
             f"The app {state} an account in {name} for new users.",
             "success",
         )
-    return redirect("/mtas-admin/auto-creation")
-
-
-@router.get("/service-accounts")
-def old_auto_creation_address():
-    """Old address of the page "Auto creation" """
-
     return redirect("/mtas-admin/auto-creation")
 
 
@@ -489,10 +465,3 @@ def check_openrefine_access(rows: list) -> None:
         verdicts = executor.map(lambda job: check_basic_auth(*job[1:]), jobs)
         for (row, *_), verdict in zip(jobs, verdicts):
             row["access"] = verdict
-
-
-@router.get("/basic-auth-check")
-def basic_auth_check_page():
-    """Old address: the check is on the OpenRefine page now"""
-
-    return redirect("/mtas-admin/services/openrefine?check=access")

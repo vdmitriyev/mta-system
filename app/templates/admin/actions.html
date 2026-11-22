@@ -1,7 +1,7 @@
 {% extends "admin/base.html" %}
-{% block title %}Admin log{% endblock %}
+{% block title %}Admin actions{% endblock %}
 {% block admin %}
-{{ ui.page_head("Admin log", "The newest 300 changes of the admins: reviews, bonus points, deadlines, deleted files, exercises, downloads and settings. The IDs of the admin and of the user are the user IDs on the page Users.") }}
+{{ ui.page_head("Admin actions", "The newest 300 changes of the admins: reviews, bonus points, deadlines, deleted files, exercises, downloads and settings. The IDs of the admin and of the user are the user IDs on the page Users.") }}
 {% if filter_user_id is not none %}
 <p class="row">
   <span>Only user_id <strong>{{ filter_user_id }}</strong>.</span>

@@ -8,6 +8,8 @@ from app.config import get_settings
 from app.services import docker_ctl
 
 IMAGE_HINT = "Download it on the server:"
+# port of Metabase inside its container (the default of the image)
+CONTAINER_PORT = 3000
 
 
 def image() -> str:
@@ -35,7 +37,11 @@ def create_user_and_docker_mb(user_data: UserDataMetabase, docker_port: int) -> 
         logger.error("Metabase is not created: %s", image.text)
         return False
     if not create_docker_container(docker_port):
-        logger.warning("Metabase container was not created. Try to create the user.")
+        if not docker_ctl.is_running(
+            docker_ctl.container_name("metabase", docker_port)
+        ):
+            return False
+        logger.warning("Metabase container was not created, but one runs: use it.")
     return run_create_user(user_data, docker_port)
 
 
@@ -49,14 +55,12 @@ def create_docker_container(port: int) -> bool:
     if port is None:
         return False
     try:
-        container = docker_ctl.get_client().containers.run(
+        container = docker_ctl.run_container(
             image=image(),
             detach=True,
             name=docker_ctl.container_name("metabase", port),
-            ports=docker_ctl.published_ports("80/tcp", port),
-            network=get_settings().docker_network_name,
+            ports=docker_ctl.published_ports(f"{CONTAINER_PORT}/tcp", port),
             restart_policy={"Name": "unless-stopped", "MaximumRetryCount": 0},
-            environment={"MB_JETTY_PORT": 80},
         )
         logger.info("Created Metabase container: %s", container.short_id)
         return True
@@ -66,10 +70,16 @@ def create_docker_container(port: int) -> bool:
 
 
 def base_url_for(port: int) -> str:
+    """Address of a user's Metabase, as the app reaches it.
+
+    In Docker: the name of the container and port 3000. With METABASE_BASE_URL
+    (app outside Docker): that address and the published port, e.g. http://localhost:3001.
+    """
+
     base_url = get_settings().metabase_base_url
-    if base_url == "http://localhost":
-        return f"{base_url}:{port}"
-    return f"{base_url}{port}"
+    if base_url:
+        return f"{base_url.rstrip('/')}:{port}"
+    return f"http://{docker_ctl.container_name('metabase', port)}:{CONTAINER_PORT}"
 
 
 def run_create_user(user_data: UserDataMetabase, port: int) -> bool:

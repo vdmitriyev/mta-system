@@ -19,6 +19,10 @@ services:
       WEB_CONCURRENCY: "1"
       ENV_FILE_NAME: ${ENV_FILE_NAME}
       TZ: Europe/Berlin
+      # port of nginx (HTTPS) on the host: the links of the app use it
+      HTTPS_PORT: "51443"
+      # network of this project: the app starts the service containers of the users in it
+      DOCKER_NETWORK_NAME: ${COMPOSE_PROJECT_NAME:-mta-system}_mtas-network
     depends_on:
       postgresql-service:
         condition: service_started
@@ -40,9 +44,12 @@ services:
       - ./certbot/conf/:/etc/nginx/ssl/:ro
       - ./.logs/nginx:/var/log/nginx
       - ./.htpasswd_nginx:/.htpasswd_nginx
+    environment:
+      # port of HTTPS on the host: the redirect from HTTP goes there
+      HTTPS_PORT: "51443"
     ports:
-      - "127.0.0.1:80:80"
-      - "127.0.0.1:443:443"
+      - "127.0.0.1:5180:80"
+      - "127.0.0.1:51443:443"
     depends_on:
       - webapp
     networks:

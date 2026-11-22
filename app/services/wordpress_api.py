@@ -74,19 +74,16 @@ def create_user_and_docker_wordpress(
         "WORDPRESS_DB_USER": user_data.databaseUser,
         "WORDPRESS_DB_PASSWORD": user_data.databasePassword,
     }
-    network = get_settings().docker_network_name
     volumes = [f"{docker_ctl.container_name('wordpress', docker_port)}:/var/www/html"]
 
     try:
-        client = docker_ctl.get_client()
-        container = client.containers.run(
+        container = docker_ctl.run_container(
             image=image(),
             detach=True,
             name=docker_ctl.container_name("wordpress", docker_port),
             ports=docker_ctl.published_ports("80/tcp", docker_port),
             restart_policy={"Name": "unless-stopped", "MaximumRetryCount": 0},
             volumes=volumes,
-            network=network,
             environment={
                 **database,
                 "WORDPRESS_CONFIG_EXTRA": _build_wordpress_env_config_extra(
@@ -109,13 +106,12 @@ def create_user_and_docker_wordpress(
             f" --admin_email={user_data.wpEmail}"
             " --skip-email"
         )
-        cli_container = client.containers.run(
+        cli_container = docker_ctl.run_container(
             image=cli_image(),
             detach=True,
             name=docker_ctl.container_name("wordpress", docker_port, "cli"),
             restart_policy={"Name": "on-failure", "MaximumRetryCount": 5},
             volumes=volumes,
-            network=network,
             command=f'/bin/bash -c "sleep 10 && {install}"',
             environment=database,
         )

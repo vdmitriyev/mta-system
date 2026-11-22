@@ -5,7 +5,15 @@ from dataclasses import dataclass
 from sqlalchemy import insert, inspect
 from sqlalchemy.orm import Session
 
+from app.config import get_settings
 from app.models import ServiceSettings
+from app.services import (
+    metabase_api,
+    nifi_api,
+    openrefine_api,
+    postgresql,
+    wordpress_api,
+)
 
 SHARED_SERVER = "One shared server, an own database for each user"
 SHARED_SERVICE = "One shared service, an own login for each user"
@@ -22,7 +30,7 @@ class ServiceInfo:
     deprecated: bool = False
 
 
-# All are off until an admin switches them on (admin page "Auto creation")
+# All are off until an admin switches them on (admin page "Services creation")
 SERVICES = [
     ServiceInfo("postgresql", "PostgreSQL", SHARED_SERVER),
     ServiceInfo("pgadmin4", "pgAdmin 4", SHARED_SERVICE, "Needs PostgreSQL"),
@@ -103,3 +111,20 @@ def set_creates_accounts(db: Session, service: str, on: bool) -> None:
         {"create_accounts": on}
     )
     db.commit()
+
+
+def container_images() -> dict:
+    """Images of the services whose version is known (versions.env): service -> images"""
+
+    settings = get_settings()
+    return {
+        "postgresql": [postgresql.image()],
+        "pgadmin4": [f"dpage/pgadmin4:{settings.pgadmin4_version}"],
+        "metabase": [metabase_api.image()],
+        "openrefine": [openrefine_api.image()],
+        "mariadb": [f"mariadb:{settings.mariadb_version}"],
+        "wordpress": [wordpress_api.image(), wordpress_api.cli_image()],
+        "sqlmate": [f"sqlmate:{settings.sqlmate_version}"],
+        "surveylite": [f"surveylite:{settings.surveylite_version}"],
+        "nifi": [nifi_api.IMAGE],
+    }

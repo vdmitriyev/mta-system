@@ -166,6 +166,30 @@ def test_start_own_container(student_client, db, student, docker):
     assert "The service starts" in student_client.get("/services").text
 
 
+def test_start_button_is_grey_while_the_container_runs(
+    student_client, db, student, docker
+):
+    add_all_services(db, student)
+    docker.containers.add("metabase-3001", "running")
+    docker.containers.add("openrefine-4001", "exited")
+    text = student_client.get("/services").text
+
+    def start_part(name):
+        start = text.index(f'id="service-{name}"')
+        start = text.index('<div class="card-foot stacked">', start)
+        return text[start : text.index("</div>", start)]
+
+    metabase = start_part("metabase")
+    # the text first, then the button, then the status
+    assert metabase.index("does not answer") < metabase.index("Start service")
+    assert 'data-start-button="metabase" disabled>' in metabase
+    assert '<strong class="container-state running"' in metabase
+    assert ">Running</strong>" in metabase
+    openrefine = start_part("openrefine")
+    assert 'data-start-button="openrefine">' in openrefine
+    assert ">Exited</strong>" in openrefine
+
+
 def test_start_fails_without_container(student_client, db, student, docker):
     add_all_services(db, student)
     post(student_client, "/services/metabase/start")

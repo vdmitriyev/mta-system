@@ -658,6 +658,26 @@ a.card h3 {
   cursor: progress;
 }
 
+/* "Start service" while the container runs: grey, nothing to do */
+.btn.start-service:disabled {
+  opacity: 1;
+  background: var(--neutral-soft);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.container-state {
+  color: var(--muted);
+}
+
+.container-state.running {
+  color: var(--success);
+}
+
+.container-state.exited {
+  color: var(--danger);
+}
+
 .btn.is-done {
   border-color: var(--success);
   color: var(--success);

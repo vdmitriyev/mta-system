@@ -46,7 +46,7 @@ Before you go live:
 | `task prod:create-admins` | Creates the accounts of `SYSTEM_ADMINS`. Prints the login data and sends it by e-mail. |
 | `task prod:cert` | Gets a Let's Encrypt certificate for `SERVER_FQDN` and restarts nginx. |
 | `task prod:cert-renew` | Renews the certificates and reloads nginx. |
-| `task prod:nginx-reload` | Checks the nginx configuration and reloads it. Old name: `prod:reload`. |
+| `task prod:nginx-reload` | Checks the nginx configuration and reloads it. |
 | `task prod:nginx-recreate` | Builds nginx again and recreates only nginx. Use it after a change in `provision/nginx/nginx-docker.conf`: the file is part of the image. |
 | `task prod:app-recreate` | Builds the app again, recreates only the app and reloads nginx. |
 
@@ -153,9 +153,9 @@ The admin page **Downloads** offers files to the users: PDF, ZIP, MD, TXT or SQL
 * A file that is not visible stays on the server, e.g. the solution until the deadline.
 * The files are in `data/downloads/` (`DOWNLOADS_DIR`), in the folder of the database. `task prod:backup` packs them.
 
-### Admin log
+### Admin actions
 
-The admin page **Admin log** lists the newest 300 changes of the admins: reviews, bonus points, personal deadlines, deleted files, exercises, downloads, accounts and containers of the services, surveys, visibility and auto creation. A click on a user ID shows only the changes for this user.
+The admin page **Logs → Admin actions** lists the newest 300 changes of the admins: reviews, bonus points, personal deadlines, deleted files, exercises, downloads, accounts and containers of the services, surveys, visibility and services creation. A click on a user ID shows only the changes for this user.
 
 ### Exercises as CSV
 
@@ -204,7 +204,7 @@ Put `COMPOSE_PROFILES` in the file `.env` in the project folder, for example `CO
    task sqlmate:init    # once, and after each update of sqlmate
    ```
 
-6. Switch on sqlmate on the admin page **Services → Auto creation**.
+6. Switch on sqlmate on the admin page **Services creation**.
 
 sqlmate runs at `https://<SERVER_FQDN>/sqlmate/`. It joins the network of mta-system and opens no port. Other tasks: `sqlmate:ps`, `sqlmate:logs`, `sqlmate:restart`, `sqlmate:rebuild` (builds the image again and replaces the running sqlmate), `sqlmate:down` (the data stays).
 
@@ -224,7 +224,7 @@ Up to version 2.4.0, `task prod:up` started sqlmate. Remove the old containers o
 3. In the env file of the app, set `SURVEYLITE_API_KEY` to one of `SURVEYLITE_API_KEYS` of `envs/surveylite-service.env`.
 4. Put the surveys in `setup/surveylite` as YAML files, or build them at `https://<SERVER_FQDN>/surveylite/admin`.
 5. Start mta-system first, then SurveyLite: `task surveylite:up`.
-6. Switch on SurveyLite on the admin page **Services → Auto creation**.
+6. Switch on SurveyLite on the admin page **Services creation**.
 
 SurveyLite runs at `https://<SERVER_FQDN>/surveylite/`. If **Log in to SurveyLite** opens a wrong address, check `SURVEYLITE_BASE_URL`, then run `task surveylite:up` (a restart does not read the env file again). It joins the network of mta-system and opens no port. Other tasks: `surveylite:ps`, `surveylite:logs`, `surveylite:restart`, `surveylite:rebuild` (builds the image again and replaces the running SurveyLite), `surveylite:down` (the data stays).
 
@@ -237,7 +237,7 @@ Up to version 2.4.0, `task prod:up` started SurveyLite. Remove the old container
 
 ## Versions of the services
 
-`versions.env` holds the versions of all service images. The app, all `task` commands and the compose files read it. The [README](../README.md#supported-versions-of-the-services) lists the versions. `task services:versions` and the admin page **Services → Auto creation** show them.
+`versions.env` holds the versions of all service images. The app, all `task` commands and the compose files read it. The [README](../README.md#supported-versions-of-the-services) lists the versions. `task services:versions` and the admin page **Services creation** show them.
 
 To change a version:
 

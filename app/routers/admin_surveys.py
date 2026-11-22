@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, Depends, Form
 
 from app import provisioning, surveys
-from app.admin_log import log_action
+from app.admin_log import log_action, versions
 from app.config import get_settings
 from app.models import SurveyAssignment
 from app.routers.admin import get_course_user, user_rows
@@ -85,7 +85,13 @@ def sqlmate_create(page: Page = Depends(), user_id: int = Form(...)):
         student.internal_email,
         force_create=True,
     ):
-        log_action(page.db, page.user, "sqlmate_created", student.itid)
+        log_action(
+            page.db,
+            page.user,
+            "sqlmate_created",
+            student.itid,
+            details=versions("sqlmate"),
+        )
         flash(page.request, f"sqlmate was set up for {student.email}.", "success")
     else:
         flash(
@@ -164,7 +170,13 @@ def surveylite_create(page: Page = Depends(), user_id: int = Form(...)):
         return redirect(SURVEYLITE_PAGE)
     _mark_deleted(page.db, get_user_services(page.db, student.itid).get("surveylite"))
     if provisioning.surveylite_participant(page.db, student.itid, force_create=True):
-        log_action(page.db, page.user, "surveylite_created", student.itid)
+        log_action(
+            page.db,
+            page.user,
+            "surveylite_created",
+            student.itid,
+            details=versions("surveylite"),
+        )
         flash(page.request, f"SurveyLite was set up for {student.email}.", "success")
     else:
         flash(

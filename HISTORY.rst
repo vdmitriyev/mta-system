@@ -2,6 +2,24 @@
 History
 =======
 
+2.6.5 (2026-11-22)
+-------------------
+
+* Metabase `v0.57.3` → `v0.64-lts` (`METABASE_VERSION`). New users get the new version; existing containers keep their version.
+* Metabase runs on its default port `3000` in the container. The app reaches it by the container name (`http://metabase-3001:3000`), nginx too. `METABASE_BASE_URL` is now only for an app outside Docker (e.g. `http://localhost`). Existing Metabase containers (port `80`) need **Create again**; nginx needs `task prod:nginx-recreate`.
+* **Admin log**: the entries for created services show the images with their versions.
+* Containers of the users (Metabase, OpenRefine, WordPress): if the Docker network `DOCKER_NETWORK_NAME` is missing, the app stops with a clear message. Before, the container was created but never started. A container that cannot start is removed again.
+* `DOCKER_NETWORK_NAME` not set: the default network of Docker (before: `mtas-network`, which no compose file creates). Enough for `task app:serve`. `compose.yml` sets it for the dev setup.
+* **Services** (users): the part "Start service" shows the text first, then the button, as the dataset import of PostgreSQL. While the container runs, the button is grey and cannot be clicked. Below it: **Status: Running** in green (red when stopped). The page updates both every 15 seconds.
+* Dev setup (`task dev:up`): nginx listens on `127.0.0.1:5180` (HTTP) and `127.0.0.1:51443` (HTTPS) instead of `80` and `443`. nginx redirects HTTP to the port `HTTPS_PORT`.
+* New setting `HTTPS_PORT` (default `443`): the links of the app to nginx use this port, e.g. `https://localhost:51443/metabase/3001/`. `compose.yml` sets `51443`; `compose.prod.yaml` passes `HTTPS_PORT` of `.env` to the app and to nginx.
+* WordPress: new sites get the address `https://<SERVER_FQDN>[:HTTPS_PORT]/wordpress/<port>/` (before: `http://`, without the port). Existing sites keep their address.
+
+2.6.4 (2026-11-22)
+-------------------
+
+* Removed the old names kept for backward compatibility: the admin addresses `/mtas-admin/configs`, `/mtas-admin/service-accounts` and `/mtas-admin/basic-auth-check`, the variable `FLASK_SECRET_KEY` (use `SECRET_KEY`) and the task `prod:reload` (use `prod:nginx-reload`).
+
 2.6.3 (2026-11-20)
 -------------------
 

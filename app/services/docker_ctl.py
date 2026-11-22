@@ -204,3 +204,50 @@ def check_image(
             image,
             **missing,
         )
+
+
+class DockerSetupError(Exception):
+    """Docker cannot start the container, e.g. its network is missing"""
+
+
+def run_container(**options):
+    """Creates and starts a container of a user in the network DOCKER_NETWORK_NAME.
+
+    Raises DockerSetupError if the network is missing. If the container was created
+    but cannot start, it is removed again, so its name stays free.
+    """
+
+    from app.config import get_settings
+
+    client = get_client()
+    network = get_settings().docker_network_name
+    if network is not None:
+        try:
+            client.networks.get(network)
+        except Exception as error:
+            if not _is_not_found(error):
+                raise
+            raise DockerSetupError(
+                f"The Docker network {network} does not exist. Start the services "
+                "first (e.g. task dev:up), or remove DOCKER_NETWORK_NAME "
+                "(the default network of Docker)."
+            ) from error
+    try:
+        return client.containers.run(network=network, **options)
+    except Exception:
+        _remove_if_not_started(client, options["name"])
+        raise
+
+
+def _remove_if_not_started(client, name: str) -> None:
+    try:
+        container = client.containers.get(name)
+        if container.status == "created":
+            container.remove()
+            logger.info("Container %s did not start and was removed", name)
+    except Exception as error:
+        logger.info("No container %s to remove: %s", name, error)
+
+
+def is_running(name: str) -> bool:
+    return any(c.name == name for c in list_containers(only_running=True))

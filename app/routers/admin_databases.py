@@ -6,7 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from fastapi import APIRouter, Depends, Form
 
 from app import config, provisioning
-from app.admin_log import log_action
+from app.admin_log import log_action, versions
 from app.config import get_settings
 from app.models import PostgreSQLService
 from app.routers.admin import (
@@ -139,7 +139,13 @@ def postgresql_create(page: Page = Depends(), user_id: int = Form(...)):
     student = get_course_user(page.db, user_id)
     try:
         flash(page.request, create_postgresql_account(page.db, student), "success")
-        log_action(page.db, page.user, "postgresql_created", student.itid)
+        log_action(
+            page.db,
+            page.user,
+            "postgresql_created",
+            student.itid,
+            details=versions("postgresql"),
+        )
     except postgresql.PostgreSQLError as error:
         flash(page.request, f"Not created: {error}", "danger")
     return redirect("/mtas-admin/services/postgresql")
@@ -254,6 +260,12 @@ def pgadmin4_login(page: Page = Depends(), user_id: int = Form(...)):
         password,
         force_create=True,
     )
-    log_action(page.db, page.user, "pgadmin4_created", student.itid)
+    log_action(
+        page.db,
+        page.user,
+        "pgadmin4_created",
+        student.itid,
+        details=versions("pgadmin4"),
+    )
     flash(page.request, f"pgAdmin 4 was set up for {student.email}.", "success")
     return redirect("/mtas-admin/services/pgadmin4")

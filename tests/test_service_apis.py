@@ -64,7 +64,7 @@ def test_openrefine_container_and_login(settings, docker):
     assert run["name"] == "openrefine-4001"
     assert run["image"] == "openrefine:3.10.1"
     assert run["ports"] == {"80/tcp": ("127.0.0.1", 4001)}
-    assert run["network"] == "mtas-network"
+    assert run["network"] is None  # DOCKER_NETWORK_NAME is not set
     assert HtpasswdFile(basic_auth.port_auth_file(4001)).check_password(
         "common_user_01", "pw"
     )
@@ -96,7 +96,7 @@ def test_metabase_image_from_the_registry_is_used(settings, docker, monkeypatch)
     docker.images.in_registry.add(metabase_api.image())
     monkeypatch.setattr(metabase_api, "run_create_user", lambda *_args: True)
     assert metabase_api.create_user_and_docker_mb(MB_USER, 3001) is True
-    assert docker.containers.runs[0]["image"] == "metabase/metabase:v0.57.3"
+    assert docker.containers.runs[0]["image"] == "metabase/metabase:v0.64-lts"
 
 
 def test_nifi_container_and_login(settings, docker):
@@ -122,11 +122,16 @@ def test_nifi_without_docker(settings, no_docker):
 MB_USER = UserDataMetabase("Jane", "Doe", "jane@x.org", "pw12345678")
 
 
-def test_metabase_base_url(use_settings):
+def test_metabase_is_reached_by_the_container_name(use_settings):
     use_settings()
+    assert metabase_api.base_url_for(3001) == "http://metabase-3001:3000"
+    use_settings(CONTAINER_NAME_PREFIX="mtas-testenv-")
+    assert metabase_api.base_url_for(3001) == "http://mtas-testenv-metabase-3001:3000"
+
+
+def test_metabase_outside_docker_uses_the_published_port(use_settings):
+    use_settings(METABASE_BASE_URL="http://localhost/")
     assert metabase_api.base_url_for(3001) == "http://localhost:3001"
-    use_settings(METABASE_BASE_URL="http://metabase-")
-    assert metabase_api.base_url_for(3001) == "http://metabase-3001"
 
 
 def test_metabase_container_and_first_user(settings, docker, monkeypatch):
@@ -148,14 +153,37 @@ def test_metabase_container_and_first_user(settings, docker, monkeypatch):
     assert metabase_api.create_user_and_docker_mb(MB_USER, 3001) is True
     run = docker.containers.runs[0]
     assert run["name"] == "metabase-3001"
-    assert run["image"] == "metabase/metabase:v0.57.3"
-    assert run["ports"] == {"80/tcp": ("127.0.0.1", 3001)}
+    assert run["image"] == "metabase/metabase:v0.64-lts"
+    assert run["ports"] == {"3000/tcp": ("127.0.0.1", 3001)}
+    assert "environment" not in run
 
     method, url, payload = calls[-1]
-    assert (method, url) == ("POST", "http://localhost:3001/api/setup")
+    assert (method, url) == ("POST", "http://metabase-3001:3000/api/setup")
     assert payload["token"] == "token-1"
     assert payload["user"]["email"] == "jane@x.org"
     assert payload["user"]["first_name"] == "Jane"
+
+
+def test_missing_network_stops_before_the_container_is_created(
+    use_settings, docker, monkeypatch
+):
+    use_settings(DOCKER_NETWORK_NAME="mtas-network")
+    docker.networks.missing.add("mtas-network")
+    monkeypatch.setattr(metabase_api.time, "sleep", pytest.fail)
+    assert metabase_api.create_user_and_docker_mb(MB_USER, 3001) is False
+    assert docker.containers.runs == []
+
+
+def test_container_that_cannot_start_is_removed(settings, docker, monkeypatch):
+    docker.containers.fail_start = True
+    monkeypatch.setattr(metabase_api.time, "sleep", pytest.fail)
+    assert metabase_api.create_user_and_docker_mb(MB_USER, 3001) is False
+    assert docker.containers.list(all=True) == []
+
+
+def test_without_network_name_the_default_network_is_used(settings, docker):
+    assert metabase_api.create_docker_container(3001) is True
+    assert docker.containers.runs[0]["network"] is None
 
 
 def test_metabase_that_never_starts(settings, docker, monkeypatch):
@@ -194,7 +222,7 @@ WP_USER = UserDataWordpress(
     databaseName="mariadb_wordpress_db_7001",
     databaseUser="mariadb_user_01",
     databasePassword="dbpw",
-    wordpressBaseURL="http://mtas.example.org/wordpress/",
+    wordpressBaseURL="https://mtas.example.org/wordpress/",
 )
 
 
@@ -209,7 +237,7 @@ def test_wordpress_containers(settings, docker, monkeypatch):
     assert site["ports"] == {"80/tcp": ("127.0.0.1", 7001)}
     assert site["environment"]["WORDPRESS_DB_NAME"] == "mariadb_wordpress_db_7001"
     assert (
-        "http://mtas.example.org/wordpress/7001/"
+        "https://mtas.example.org/wordpress/7001/"
         in site["environment"]["WORDPRESS_CONFIG_EXTRA"]
     )
     assert site["volumes"] == cli["volumes"] == ["wordpress-7001:/var/www/html"]
@@ -217,7 +245,7 @@ def test_wordpress_containers(settings, docker, monkeypatch):
     # both images come from versions.env
     assert (site["image"], cli["image"]) == ("wordpress:latest", "wordpress:cli")
     assert "--admin_user=wordpress_user_01" in cli["command"]
-    assert "--url=http://mtas.example.org/wordpress " in cli["command"]
+    assert "--url=https://mtas.example.org/wordpress " in cli["command"]
     assert pauses == [wordpress_api.SLEEP_TIME_BETWEEN_CONTAINERS_SECONDS]
     assert ".htaccess" in docker.containers.items[0].commands[0][2]
 

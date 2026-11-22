@@ -104,9 +104,7 @@ class Settings(BaseSettings):
     enable_api_docs: bool | None = Field(None, validate_default=True)
 
     # ---- secrets ----
-    secret_key: SecretStr = Field(
-        validation_alias=AliasChoices("secret_key", "flask_secret_key")
-    )
+    secret_key: SecretStr
     hash_key_hidden: SecretBytes
     hash_key_links: SecretBytes
     # None: on in production, off in development
@@ -117,6 +115,8 @@ class Settings(BaseSettings):
     course_security_code: str = "CODE"
     course_name_title: str | None = None
     server_fqdn: str = "localhost"
+    # port of HTTPS (nginx) for the users, in the links of the app (dev setup: 51443)
+    https_port: Port = 443
     system_admins: SemicolonList = []
     allowed_fqdn_for_emails: SemicolonList = []
     services_ui: SemicolonList = Field(
@@ -180,7 +180,8 @@ class Settings(BaseSettings):
     nginx_basic_auth_file_extension: str = ".htpasswd"
 
     # ---- containers of the users ----
-    docker_network_name: str = "mtas-network"
+    # not set: the default network of Docker (enough for an app outside Docker)
+    docker_network_name: str | None = None
     # in front of the names of the containers and volumes, e.g. "mtas-testenv-"
     container_name_prefix: Annotated[
         str, Field(pattern=r"^([a-z0-9][a-z0-9_.-]*)?$")
@@ -199,7 +200,8 @@ class Settings(BaseSettings):
     mariadb_version: ImageVersion
     sqlmate_version: ImageVersion
     surveylite_version: ImageVersion
-    metabase_base_url: str = "http://localhost"
+    # empty: the app reaches Metabase by the name of the container (app in Docker)
+    metabase_base_url: str | None = None
     metabase_try_count: PositiveInt = 3
     metabase_try_sleep_sec: NonNegativeInt = 30
     superset_base_url: str | None = None
@@ -303,16 +305,24 @@ class Settings(BaseSettings):
         return f"sqlite:///{self.mtas_db_path}"
 
     @property
+    def public_host(self) -> str:
+        """SERVER_FQDN with HTTPS_PORT, e.g. localhost:51443 (no port for 443)"""
+
+        if self.https_port == 443:
+            return self.server_fqdn
+        return f"{self.server_fqdn}:{self.https_port}"
+
+    @property
     def base_url(self) -> str:
-        return f"https://{self.server_fqdn}/"
+        return f"https://{self.public_host}/"
 
     @property
     def pgadmin4_url(self) -> str:
-        return f"https://{self.server_fqdn}/pgadmin4"
+        return f"https://{self.public_host}/pgadmin4"
 
     @property
     def jupyterhub_url(self) -> str:
-        return f"https://{self.server_fqdn}/jupyterhub/"
+        return f"https://{self.public_host}/jupyterhub/"
 
     @property
     def superset_url(self) -> str:
@@ -320,22 +330,22 @@ class Settings(BaseSettings):
 
     @property
     def wordpress_base_url(self) -> str:
-        return f"http://{self.server_fqdn}/wordpress/"
+        return f"https://{self.public_host}/wordpress/"
 
     @property
     def sqlmate_public_url(self) -> str:
-        return _with_slash(self.sqlmate_url or f"https://{self.server_fqdn}/sqlmate/")
+        return _with_slash(self.sqlmate_url or f"https://{self.public_host}/sqlmate/")
 
     @property
     def surveylite_public_url(self) -> str:
         return _with_slash(
-            self.surveylite_url or f"https://{self.server_fqdn}/surveylite/"
+            self.surveylite_url or f"https://{self.public_host}/surveylite/"
         )
 
     def container_url(self, service: str, port: int) -> str:
-        """URL of a user's container behind nginx, e.g. https://<server>/metabase/3001/"""
+        """URL of a user's container behind nginx, e.g. https://<host>/metabase/3001/"""
 
-        return f"https://{self.server_fqdn}/{service}/{port}/"
+        return f"https://{self.public_host}/{service}/{port}/"
 
     def public_items(self) -> dict:
         """Settings without secrets, for the admin UI"""

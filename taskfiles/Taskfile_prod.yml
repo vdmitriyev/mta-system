@@ -53,7 +53,6 @@ tasks:
 
   nginx-reload:
     desc: checks and reloads the nginx config
-    aliases: [reload]
     cmds:
       - "{{.PROD_COMPOSE}} exec nginx nginx -t"
       - "{{.PROD_COMPOSE}} exec nginx nginx -s reload"

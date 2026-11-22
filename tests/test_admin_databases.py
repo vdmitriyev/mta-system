@@ -94,6 +94,7 @@ def test_create_database_for_a_user_without_account(admin_client, db, student, m
     text = admin_client.get("/mtas-admin/services/postgresql").text
     assert "The database bicourse_db_01 was created for" in text
     assert logged(db) == [("postgresql_created", student.itid)]
+    assert db.query(AdminActions).one().details == postgresql.image()
 
 
 def test_missing_database_is_created_again_with_the_stored_login(

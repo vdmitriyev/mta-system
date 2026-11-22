@@ -53,7 +53,7 @@ Registration, dataset imports and new containers can take minutes. The app runs 
 
 | Service | Image | Version | Variable |
 | --- | --- | --- | --- |
-| Metabase (per user) | `metabase/metabase` | `v0.57.3` | `METABASE_VERSION` |
+| Metabase (per user) | `metabase/metabase` | `v0.64-lts` | `METABASE_VERSION` |
 | OpenRefine (per user) | `openrefine`, built from `provision/openrefine` | `3.10.1` | `OPENREFINE_VERSION` |
 | WordPress (per user) | `wordpress` | `latest` | `WORDPRESS_VERSION` |
 | WP-CLI (installs WordPress) | `wordpress` | `cli` | `WORDPRESS_CLI_VERSION` |

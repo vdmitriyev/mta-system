@@ -5,6 +5,7 @@ import pytest
 import requests
 
 from app.models import (
+    AdminActions,
     BackgroundTask,
     ExerciseBonusPoints,
     ExerciseReviews,
@@ -130,6 +131,8 @@ def test_generate_accounts(admin_client, db, admin, monkeypatch):
         "Prepared accounts: 5",
     )
     assert "5 accounts are prepared" in admin_client.get("/mtas-admin/").text
+    entry = db.query(AdminActions).filter_by(action="accounts_generated").one()
+    assert entry.details.startswith("5 accounts: ")
 
 
 def test_users_page(admin_client, db, admin, student):
@@ -469,6 +472,8 @@ def test_create_metabase_again(admin_client, db, admin, student, docker, monkeyp
     task = db.query(BackgroundTask).one()
     assert (task.kind, task.status) == ("service:create:metabase", "done")
     assert STUDENT_EMAIL in task.message
+    entry = db.query(AdminActions).filter_by(action="service_created").one()
+    assert entry.details == "Metabase: metabase/metabase:v0.64-lts"
 
 
 def test_create_openrefine_without_postgresql(db, admin, student, docker, settings):
@@ -657,18 +662,11 @@ def test_check_basic_auth_errors(monkeypatch, error, verdict):
     assert check_basic_auth("https://x/", "u", "p") == verdict
 
 
-def test_old_access_check_address_leads_to_openrefine(admin_client):
-    response = admin_client.get("/mtas-admin/basic-auth-check", follow_redirects=False)
-    assert (
-        response.headers["location"] == "/mtas-admin/services/openrefine?check=access"
-    )
-
-
 def test_metabase_page_has_no_access_check(admin_client, docker):
     text = admin_client.get("/mtas-admin/services/metabase").text
     assert "Check access" not in text
     assert (
-        "Image is on this server: <strong><code>metabase/metabase:v0.57.3</code></strong>"
+        "Image is on this server: <strong><code>metabase/metabase:v0.64-lts</code></strong>"
         in text
     )
     assert "docker pull" not in text
@@ -710,11 +708,6 @@ def test_services_menu(admin_client, docker):
     assert 'href="/mtas-admin/auto-creation"' in text
     text = admin_client.get("/mtas-admin/users").text
     assert "<summary>Services" in text
-
-
-def test_old_settings_address_leads_to_the_settings_page(admin_client):
-    response = admin_client.get("/mtas-admin/configs", follow_redirects=False)
-    assert response.headers["location"] == "/mtas-admin/settings"
 
 
 def test_visibility_is_grouped_by_category_and_service(admin_client, db):

@@ -32,7 +32,6 @@ services:
       DOCKER_NETWORK_NAME: mtas-testenv_mtas-network
       CONTAINER_NAME_PREFIX: mtas-testenv-
       CONTAINER_PUBLISH_PORTS: "false"
-      METABASE_BASE_URL: http://mtas-testenv-metabase-
       METABASE_TRY_COUNT: "20"
       METABASE_TRY_SLEEP_SEC: "15"
       # for tests/testenv/services_check.py

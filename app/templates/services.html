@@ -81,12 +81,14 @@
     {% endif %}
 
     {% if card.can_start %}
-    <div class="card-foot">
+    {% set running = card.status == "running" %}
+    <div class="card-foot stacked">
+      <span class="muted small">Start the service if it does not answer:</span>
       <form method="post" action="/services/{{ card.name }}/start" class="inline-form">
         {{ ui.csrf(csrf_token) }}
-        <button type="submit" class="btn">{{ ui.icon("play") }} Start service</button>
+        <button type="submit" class="btn start-service" data-start-button="{{ card.name }}"{% if running %} disabled{% endif %}>{{ ui.icon("play") }} Start service</button>
       </form>
-      <span class="muted small">Use this if the service does not answer.</span>
+      <span class="small">Status: <strong class="container-state {{ card.status }}" data-container-state="{{ card.name }}">{{ card.status | capitalize }}</strong></span>
     </div>
     {% endif %}
 

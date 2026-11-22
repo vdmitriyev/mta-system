@@ -21,7 +21,13 @@ from app import surveys
 from app.config import get_settings
 from app.database import init_engine, session_scope
 from app.models import Users
-from app.services import basic_auth, docker_ctl, sqlmate_api, surveylite_api
+from app.services import (
+    basic_auth,
+    docker_ctl,
+    metabase_api,
+    sqlmate_api,
+    surveylite_api,
+)
 from app.users import access_url, get_user_services
 
 settings = get_settings()
@@ -53,12 +59,12 @@ def url_of(error) -> str:
     return getattr(error, "url", "") or ""
 
 
-def container_url(service: str, port: int) -> str:
+def container_url(service: str, port: int, container_port: int = 80) -> str:
     """Address of a container of a user, as the app reaches it"""
 
     if settings.container_publish_ports:
         return f"http://127.0.0.1:{port}"
-    return f"http://{docker_ctl.container_name(service, port)}"
+    return f"http://{docker_ctl.container_name(service, port)}:{container_port}"
 
 
 def wait_for(url: str, ok, seconds: int) -> tuple:
@@ -170,7 +176,7 @@ if entry is None:
     report("metabase", False, "no account")
 else:
     port = entry["metabase_docker_port"]
-    base = container_url("metabase", port)
+    base = container_url("metabase", port, metabase_api.CONTAINER_PORT)
     status, body = wait_for(
         f"{base}/api/health", lambda s, b: s == 200 and '"ok"' in b, 300
     )
@@ -261,7 +267,11 @@ else:
         except Exception:
             pass
         time.sleep(5)
-    status, _body = fetch(f"{container_url('wordpress', port)}/wp-login.php")
+    # as nginx: WordPress runs under https://, so it redirects plain http
+    status, _body = fetch(
+        f"{container_url('wordpress', port)}/wp-login.php",
+        headers={"X-Forwarded-Proto": "https"},
+    )
     ok = installed and status in (200, 301, 302)
     report(
         "wordpress",

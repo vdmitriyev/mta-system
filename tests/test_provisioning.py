@@ -116,7 +116,7 @@ def test_mariadb_and_wordpress(db, use_settings, monkeypatch):
         "wp_user",
         "dbpw",
     )
-    assert data.wordpressBaseURL == "http://mtas.example.org/wordpress/"
+    assert data.wordpressBaseURL == "https://mtas.example.org/wordpress/"
     assert db.query(MariaDBService).one().created is True
     assert db.query(WordpressService).one().wordpress_docker_port == 7001
 

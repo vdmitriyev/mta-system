@@ -84,7 +84,7 @@ def test_wordpress_needs_mariadb(db):
 
 def test_admin_page_lists_the_services(admin_client):
     text = admin_client.get("/mtas-admin/auto-creation").text
-    assert "<title>Auto creation" in text
+    assert "<title>Services creation" in text
     for service in SERVICE_KEYS:
         assert f"<code>{service}</code>" in text
 
@@ -187,11 +187,6 @@ def test_table_splits_name_and_how_it_runs(admin_client):
     assert "<th>How it runs</th>" in text
 
 
-def test_old_auto_creation_address(admin_client):
-    response = admin_client.get("/mtas-admin/service-accounts", follow_redirects=False)
-    assert response.headers["location"] == "/mtas-admin/auto-creation"
-
-
 def test_every_service_has_a_name_and_a_way_to_run():
     from app.service_settings import SERVICES
 
@@ -202,7 +197,7 @@ def test_versions_of_the_own_containers(admin_client, use_settings):
     use_settings(OPENREFINE_VERSION="3.9.5")
     text = admin_client.get("/mtas-admin/auto-creation").text
     for name, image, setting in (
-        ("Metabase", "metabase/metabase:v0.57.3", "METABASE_VERSION"),
+        ("Metabase", "metabase/metabase:v0.64-lts", "METABASE_VERSION"),
         ("OpenRefine", "openrefine:3.9.5", "OPENREFINE_VERSION"),
         ("WordPress", "wordpress:latest", "WORDPRESS_VERSION, WORDPRESS_CLI_VERSION"),
         ("MariaDB", "mariadb:13.0.2", "MARIADB_VERSION"),

@@ -53,7 +53,7 @@ def test_run_module_creates_the_app(run_python):
 
 
 def test_missing_secret_stops_the_start_with_a_clear_message(run_python):
-    result = run_python("-c", "import run", SECRET_KEY="", FLASK_SECRET_KEY="")
+    result = run_python("-c", "import run", SECRET_KEY="")
     assert result.returncode != 0
     assert "Set the environment variable SECRET_KEY" in result.stderr
 

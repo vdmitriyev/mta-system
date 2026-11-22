@@ -49,12 +49,6 @@ def test_missing_secret_is_an_error(key):
         Settings.from_env(env)
 
 
-def test_old_name_of_the_secret_key_still_works():
-    env = {k: v for k, v in BASE_ENV.items() if k != "SECRET_KEY"}
-    env["FLASK_SECRET_KEY"] = "old-secret"
-    assert Settings.from_env(env).secret_key.get_secret_value() == "old-secret"
-
-
 def test_lists_are_split_at_semicolons():
     env = {**BASE_ENV, "SYSTEM_ADMINS": "a@x.org; b@x.org;", "SERVICES_UI": "metabase"}
     settings = Settings.from_env(env)
@@ -116,7 +110,25 @@ def test_urls_use_the_server_name():
     )
     assert settings.jupyterhub_url.endswith("/jupyterhub/")
     assert settings.superset_url == "https://mtas.example.org:8089/"
-    assert settings.wordpress_base_url == "http://mtas.example.org/wordpress/"
+    assert settings.wordpress_base_url == "https://mtas.example.org/wordpress/"
+
+
+def test_links_with_another_https_port():
+    settings = Settings.from_env({**BASE_ENV, "HTTPS_PORT": "51443"})
+    host = "https://mtas.example.org:51443"
+    assert settings.base_url == f"{host}/"
+    assert settings.pgadmin4_url == f"{host}/pgadmin4"
+    assert settings.container_url("metabase", 3001) == f"{host}/metabase/3001/"
+    assert settings.sqlmate_public_url == f"{host}/sqlmate/"
+    assert settings.surveylite_public_url == f"{host}/surveylite/"
+    assert settings.wordpress_base_url == f"{host}/wordpress/"
+    # not an address of nginx: the server name stays without the port
+    assert settings.server_fqdn == "mtas.example.org"
+
+
+def test_https_port_must_be_a_port():
+    with pytest.raises(ConfigError, match="HTTPS_PORT"):
+        Settings.from_env({**BASE_ENV, "HTTPS_PORT": "70000"})
 
 
 def test_public_items_hide_secrets():
@@ -186,7 +198,6 @@ def clean_env(monkeypatch):
 
     for key in list(os.environ):
         if key.lower() in Settings.model_fields or key in (
-            "FLASK_SECRET_KEY",
             "NGINX_BASIC_AUTH_DIR_ABSOLUTE",
             "ENV_FILE_NAME",
         ):
@@ -240,7 +251,7 @@ def test_image_versions(tmp_path):
         settings.metabase_version,
         settings.openrefine_version,
         settings.wordpress_version,
-    ) == ("v0.57.3", "3.10.1", "latest")
+    ) == ("v0.64-lts", "3.10.1", "latest")
 
 
 @pytest.mark.parametrize("value", ["3.10 .1", "latest;rm -rf /", ":3.10", "-x"])

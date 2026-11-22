@@ -61,7 +61,7 @@ ENV_FILE_NAME=envs/webapp-dev-docker.env task app:config
 
 ### Services for the users
 
-The database stores in which services a new user gets an account. Change it on the admin page **Services → Auto creation**, or:
+The database stores in which services a new user gets an account. Change it on the admin page **Services creation**, or:
 
 ```bash
 task app:cli -- auto-creation                                   # shows the switches
@@ -135,7 +135,7 @@ task app:serve    # runs the app on http://127.0.0.1:5353 and reloads on code ch
 
 ### Run in Docker for development
 
-The app runs with reload behind nginx, with PostgreSQL and pgAdmin 4. The settings come from `envs/webapp-dev-docker.env`.
+The app runs with reload behind nginx, with PostgreSQL and pgAdmin 4. The settings come from `envs/webapp-dev-docker.env`. nginx listens on `http://127.0.0.1:5180` and `https://127.0.0.1:51443` (self-signed certificate), so it does not block ports 80 and 443. `compose.yml` sets `HTTPS_PORT=51443` for the app too, so its links (e.g. `https://localhost:51443/metabase/3001/`) go to this port.
 
 ```bash
 task dev:up                   # builds and starts, app on http://127.0.0.1:5252

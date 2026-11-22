@@ -3,6 +3,7 @@
 from sqlalchemy.orm import Session
 
 from app.models import AdminActions, Users
+from app.service_settings import container_images
 
 ACTION_LABELS = {
     "review": "Review saved",
@@ -13,7 +14,7 @@ ACTION_LABELS = {
     "exercise": "Exercise saved",
     "user_deleted": "User deleted",
     "visibility": "Visibility changed",
-    "auto_creation": "Auto creation changed",
+    "auto_creation": "Services creation changed",
     "download_added": "Download added",
     "download_changed": "Download changed",
     "download_moved": "Download moved",
@@ -54,6 +55,13 @@ def log_action(
         )
     )
     db.commit()
+
+
+def versions(*services: str) -> str:
+    """Images of the services with their versions, e.g. "metabase/metabase:v0.64-lts" """
+
+    images = container_images()
+    return ", ".join(image for service in services for image in images.get(service, []))
 
 
 def recent_actions(db: Session, limit: int = 300, user_id: int | None = None) -> list:
