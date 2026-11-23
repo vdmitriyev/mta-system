@@ -2,6 +2,11 @@
 History
 =======
 
+2.7.1 (2026-11-23)
+-------------------
+
+* Registration works when PostgreSQL or another service is not reachable: the user is created and gets the e-mail; the status page names the services that are not ready yet.
+
 2.7.0 (2026-11-22)
 -------------------
 
@@ -12,6 +17,8 @@ History
 * Automatic notifications wait until an admin shows them. Setting `NOTIFICATIONS_AUTO`; **Visibility** can switch notifications off.
 * Markdown in notifications, e-mails and descriptions.
 * E-mail texts are Jinja2 templates in `app/templates/emails`.
+* Less DEBUG logging from the Markdown package.
+* README: section "Web UI" with screenshots.
 * Database: tables `notifications`, `notification_reads`, `notification_emails`, `email_batches`, `email_batch_items`.
 
 2.6.7 (2026-11-22)

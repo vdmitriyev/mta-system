@@ -26,10 +26,10 @@ from app.config import (
     get_settings,
 )
 from app.emails import email_content, send_email
-from app.models import SERVICE_MODELS, LoginHistory, Users
+from app.models import SERVICE_MODELS, LoginHistory, PostgreSQLService, Users
 from app.provisioning import email_to_tokens
 from app.security import generate_pin, make_hash, random_string
-from app.service_settings import creates_accounts
+from app.service_settings import SERVICES, creates_accounts
 from app.services import docker_ctl, postgresql
 from app.tasks import TaskError, set_about_user
 
@@ -212,6 +212,28 @@ def send_access_email(user: Users) -> bool:
     )
 
 
+def services_not_ready(db: Session, user: Users) -> list[str]:
+    """Names of the switched-on services in which the user has no working account"""
+
+    names = []
+    for service in SERVICES:
+        if not creates_accounts(db, service.key):
+            continue
+        model = SERVICE_MODELS[service.key]
+        ready = (
+            db.query(model.itid)
+            .filter(
+                model.user_id == user.itid,
+                model.deleted.is_(False),
+                model.created.is_(True),
+            )
+            .first()
+        )
+        if ready is None:
+            names.append(service.name)
+    return names
+
+
 def is_email_in_allowed_fqdn_list(email: str, allowed_email_fqdn: list) -> bool:
     """Checks that the domain of the e-mail is allowed. An empty list allows all domains."""
 
@@ -228,10 +250,16 @@ def next_account_number(db: Session) -> int:
 
     if creates_accounts(db, "postgresql"):
         number = postgresql.next_database_number()
-        if number is None:
-            raise TaskError("The database service is not available. Try again later.")
-        return number
-    return (db.query(func.max(Users.itid)).scalar() or 0) + 1
+        if number is not None:
+            return number
+        # the user is registered anyway; the database can be created later
+        logger.warning("PostgreSQL is not reachable: the app chooses the number")
+    numbers = [db.query(func.max(Users.itid)).scalar() or 0]
+    for (name,) in db.query(PostgreSQLService.postgresql_db):
+        suffix = (name or "").rsplit("_", 1)[-1]
+        if suffix.isdigit():
+            numbers.append(int(suffix))
+    return max(numbers) + 1
 
 
 def assign_available_account(db: Session, email: str) -> Users | None:
@@ -346,14 +374,28 @@ def register_user_task(db: Session, email: str) -> str:
         user = assign_available_account(db, email) or register_new_user(db, email)
     set_about_user(db, user.itid)
 
+    not_ready = services_not_ready(db, user)
+    if not_ready:
+        logger.warning(
+            "Services without an account for user %s: %s",
+            user.itid,
+            ", ".join(not_ready),
+        )
     if not send_access_email(user):
         raise TaskError(
             "Your account is set up, but we could not send the e-mail with the "
             "login data. Ask your instructor for help."
         )
     if known:
-        return "This e-mail is already registered. We sent the login data again."
-    return "Your registration is complete. Check your e-mail for the login data."
+        message = "This e-mail is already registered. We sent the login data again."
+    else:
+        message = "Your registration is complete. Check your e-mail for the login data."
+    if not_ready:
+        message += (
+            f" Not ready yet: {', '.join(not_ready)}. The course team sets "
+            "them up later."
+        )
+    return message
 
 
 def generate_accounts_task(db: Session, count: int) -> str:

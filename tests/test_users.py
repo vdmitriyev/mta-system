@@ -150,9 +150,41 @@ def test_next_account_number_comes_from_postgresql(db, tmp_path, monkeypatch):
     monkeypatch.setattr("app.users.postgresql.next_database_number", lambda: 7)
     assert next_account_number(db) == 7
 
+    # not reachable: the app chooses the number after its own users and databases
     monkeypatch.setattr("app.users.postgresql.next_database_number", lambda: None)
-    with pytest.raises(TaskError, match="not available"):
-        next_account_number(db)
+    user = add_user(db)
+    db.add(
+        PostgreSQLService(
+            user_id=user.itid,
+            postgresql_db="bicourse_db_09",
+            postgresql_user="bicourse_user_09",
+            postgresql_password="x",
+        )
+    )
+    db.commit()
+    assert next_account_number(db) == 10
+
+
+def test_registration_without_a_reachable_postgresql(db, monkeypatch, no_email):
+    switch_on(db, "postgresql", "pgadmin4")
+    monkeypatch.setattr("app.users.postgresql.next_database_number", lambda: None)
+    monkeypatch.setattr(
+        "app.provisioning.postgresql.create_postgresql_db", lambda *args: False
+    )
+    monkeypatch.setattr(
+        "app.provisioning.pgadmin4_api.new_user_pgadmin4_for_web_auth",
+        lambda *args: True,
+    )
+
+    message = register_user_task(db, "new.user@uni.example")
+
+    user = find_user_by_email(db, "new.user@uni.example")
+    assert user is not None
+    assert get_user_services(db, user.itid)["postgresql"].created is False
+    assert "complete" in message and "Not ready yet: PostgreSQL." in message
+    assert no_email[0]["to"] == "new.user@uni.example"
+    assert "not ready" not in no_email[0]["content"]
+    assert user.pin in no_email[0]["content"]
 
 
 def test_register_new_user_without_services(db, settings):

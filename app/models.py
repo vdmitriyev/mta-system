@@ -432,7 +432,7 @@ class Notification(Base):
     itid = Column(Integer, primary_key=True)
     kind = Column(String(20), nullable=False, default="message")
     title = Column(String(200), nullable=False)
-    body = Column(Text)    
+    body = Column(Text)
     user_id = Column(Integer, ForeignKey("users.itid"), index=True)
     audience = Column(String(50))
     event_key = Column(String(100), unique=True)
