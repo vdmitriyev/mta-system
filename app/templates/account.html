@@ -18,7 +18,7 @@
 {% if notifications is not none %}
 <section class="card" id="notifications">
   <div class="card-head">
-    <h2>Notifications{% if unread_notifications %} <span class="badge info">{{ unread_notifications }} new</span>{% endif %}</h2>
+    <h2>Notifications{% if unread_notifications %} <span class="badge success">{{ unread_notifications }} new</span>{% endif %}</h2>
     {% if unread_notifications %}
     <form method="post" action="/account/notifications/read-all" class="inline-form">
       {{ ui.csrf(csrf_token) }}
@@ -36,7 +36,7 @@
       <div class="notification-head">
         <strong>{{ item.title }}</strong>
         <span class="muted small">{{ item.shown_at | local }}</span>
-        {% if entry.read %}<span class="badge">seen</span>{% else %}<span class="badge info">new</span>{% endif %}
+        {% if entry.read %}<span class="badge">seen</span>{% else %}<span class="badge success">new</span>{% endif %}
       </div>
       {% if item.body %}<div class="notification-body md">{{ item.body | markdown }}</div>{% endif %}
       {% if not entry.read %}

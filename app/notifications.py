@@ -500,7 +500,7 @@ def visibility_switched_on(db: Session, ui_key: str) -> int:
     today = date.today().isoformat()
     if item.label == SERVICE_CARD and ui_key in SERVICE_MODELS:
         title, kind, service = f"New service: {item.group}", "service", ui_key
-        body = f"{item.group} is now on the page Services, with your login."
+        body = f"`{item.group}` service is now accessible on the page **Services**."
     elif ui_key.startswith("importers_"):
         name = item.label.split(":", 1)[-1].strip()
         title, kind, service = f"New dataset: {name}", "dataset", "postgresql"
@@ -513,7 +513,7 @@ def visibility_switched_on(db: Session, ui_key: str) -> int:
             db,
             "page",
             f"New page: {PAGES[ui_key]}",
-            f"The menu has a new entry: {PAGES[ui_key]}.",
+            f"The menu has a new page: {PAGES[ui_key]}.",
             event_key=f"visibility:{ui_key}:{today}",
         )
         return int(added)
@@ -538,7 +538,7 @@ def download_added(db: Session, item, page_visible: bool) -> bool:
     return notify(
         db,
         "download",
-        f"New download: {item.title}",
+        f"New download available: {item.title}",
         item.description or "",
         event_key=f"download:{item.itid}",
     )

@@ -118,7 +118,7 @@ def test_user_sees_a_message_and_marks_it_as_read(student_client, db):
     assert "only when an admin sends it manually." in text
     # no kind on the page Account
     assert '<span class="badge">Message</span>' not in text
-    assert '<span class="badge info">new</span>' in text
+    assert '<span class="badge success">new</span>' in text
 
     response = post(student_client, f"/account/notifications/{item.itid}/read")
     assert response.headers["location"] == "/account#notifications"
@@ -126,7 +126,7 @@ def test_user_sees_a_message_and_marks_it_as_read(student_client, db):
     assert gear_count(text) is None
     # still listed, without "new"
     assert "Exam on Friday" in text
-    assert '<span class="badge info">new</span>' not in text
+    assert '<span class="badge success">new</span>' not in text
     assert '<span class="badge">seen</span>' in text
 
 
@@ -482,6 +482,9 @@ def test_service_shown_tells_the_users_with_an_account(admin_client, db, student
     assert [(r.kind, r.title, r.audience, r.hidden) for r in rows] == [
         ("service", "New service: Metabase", "service:metabase", True)
     ]
+    assert rows[0].body == (
+        "`Metabase` service is now accessible on the page **Services**."
+    )
     assert "waits at Notifications" in admin_client.get("/mtas-admin/visibility").text
     assert not notifications.for_user(db, student)
     show_all(db)
