@@ -563,8 +563,8 @@ def new_version(db: Session) -> bool:
     added = notify(
         db,
         "version",
-        f"New version {__version__}",
-        "The system was updated. The page About shows the services and their versions.",
+        f"New version: {__version__}",
+        "The system has been updated to a newer version.",
         event_key=f"version:{__version__}",
     )
     db.commit()
