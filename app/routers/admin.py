@@ -9,7 +9,7 @@ import requests
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 
-from app import config, provisioning
+from app import config, notifications, provisioning
 from app.admin_log import ACTION_LABELS, log_action, recent_actions, versions
 from app.config import get_settings
 from app.models import SERVICE_MODELS, Users
@@ -386,10 +386,17 @@ def visibility_page(page: Page = Depends()):
 def visibility_change(
     page: Page = Depends(), ui_key: str = Form(...), visible: bool = Form(...)
 ):
+    was_visible = page.visibility.get(ui_key)
     if change_ui_visibility_settings(page.db, ui_key, visible):
         log_action(page.db, page.user, "visibility", details=f"{ui_key}={visible}")
         state = "shown" if visible else "hidden"
-        flash(page.request, f"“{ui_key}” is now {state}.", "success")
+        message = f"“{ui_key}” is now {state}."
+        if visible and not was_visible:
+            told = notifications.visibility_switched_on(page.db, ui_key)
+            page.db.commit()
+            if told:
+                message += " A notification for the users waits at Notifications: show it there."
+        flash(page.request, message, "success")
     else:
         flash(page.request, f"There is no setting “{ui_key}”.", "danger")
     return redirect("/mtas-admin/visibility")

@@ -1,0 +1,116 @@
+{% extends "admin/base.html" %}
+{% block title %}Notification{% endblock %}
+{% block admin %}
+{{ ui.page_head(item.title, kind_labels.get(item.kind, item.kind) ~ " · " ~ (item.created_at | local) ~ " · " ~ (audience_label(item.audience) if item.user_id is none else "user_id " ~ item.user_id)) }}
+<p class="row">
+  <a class="btn sm" href="/mtas-admin/notifications">‹ All notifications</a>
+  {% if item.shown_at is none %}<span class="badge warning">waits: not shown to the users yet</span>{% elif item.hidden %}<span class="badge">hidden from the users</span>{% else %}<span class="badge success">shown to the users</span>{% endif %}
+  <span class="muted small">Read by {{ read_count }} {{ "user" if read_count == 1 else "users" }}.</span>
+</p>
+
+<div class="grid halves">
+  <section class="card">
+    <h2>Text</h2>
+    <form class="form" method="post" action="/mtas-admin/notifications/{{ item.itid }}/edit">
+      {{ ui.csrf(csrf_token) }}
+      <div class="field">
+        <label for="title">Title</label>
+        <input class="input" type="text" id="title" name="title" maxlength="200" value="{{ item.title }}" required>
+      </div>
+      <div class="field">
+        <label for="body">Text</label>
+        <textarea class="input" id="body" name="body">{{ item.body or "" }}</textarea>
+        <span class="hint">Markdown: **bold**, *italic*, lists with "- ", [text](https://...). A web address becomes a link. Line breaks stay.</span>
+      </div>
+      <div class="row">
+        <button type="submit" class="btn primary">Save</button>
+        <span class="muted small">After a change, a new test e-mail shows the new text.</span>
+      </div>
+    </form>
+    <div class="card-foot">
+      <form method="post" action="/mtas-admin/notifications/{{ item.itid }}/hide" class="inline-form">
+        {{ ui.csrf(csrf_token) }}
+        {% if item.hidden %}
+        <button type="submit" class="btn sm primary">{{ ui.icon("eye") }} Show to the users</button>
+        {% else %}
+        <button type="submit" class="btn sm">{{ ui.icon("eye-off") }} Hide from the users</button>
+        {% endif %}
+      </form>
+      <form method="post" action="/mtas-admin/notifications/{{ item.itid }}/delete" class="inline-form" data-confirm="Delete “{{ item.title }}”? The users no longer see it.">
+        {{ ui.csrf(csrf_token) }}
+        <button type="submit" class="btn sm danger">{{ ui.icon("trash") }} Delete</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="card" id="email">
+    <h2>E-mail</h2>
+    <form class="form" method="post" action="/mtas-admin/notifications/{{ item.itid }}/email-subject">
+      {{ ui.csrf(csrf_token) }}
+      <div class="field">
+        <label for="subject">Subject</label>
+        <div class="row nowrap">
+          <span class="muted small nowrap">{{ subject_prefix }}</span>
+          <input class="input" type="text" id="subject" name="subject" maxlength="200" value="{{ email_subject }}" placeholder="{{ default_subject }}">
+          <button type="submit" class="btn">Save</button>
+        </div>
+        <span class="hint">Empty: {{ default_subject }}</span>
+      </div>
+    </form>
+    <div class="email-preview md">{{ email_html | safe }}</div>
+
+    <h3 class="email-step">1. Send test e-mail <span class="muted small">(optional)</span></h3>
+    <form method="post" action="/mtas-admin/notifications/{{ item.itid }}/email-test" class="inline-form">
+      {{ ui.csrf(csrf_token) }}
+      <button type="submit" class="btn">{{ ui.icon("mail") }} Send a test to me ({{ user.email }})</button>
+    </form>
+    {% if item.email_test_at %}
+    <p class="small"><span class="badge success">done</span> Test sent to {{ item.email_test_to }} at {{ item.email_test_at | local }}.</p>
+    {% endif %}
+
+    <h3 class="email-step">2. Send to the users</h3>
+    {% if item.emailed_at %}
+    <p class="small">
+      Got the e-mail: <strong>{{ email_state.sent }}</strong> of {{ users | length }} users (last sent at {{ item.emailed_at | local }}).
+      {% if email_state.sending %}<span class="badge info">{{ email_state.sending }} being sent</span>{% endif %}
+    </p>
+    {% if email_state.failed %}
+    <details class="email-failed">
+      <summary><span class="badge danger">{{ email_state.failed | length }} not sent</span> Show the addresses</summary>
+      <ul class="small">
+        {% for row in email_state.failed %}<li>{{ row.email }}: <span class="muted">{{ row.error }}</span></li>{% endfor %}
+      </ul>
+    </details>
+    {% endif %}
+    {% endif %}
+    {% if batches %}<p class="small"><a href="/mtas-admin/notifications/emails?notification={{ item.itid }}">{{ ui.icon("mail") }} E-mail history of this notification ({{ batches }})</a></p>{% endif %}
+    <form class="form" method="post" action="/mtas-admin/notifications/{{ item.itid }}/email-users" data-confirm="Send the e-mail “{{ email_subject }}” to the chosen users?">
+      {{ ui.csrf(csrf_token) }}
+      <fieldset class="plain">
+        <label class="check"><input type="radio" name="audience" value="missing" checked> {{ audience_label(item.audience) if item.user_id is none else "The user" }}, who did not get it yet ({{ missing }}){% if email_state.failed %}, with the {{ email_state.failed | length }} not sent{% endif %}</label>
+        {% if email_state.sent %}<label class="check"><input type="radio" name="audience" value="all"> All of them again, also who got it ({{ users | length }})</label>{% endif %}
+        <label class="check"><input type="radio" name="audience" value="selected"> Only the users chosen below</label>
+        <details class="user-pick">
+          <summary>Choose users</summary>
+          {{ ui.table_filter("email-users", users | length) }}
+          <div class="table-wrap">
+            <table class="table" id="email-users">
+              <tbody>
+                {% for row in users %}
+                <tr>
+                  <td><label class="check"><input type="checkbox" name="user_id" value="{{ row.itid }}"> {{ row.email }}</label></td>
+                  <td class="num muted">{{ row.itid }}</td>
+                </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </details>
+        <div class="row">
+          <button type="submit" class="btn primary">{{ ui.icon("mail") }} Send to the users</button>
+        </div>
+      </fieldset>
+    </form>
+  </section>
+</div>
+{% endblock %}

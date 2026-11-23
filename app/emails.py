@@ -2,6 +2,9 @@ import logging
 import smtplib
 from email.message import EmailMessage
 from email.utils import formataddr, parseaddr
+from pathlib import Path
+
+from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from app.config import Settings
 
@@ -11,36 +14,45 @@ logger = logging.getLogger(__name__)
 SUBJECT_PREFIX = "[MTA-SYSTEM]"
 SENDER_NAME = "modular teaching assistance system"
 
-REGISTRATION_TEXT = """Dear student,
+# plain-text e-mails (app/templates/emails): the same greeting and signature
+_texts = Environment(
+    loader=FileSystemLoader(Path(__file__).parent / "templates"),
+    autoescape=select_autoescape(enabled_extensions=("html",)),
+    keep_trailing_newline=True,
+)
 
-this is the confirmation of your registration.
 
-Please, use the following link to get access to credentials and settings of services, which are hosted on the online platform:
+def render_text(name: str, **values) -> str:
+    """The text of app/templates/emails/<name>.txt"""
 
-{link}
-
-You can also access the online platform with your E-MAIL and this PIN: {pin}
-
-The link above could be used to check, which services are available to you and how to use them.
-
-Good luck!
-
-Best regards,
-Course Team
-"""
+    return _texts.get_template(f"emails/{name}.txt").render(**values)
 
 
 def email_content(link: str, pin: str) -> str:
-    return REGISTRATION_TEXT.format(link=link, pin=pin)
+    return render_text("registration", link=link, pin=pin)
 
 
-def build_email(to_email: str, subject: str, content: str, sender: str | None):
+def build_email(
+    to_email: str,
+    subject: str,
+    content: str,
+    sender: str | None,
+    html: str | None = None,
+):
+    """content: the plain text. html: optional second part (e-mail programs show it)"""
+
     msg = EmailMessage()
     msg["Subject"] = f"{SUBJECT_PREFIX} {subject or 'No Subject'}"
     address = parseaddr(sender or "")[1]
     msg["From"] = formataddr((SENDER_NAME, address)) if address else ""
     msg["To"] = to_email
     msg.set_content(content or "No body")
+    if html:
+        msg.add_alternative(
+            f'<!doctype html><html><body style="font-family: sans-serif">{html}'
+            "</body></html>",
+            subtype="html",
+        )
     return msg
 
 
@@ -78,10 +90,16 @@ def describe_error(error: Exception, settings: Settings) -> str:
     )
 
 
-def send_email(to_email: str, subject: str, content: str, settings: Settings) -> bool:
+def send_email(
+    to_email: str,
+    subject: str,
+    content: str,
+    settings: Settings,
+    html: str | None = None,
+) -> bool:
     """Sends an e-mail through the SMTP server of the settings. Returns True if it was sent."""
 
-    msg = build_email(to_email, subject, content, settings.mail_default_sender)
+    msg = build_email(to_email, subject, content, settings.mail_default_sender, html)
     try:
         with connect(settings) as server:
             server.send_message(msg)
@@ -96,3 +114,55 @@ def send_email(to_email: str, subject: str, content: str, settings: Settings) ->
         return False
     logger.info("E-mail was sent to %s", to_email)
     return True
+
+
+class Mailer:
+    """Many e-mails over one SMTP connection (opened at the first e-mail).
+
+    with Mailer(settings) as mailer: error = mailer.send(...)  # None: sent
+    """
+
+    def __init__(self, settings: Settings):
+        self.settings = settings
+        self.server = None
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *exc):
+        self.close()
+
+    def close(self) -> None:
+        if self.server is not None:
+            try:
+                self.server.quit()
+            except (OSError, smtplib.SMTPException):
+                self.server.close()
+            self.server = None
+
+    def send(
+        self, to_email: str, subject: str, content: str, html: str | None = None
+    ) -> str | None:
+        """Returns None if the e-mail was sent, else a short error text"""
+
+        msg = build_email(
+            to_email, subject, content, self.settings.mail_default_sender, html
+        )
+        # a second try on a new connection: the server may have closed the old one
+        for attempt in (1, 2):
+            try:
+                if self.server is None:
+                    self.server = connect(self.settings)
+                self.server.send_message(msg)
+                logger.info("E-mail was sent to %s", to_email)
+                return None
+            except smtplib.SMTPRecipientsRefused as error:
+                logger.error("E-mail to %s was refused: %s", to_email, error)
+                return "the server refused the address"
+            except OSError as error:
+                self.close()
+                if attempt == 2:
+                    text = describe_error(error, self.settings)
+                    logger.error("E-mail to %s was not sent. %s", to_email, text)
+                    return text
+        return "not sent"

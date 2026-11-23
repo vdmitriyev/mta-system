@@ -77,6 +77,12 @@ VISIBILITY_ITEMS = [
         "Downloads (files for the users)",
         default=False,
     ),
+    VisibilityItem(
+        "notifications",
+        MENU_CATEGORY,
+        "Account",
+        "Notifications (page Account, number on the gear icon)",
+    ),
 ]
 VISIBILITY_INFO = {item.ui_key: item for item in VISIBILITY_ITEMS}
 

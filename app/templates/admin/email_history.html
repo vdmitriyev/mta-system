@@ -1,0 +1,51 @@
+{% extends "admin/base.html" %}
+{% block title %}E-mail history{% endblock %}
+{% block admin %}
+<div class="notifications-admin">
+{{ ui.page_head("E-mail history", "Each sending of a notification e-mail: the test e-mails and the e-mails to the users, as they were sent.") }}
+<p class="row">
+  <a class="btn sm" href="/mtas-admin/notifications">‹ All notifications</a>
+  {% if notification is not none %}
+  <span class="small">Only the notification {% if titles.get(notification) %}<a href="/mtas-admin/notifications/{{ notification }}">{{ titles[notification] }}</a>{% else %}{{ notification }}{% endif %}.</span>
+  <a class="btn sm" href="/mtas-admin/notifications/emails">Show all</a>
+  {% endif %}
+</p>
+
+{{ ui.table_filter("email-history", batches | length, "Filter by subject") }}
+<div class="card flush">
+  {% if not batches %}
+    <div class="empty">No e-mails sent yet.</div>
+  {% else %}
+  <div class="table-wrap">
+    <table class="table" id="email-history">
+      <thead>
+        <tr>
+          <th data-sort>Time</th>
+          <th data-sort>Kind</th>
+          <th data-sort>Subject</th>
+          <th data-sort>Notification</th>
+          <th data-sort="number">Sent</th>
+          <th data-sort="number">Failed</th>
+          <th data-sort>By</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for batch in batches %}
+        {% set sent, failed = counts.get(batch.itid, (0, 0)) %}
+        <tr>
+          <td class="nowrap" data-value="{{ batch.created_at }}">{{ batch.created_at | local }}</td>
+          <td>{% if batch.kind == "test" %}<span class="badge">test</span>{% else %}<span class="badge info">to the users</span>{% endif %}{% if batch.finished_at is none %} <span class="badge warning">being sent</span>{% endif %}</td>
+          <td data-value="{{ batch.subject }}"><a href="/mtas-admin/notifications/emails/{{ batch.itid }}">{{ batch.subject }}</a></td>
+          <td class="small">{% if batch.notification_id and titles.get(batch.notification_id) %}<a href="/mtas-admin/notifications/{{ batch.notification_id }}">{{ titles[batch.notification_id] }}</a>{% else %}<span class="muted">deleted</span>{% endif %}</td>
+          <td class="num">{{ sent }}</td>
+          <td class="num">{% if failed %}<span class="badge danger">{{ failed }}</span>{% else %}0{% endif %}</td>
+          <td class="small">{{ admins.get(batch.created_by, "–") }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

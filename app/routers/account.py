@@ -5,7 +5,7 @@ import logging
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException
 from sqlalchemy.orm import Session
 
-from app import surveys
+from app import notifications, surveys
 from app.config import get_settings
 from app.exercises import (
     PART_BONUS,
@@ -399,7 +399,39 @@ def import_dataset(
 
 @router.get("/account")
 def account_page(page: Page = Depends(), user: Users = Depends(require_user)):
-    return page.render("account.html")
+    shown = page.visibility.get("notifications")
+    return page.render(
+        "account.html",
+        notifications=notifications.for_user(page.db, user) if shown else None,
+    )
+
+
+def _notifications_on(page: Page) -> None:
+    if not page.visibility.get("notifications"):
+        raise HTTPException(status_code=404)
+
+
+@router.post(
+    "/account/notifications/{notification_id}/read",
+    dependencies=[Depends(csrf_protect)],
+)
+def notification_read(
+    notification_id: int, page: Page = Depends(), user: Users = Depends(require_user)
+):
+    _notifications_on(page)
+    if not notifications.mark_read(page.db, user, notification_id):
+        raise HTTPException(status_code=404)
+    return redirect("/account#notifications")
+
+
+@router.post("/account/notifications/read-all", dependencies=[Depends(csrf_protect)])
+def notifications_read_all(page: Page = Depends(), user: Users = Depends(require_user)):
+    _notifications_on(page)
+    count = notifications.mark_all_read(page.db, user)
+    if count:
+        text = "1 notification is" if count == 1 else f"{count} notifications are"
+        flash(page.request, f"{text} marked as read.", "success")
+    return redirect("/account#notifications")
 
 
 @router.get("/reviews")

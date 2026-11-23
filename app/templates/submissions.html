@@ -24,7 +24,7 @@
     </span>
   </summary>
   <div class="body">
-    {% if exercise.description %}<p>{{ exercise.description }}</p>{% endif %}
+    {% if exercise.description %}<div class="md">{{ exercise.description | markdown }}</div>{% endif %}
     <p>
       {% if item.deadline %}
         Deadline: <strong>{{ item.deadline | local }}</strong>

@@ -422,3 +422,96 @@ class LoginHistory(Base):
     # "success", "failed" or "blocked" (too many failed logins)
     result = Column(String(10), nullable=False)
     created_at = Column(DateTime, server_default=func.now(), index=True)
+
+
+class Notification(Base):
+    """A message for the users on the page Account (app/notifications.py)"""
+
+    __tablename__ = "notifications"
+
+    itid = Column(Integer, primary_key=True)
+    kind = Column(String(20), nullable=False, default="message")
+    title = Column(String(200), nullable=False)
+    body = Column(Text)    
+    user_id = Column(Integer, ForeignKey("users.itid"), index=True)
+    audience = Column(String(50))
+    event_key = Column(String(100), unique=True)
+    created_by = Column(Integer)
+    hidden = Column(Boolean, default=False, nullable=False)
+    shown_at = Column(DateTime, index=True)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    updated_at = Column(DateTime, server_default=func.now())
+    email_test_at = Column(DateTime)
+    email_test_to = Column(String(100))
+    emailed_at = Column(DateTime)
+    emailed_count = Column(Integer, default=0, nullable=False)
+    email_subject = Column(String(200))
+
+
+class NotificationRead(Base):
+    """A user has read a notification: it no longer counts on the gear icon"""
+
+    __tablename__ = "notification_reads"
+    __table_args__ = (UniqueConstraint("notification_id", "user_id"),)
+
+    itid = Column(Integer, primary_key=True)
+    notification_id = Column(
+        Integer, ForeignKey("notifications.itid", ondelete="CASCADE"), nullable=False
+    )
+    user_id = Column(Integer, ForeignKey("users.itid"), nullable=False, index=True)
+    read_at = Column(DateTime, server_default=func.now())
+
+
+class NotificationEmail(Base):
+    """The e-mail of a notification to a user: sent, failed, or being sent"""
+
+    __tablename__ = "notification_emails"
+    __table_args__ = (UniqueConstraint("notification_id", "user_id"),)
+
+    itid = Column(Integer, primary_key=True)
+    notification_id = Column(
+        Integer, ForeignKey("notifications.itid", ondelete="CASCADE"), nullable=False
+    )
+    user_id = Column(Integer, ForeignKey("users.itid"), nullable=False)
+    email = Column(String(100))
+    # sending, sent, failed
+    status = Column(String(10), nullable=False)
+    error = Column(String(300))
+    updated_at = Column(DateTime, server_default=func.now())
+
+
+class EmailBatch(Base):
+    """One sending of a notification e-mail (a test, or to the users), as sent"""
+
+    __tablename__ = "email_batches"
+
+    itid = Column(Integer, primary_key=True)
+    # None: the notification was deleted
+    notification_id = Column(Integer, index=True)
+    # test, users
+    kind = Column(String(10), nullable=False)
+    subject = Column(String(300), nullable=False)
+    body = Column(Text)
+    created_by = Column(Integer)
+    created_at = Column(DateTime, server_default=func.now(), index=True)
+    finished_at = Column(DateTime)
+
+
+class EmailBatchItem(Base):
+    """One recipient of an EmailBatch: sent or failed"""
+
+    __tablename__ = "email_batch_items"
+
+    itid = Column(Integer, primary_key=True)
+    batch_id = Column(
+        Integer,
+        ForeignKey("email_batches.itid", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    user_id = Column(Integer)
+    email = Column(String(100))
+    # sent, failed
+    status = Column(String(10), nullable=False)
+    error = Column(String(300))
+    sent_at = Column(DateTime, server_default=func.now())

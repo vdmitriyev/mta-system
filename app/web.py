@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from app import __version__
+from app import __version__, markdown_text
 from app.config import BASE_DIR, get_settings
 from app.database import get_db
 from app.models import Users
@@ -25,6 +25,9 @@ FLASH_LEVELS = ("info", "success", "warning", "danger")
 templates = Jinja2Templates(directory=BASE_DIR / "app" / "templates")
 # {{ value | local }}: a UTC time of the database in local time
 templates.env.filters["local"] = local_text
+# {{ text | markdown }}: Markdown of the admins as safe HTML (app/markdown_text.py)
+templates.env.filters["markdown"] = markdown_text.render
+templates.env.filters["markdown_inline"] = markdown_text.render_inline
 STATIC_DIR = BASE_DIR / "app" / "static"
 
 
@@ -107,8 +110,29 @@ class Page:
     def visibility(self) -> dict:
         return ui_visibility_settings(self.db)
 
+    @cached_property
+    def unread_notifications(self) -> int:
+        """Number on the gear icon (0: no number)"""
+
+        from app.notifications import unread_count
+
+        if self.user is None or not self.visibility.get("notifications"):
+            return 0
+        return unread_count(self.db, self.user)
+
+    def waiting_notifications(self) -> int:
+        """Admin menu: automatic notifications that wait to be shown"""
+
+        from app.models import Notification
+
+        return (
+            self.db.query(Notification).filter(Notification.shown_at.is_(None)).count()
+        )
+
     def render(self, template: str, status_code: int = 200, **context):
         settings = get_settings()
+        if template.startswith("admin/"):
+            context.setdefault("waiting_notifications", self.waiting_notifications())
         context.update(
             course_name=settings.course_name_title,
             visibility=self.visibility,
@@ -119,6 +143,7 @@ class Page:
             api_docs=settings.enable_api_docs,
             app_version=__version__,
             path=self.request.url.path,
+            unread_notifications=self.unread_notifications,
         )
         return templates.TemplateResponse(
             self.request, template, context, status_code=status_code

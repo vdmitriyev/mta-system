@@ -167,6 +167,10 @@ The admin page **Downloads** offers files to the users: PDF, ZIP, MD, TXT or SQL
 
 The admin page **Logs → Admin actions** lists the newest 300 changes of the admins: reviews, bonus points, personal deadlines, deleted files, exercises, downloads, accounts and containers of the services, surveys, visibility and services creation. A click on a user ID shows only the changes for this user.
 
+### Notifications
+
+The admin page **Notifications** shows messages on the page **Account** and sends them by e-mail (**E-mail history**). Automatic ones wait until an admin shows them; `NOTIFICATIONS_AUTO` chooses the events. E-mail texts: `app/templates/emails`.
+
 ### Exercises as CSV
 
 Changes on the admin page **Exercises** are stored in the database only. **Download CSV** on this page gives all exercises in the format of `setup/initial_exercises.csv`.

@@ -39,7 +39,7 @@
           {% for item in items %}
           <tr{% if not item.visible %} class="muted"{% endif %}>
             <td class="num">{{ loop.index }}</td>
-            <td>{{ item.title }}{% if item.description %}<br><span class="muted small">{{ item.description }}</span>{% endif %}</td>
+            <td>{{ item.title }}{% if item.description %}<br><span class="muted small">{{ item.description | markdown_inline }}</span>{% endif %}</td>
             <td><a href="/mtas-admin/downloads/file/{{ item.itid }}">{{ item.original_name }}</a><br><span class="muted small">{{ format_size(item.size_bytes) }}</span></td>
             <td>{% set exercise = exercise_of.get(item.exercise_id) %}{% if exercise %}<span class="badge">{{ exercise.code }}</span>{% else %}–{% endif %}</td>
             <td class="center">{{ ui.yes_no(item.visible) }}</td>

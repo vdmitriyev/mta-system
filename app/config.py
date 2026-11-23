@@ -59,6 +59,9 @@ MAX_UPLOAD_MB = 10
 # Upper limit of a file on the admin page Downloads (nginx allows 64 MB)
 DOWNLOAD_MAX_MB = 50
 
+# events that give an automatic notification (setting NOTIFICATIONS_AUTO)
+NOTIFICATION_EVENTS = ("service", "dataset", "page", "download", "survey", "version")
+
 DEFAULT_SERVICES_UI = [
     "pgadmin4",
     "postgresql",
@@ -123,6 +126,10 @@ class Settings(BaseSettings):
         default_factory=lambda: list(DEFAULT_SERVICES_UI)
     )
     max_user_accounts_to_create: PositiveInt = 5
+    # automatic notifications for the users (page Account): which events
+    notifications_auto: SemicolonList = Field(
+        default_factory=lambda: list(NOTIFICATION_EVENTS)
+    )
     # containers that the nightly job stops (python -m app.cli stop-containers, ofelia)
     night_stop_services: SemicolonList = Field(
         default_factory=lambda: ["metabase", "openrefine"]
@@ -248,6 +255,7 @@ class Settings(BaseSettings):
         "allowed_fqdn_for_emails",
         "services_ui",
         "night_stop_services",
+        "notifications_auto",
         mode="before",
     )
     @classmethod

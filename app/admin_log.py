@@ -33,6 +33,13 @@ ACTION_LABELS = {
     "surveylite_login_link": "SurveyLite login link renewed",
     "survey_assigned": "Survey given",
     "survey_requirement": "Survey needed for a service",
+    "notification_added": "Notification added",
+    "notification_changed": "Notification changed",
+    "notification_hidden": "Notification hidden",
+    "notification_shown": "Notification shown again",
+    "notification_deleted": "Notification deleted",
+    "notification_test_email": "Notification: test e-mail",
+    "notification_emailed": "Notification e-mailed to the users",
 }
 
 

@@ -1,0 +1,51 @@
+{% extends "admin/base.html" %}
+{% block title %}E-mail{% endblock %}
+{% block admin %}
+<div class="notifications-admin">
+{{ ui.page_head(batch.subject, ("Test e-mail" if batch.kind == "test" else "E-mail to the users") ~ " · " ~ (batch.created_at | local) ~ (" · by " ~ admin_email if admin_email else "")) }}
+<p class="row">
+  <a class="btn sm" href="/mtas-admin/notifications/emails">‹ E-mail history</a>
+  {% if notification %}<a class="btn sm" href="/mtas-admin/notifications/{{ notification.itid }}">Notification: {{ notification.title }}</a>{% else %}<span class="muted small">The notification was deleted.</span>{% endif %}
+  {% if batch.finished_at is none %}<span class="badge warning">being sent</span>{% endif %}
+  <span class="small">Sent: <strong>{{ sent }}</strong>{% if failed %} · <span class="badge danger">{{ failed }} failed</span>{% endif %}</span>
+</p>
+
+<div class="grid halves">
+  <section class="card">
+    <h2>The e-mail</h2>
+    <p class="small"><span class="muted">Subject:</span> <strong>{{ batch.subject }}</strong></p>
+    <div class="email-preview md">{{ batch.body | markdown }}</div>
+    <details>
+      <summary class="small">Plain text part</summary>
+      <pre class="email-preview">{{ batch.body }}</pre>
+    </details>
+  </section>
+
+  <section class="card flush">
+    {{ ui.table_filter("email-recipients", items | length, "Filter by e-mail") }}
+    <div class="table-wrap">
+      <table class="table" id="email-recipients">
+        <thead>
+          <tr>
+            <th data-sort>E-mail</th>
+            <th data-sort>Status</th>
+            <th data-sort>Time</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in items %}
+          <tr>
+            <td>{% if row.user_id %}<a href="/mtas-admin/actions?user_id={{ row.user_id }}">{{ row.email }}</a>{% else %}{{ row.email }}{% endif %}</td>
+            <td>{% if row.status == "sent" %}<span class="badge success">sent</span>{% else %}<span class="badge danger">failed</span> <span class="muted small">{{ row.error }}</span>{% endif %}</td>
+            <td class="nowrap" data-value="{{ row.sent_at }}">{{ row.sent_at | local }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="muted">No recipients yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
+</div>
+{% endblock %}

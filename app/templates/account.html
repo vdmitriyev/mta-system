@@ -1,8 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Account{% endblock %}
 {% block content %}
-{{ ui.page_head("Account", "The data of your account.") }}
-<section class="card">
+{{ ui.page_head("Account", "The data of your account and your notifications.") }}
+<div class="account-page">
+<section class="card" id="user">
+  <div class="card-head">
+    <h2>User</h2>
+  </div>
   <dl class="kv">
     <div>
       <dt>Registration e-mail</dt>
@@ -10,4 +14,43 @@
     </div>
   </dl>
 </section>
+
+{% if notifications is not none %}
+<section class="card" id="notifications">
+  <div class="card-head">
+    <h2>Notifications{% if unread_notifications %} <span class="badge info">{{ unread_notifications }} new</span>{% endif %}</h2>
+    {% if unread_notifications %}
+    <form method="post" action="/account/notifications/read-all" class="inline-form">
+      {{ ui.csrf(csrf_token) }}
+      <button type="submit" class="btn sm">{{ ui.icon("check") }} Mark all as read</button>
+    </form>
+    {% endif %}
+  </div>
+  {% if not notifications %}
+    <p class="muted">No notifications yet.</p>
+  {% else %}
+  <ul class="notification-list">
+    {% for entry in notifications %}
+    {% set item = entry.item %}
+    <li class="notification{% if not entry.read %} unread{% endif %}" id="notification-{{ item.itid }}">
+      <div class="notification-head">
+        <strong>{{ item.title }}</strong>
+        <span class="muted small">{{ item.shown_at | local }}</span>
+        {% if entry.read %}<span class="badge">seen</span>{% else %}<span class="badge info">new</span>{% endif %}
+      </div>
+      {% if item.body %}<div class="notification-body md">{{ item.body | markdown }}</div>{% endif %}
+      {% if not entry.read %}
+      <form method="post" action="/account/notifications/{{ item.itid }}/read" class="inline-form">
+        {{ ui.csrf(csrf_token) }}
+        <button type="submit" class="btn sm">{{ ui.icon("check") }} Mark as read</button>
+      </form>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% endif %}
+  <p class="notification-note muted small">{{ ui.icon("mail") }} You get an e-mail about a notification only when an admin sends it manually.</p>
+</section>
+{% endif %}
+</div>
 {% endblock %}

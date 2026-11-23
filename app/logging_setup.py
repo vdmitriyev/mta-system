@@ -16,6 +16,7 @@ NOISY_LOGGERS = (
     "multipart",
     "python_multipart",
     "PIL",
+    "MARKDOWN",
 )
 
 

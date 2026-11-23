@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.middleware.sessions import SessionMiddleware
 
-from app import __version__
+from app import __version__, notifications
 from app.config import BASE_DIR, Settings, get_settings, set_settings
 from app.database import init_engine, session_scope
 from app.routers import (
@@ -17,6 +17,7 @@ from app.routers import (
     admin_databases,
     admin_downloads,
     admin_grading,
+    admin_notifications,
     admin_submissions,
     admin_surveys,
     api,
@@ -113,9 +114,12 @@ async def lifespan(_app: FastAPI):
         add_default_service_settings(db)
         try:
             fail_stale_tasks(db)
+            notifications.new_version(db)
         except Exception:
-            # the table is missing until the migrations ran
-            logger.warning("Background tasks were not checked: run the migrations")
+            # the tables are missing until the migrations ran
+            logger.warning(
+                "Tasks and notifications were not checked: run the migrations"
+            )
     settings = get_settings()
     for folder in (settings.submissions_dir, settings.downloads_dir):
         removed = remove_old_temp_files(folder)
@@ -165,6 +169,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         downloads.router,
         admin_databases.router,
         admin_downloads.router,
+        admin_notifications.router,
         admin_grading.router,
         admin_submissions.router,
         admin_surveys.router,

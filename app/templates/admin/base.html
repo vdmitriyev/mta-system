@@ -14,6 +14,7 @@
   ]),
   ("/mtas-admin/auto-creation", "Services creation"),
   ("/mtas-admin/downloads", "Downloads"),
+  ("/mtas-admin/notifications", "Notifications"),
   ("/mtas-admin/exercises", "Exercises"),
   ("/mtas-admin/submissions", "Submissions"),
   ("/mtas-admin/reviews", "Reviews"),
@@ -33,7 +34,7 @@
 <nav class="subnav" aria-label="Admin">
   {% for link in admin_links %}
     {% if link[0] %}
-    <a href="{{ link[0] }}"{% if is_current(link[0]) == "True" %} aria-current="page"{% endif %}>{{ link[1] }}</a>
+    <a href="{{ link[0] }}"{% if is_current(link[0]) == "True" %} aria-current="page"{% endif %}>{{ link[1] }}{% if link[0] == "/mtas-admin/notifications" and waiting_notifications %} <span class="nav-count" title="Waiting to be shown">{{ waiting_notifications }}</span>{% endif %}</a>
     {% else %}
     {% set menu = namespace(active=false) %}
     {% for entry in link[2] if entry and is_current(entry[0]) == "True" %}{% set menu.active = true %}{% endfor %}

@@ -1,0 +1,123 @@
+{% extends "admin/base.html" %}
+{% block title %}Notifications{% endblock %}
+{% block admin %}
+{% macro auto_badge(kind) %}{% if kind in auto_events %}<span class="badge success">on</span>{% else %}<span class="badge">off</span>{% endif %}{% endmacro %}
+<div class="notifications-admin">
+{{ ui.page_head("Notifications", "Messages for the users on the page Account. The number on the gear icon shows the unread ones. Automatic notifications wait for you: the users see them only after you show them.") }}
+<div class="grid halves">
+  <section class="card">
+    <h2>New message</h2>
+    <form class="form" method="post" action="/mtas-admin/notifications/add">
+      {{ ui.csrf(csrf_token) }}
+      <div class="field">
+        <label for="title">Title</label>
+        <input class="input" type="text" id="title" name="title" maxlength="200" required>
+      </div>
+      <div class="field">
+        <label for="body">Text</label>
+        <textarea class="input" id="body" name="body"></textarea>
+        <span class="hint">Markdown: **bold**, *italic*, lists with "- ", [text](https://...). A web address becomes a link. Line breaks stay.</span>
+      </div>
+      <div class="row">
+        <button type="submit" class="btn primary">{{ ui.icon("check") }} Show to all users</button>
+      </div>
+    </form>
+  </section>
+  <section class="card">
+    <h2>Notification rules</h2>
+    <p>The app adds a <strong>hidden</strong> notification for each update. It waits in the table below until you show it. Automatic notifications are generated for the following updates:</p>
+    <ul class="small">
+      <li>{{ auto_badge("service") }} <strong>service</strong>: a service is shown at <a href="/mtas-admin/visibility">Visibility</a> (for users with an account in it)</li>
+      <li>{{ auto_badge("dataset") }} <strong>dataset</strong>: a dataset importer is shown (users with PostgreSQL)</li>
+      <li>{{ auto_badge("page") }} <strong>page</strong>: a menu entry (Downloads, Submissions, Reviews, Bonus points) is shown</li>
+      <li>{{ auto_badge("download") }} <strong>download</strong>: a visible file is added on <a href="/mtas-admin/downloads">Downloads</a></li>
+      <li>{{ auto_badge("survey") }} <strong>survey</strong>: a survey is given to users (for these users)</li>
+      <li>{{ auto_badge("version") }} <strong>version</strong>: the app starts with a new version</li>
+    </ul>
+    <p class="small">Setting <code>NOTIFICATIONS_AUTO</code>.</p>
+    <h3>E-mails</h3>
+    <p class="small">The app never sends e-mails by itself: only an admin sends a notification by e-mail, on its page (<strong>Edit</strong>). The users see this rule on the page Account too.</p>
+    <div class="row">
+      <a class="btn primary" href="/mtas-admin/notifications/emails">{{ ui.icon("mail") }} E-mail history</a>
+    </div>
+  </section>
+</div>
+
+{% if waiting %}
+<div class="alert warning row between">
+  <span><strong>{{ waiting }} automatic {{ "notification waits" if waiting == 1 else "notifications wait" }}</strong> for you. The users see {{ "it" if waiting == 1 else "them" }} only after you show {{ "it" if waiting == 1 else "them" }}.</span>
+  <span class="row">
+    <form method="post" action="/mtas-admin/notifications/show-waiting" class="inline-form">
+      {{ ui.csrf(csrf_token) }}
+      <button type="submit" class="btn sm primary">{{ ui.icon("check") }} Show all {{ waiting }}</button>
+    </form>
+    <form method="post" action="/mtas-admin/notifications/delete-waiting" class="inline-form" data-confirm="Delete the {{ waiting }} waiting notifications?">
+      {{ ui.csrf(csrf_token) }}
+      <button type="submit" class="btn sm danger">{{ ui.icon("trash") }} Delete all {{ waiting }}</button>
+    </form>
+  </span>
+</div>
+{% endif %}
+
+{{ ui.table_filter("notifications-table", items | length, "Filter by title") }}
+<div class="card flush">
+  {% if not items %}
+    <div class="empty">No notifications yet.</div>
+  {% else %}
+  <div class="table-wrap">
+    <table class="table" id="notifications-table">
+      <thead>
+        <tr>
+          <th data-sort>Time</th>
+          <th data-sort>Title</th>
+          <th data-sort>Kind</th>
+          <th data-sort>For</th>
+          <th data-sort="number">Read</th>
+          <th>E-mail</th>
+          <th data-sort>State</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for item in items %}
+        <tr id="notification-{{ item.itid }}"{% if item.hidden %} class="muted"{% endif %}>
+          <td class="nowrap" data-value="{{ item.created_at }}">{{ item.created_at | local }}</td>
+          <td class="notification-cell" data-value="{{ item.title }}">
+            <a href="/mtas-admin/notifications/{{ item.itid }}"><strong>{{ item.title }}</strong></a>
+          </td>
+          <td class="small nowrap">{{ kind_labels.get(item.kind, item.kind) }}</td>
+          <td class="small">{% if item.user_id is not none %}<a href="/mtas-admin/actions?user_id={{ item.user_id }}">user_id {{ item.user_id }}</a>{% else %}{{ audience_label(item.audience) }}{% endif %}</td>
+          <td class="num">{{ reads.get(item.itid, 0) }} / {{ sizes.get(item.itid, 0) }}</td>
+          <td class="small">{% if item.emailed_at %}{{ item.emailed_count }} sent{% elif item.email_test_at %}test sent{% else %}<span class="muted">–</span>{% endif %}</td>
+          <td data-value="{{ 0 if item.shown_at is none else (2 if item.hidden else 1) }}">
+            {% if item.shown_at is none %}<span class="badge warning">waits</span>
+            {% elif item.hidden %}<span class="badge">hidden</span>
+            {% else %}<span class="badge success">shown</span>{% endif %}
+          </td>
+          <td>
+            <div class="row nowrap">
+              <form method="post" action="/mtas-admin/notifications/{{ item.itid }}/hide" class="inline-form">
+                {{ ui.csrf(csrf_token) }}
+                <input type="hidden" name="back" value="list">
+                {% if item.hidden %}
+                <button type="submit" class="btn sm primary">{{ ui.icon("eye") }} Show</button>
+                {% else %}
+                <button type="submit" class="btn sm">{{ ui.icon("eye-off") }} Hide</button>
+                {% endif %}
+              </form>
+              <a class="btn sm" href="/mtas-admin/notifications/{{ item.itid }}" title="Change the text, send an e-mail">{{ ui.icon("edit") }} Edit</a>
+              <form method="post" action="/mtas-admin/notifications/{{ item.itid }}/delete" class="inline-form" data-confirm="Delete “{{ item.title }}”? The users no longer see it.">
+                {{ ui.csrf(csrf_token) }}
+                <button type="submit" class="btn sm danger" title="Delete">{{ ui.icon("trash") }}<span class="sr-only">Delete</span></button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+</div>
+{% endblock %}

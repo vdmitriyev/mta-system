@@ -885,6 +885,21 @@ textarea.input {
   border-top: 1px solid var(--border);
 }
 
+/* no line at the top of a card, or right below its heading */
+.card > .kv:first-child > div:first-child,
+.account-page .card-head + .kv > div:first-child {
+  border-top: 0;
+}
+
+/* page Account: room between the cards */
+.account-page > * + * {
+  margin-top: 1.25rem;
+}
+
+.account-page .card {
+  padding: 1.5rem;
+}
+
 .kv dt {
   color: var(--muted);
   font-size: 0.9rem;
@@ -1210,6 +1225,39 @@ pre.command {
   white-space: pre;
 }
 
+/* admin page of a notification: the e-mail as the users get it */
+.email-preview {
+  max-height: 16rem;
+  margin: 0.25rem 0 1rem;
+  padding: 0.75rem;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-family: inherit;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+/* admin page of a notification: the steps of the e-mail */
+h3.email-step {
+  margin: 1.5rem 0 0.85rem;
+}
+
+fieldset.plain {
+  display: grid;
+  gap: 0.6rem;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.user-pick .table-wrap {
+  max-height: 18rem;
+  overflow: auto;
+}
+
 pre.log {
   max-height: 20rem;
   margin: 0.5rem 0 0;
@@ -1367,6 +1415,133 @@ progress {
 
 .nav-icon-label {
   display: none;
+}
+
+/* unread notifications: small number at the upper right of the gear icon */
+.gear {
+  position: relative;
+  display: inline-flex;
+}
+
+.gear .nav-count {
+  position: absolute;
+  right: -0.55rem;
+  top: -0.45rem;
+  min-width: 0.95rem;
+  padding: 0 0.2rem;
+  font-size: 0.62rem;
+  line-height: 0.95rem;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.nav-count {
+  min-width: 1.15rem;
+  padding: 0.05rem 0.3rem;
+  border-radius: 999px;
+  background: var(--danger);
+  color: #ffffff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.1rem;
+  text-align: center;
+}
+
+/* page Account: notifications */
+.notification-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.notification {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.8rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.notification:first-child {
+  border-top: 0;
+}
+
+.notification.unread {
+  margin-left: -0.8rem;
+  padding-left: 0.65rem;
+  border-left: 3px solid var(--primary);
+}
+
+.notification-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* admin page Notifications: more room between the parts */
+.notifications-admin > * + * {
+  margin-top: 1.75rem;
+}
+
+.notifications-admin .grid.halves {
+  gap: 1.75rem;
+}
+
+.notifications-admin .card ul {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.notifications-admin .table td {
+  padding-top: 0.7rem;
+  padding-bottom: 0.7rem;
+}
+
+.notifications-admin .table .row {
+  gap: 0.5rem;
+}
+
+.notification-body {
+  margin: 0;
+}
+
+/* Markdown of the admins (app/markdown_text.py) */
+.md > :first-child {
+  margin-top: 0;
+}
+
+.md > :last-child {
+  margin-bottom: 0;
+}
+
+.md p,
+.md ul,
+.md ol,
+.md pre,
+.md blockquote {
+  margin: 0 0 0.6rem;
+}
+
+.md ul,
+.md ol {
+  padding-left: 1.3rem;
+}
+
+.md img {
+  max-width: 100%;
+}
+
+/* the rule about e-mails, below the list */
+.notification-note {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.8rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.notification:not(.unread) .notification-head strong {
+  color: var(--muted);
 }
 
 /* the icon shows the theme that a click switches to */

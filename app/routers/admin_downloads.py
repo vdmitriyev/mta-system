@@ -2,7 +2,7 @@
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app import downloads
+from app import downloads, notifications
 from app.admin_log import log_action
 from app.config import DOWNLOAD_MAX_MB
 from app.models import Downloads
@@ -95,6 +95,8 @@ def download_add(page: Page = Depends(), form: dict = Depends(download_form)):
     item = downloads.add_download(
         page.db, stored, form["title"], form["description"], linked, form["visible"]
     )
+    if notifications.download_added(page.db, item, page.visibility.get("downloads")):
+        page.db.commit()
     log_action(
         page.db,
         page.user,
@@ -128,11 +130,16 @@ def download_edit(page: Page = Depends(), form: dict = Depends(download_form)):
             flash(page.request, str(error), "danger")
             return redirect(f"/mtas-admin/downloads/edit?id={item.itid}")
         downloads.replace_file(page.db, item, stored)
+    was_visible = item.visible
     item.title = form["title"]
     item.description = form["description"] or None
     item.exercise_id = linked
     item.visible = form["visible"]
     page.db.commit()
+    if not was_visible and notifications.download_added(
+        page.db, item, page.visibility.get("downloads")
+    ):
+        page.db.commit()
     log_action(
         page.db,
         page.user,

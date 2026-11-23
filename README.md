@@ -15,6 +15,16 @@ Documentation: [vdmitriyev.github.io/mta-system](https://vdmitriyev.github.io/mt
 | [docs/deployment.md](docs/deployment.md) | Server, HTTPS certificate, pgAdmin 4 login, admin accounts, backups, submissions, downloads, admin log, login history, delete users, sqlmate, SurveyLite, versions of the services |
 | [HISTORY.rst](HISTORY.rst) | Changes of each version. Read it before you update a server. |
 
+## Web UI
+
+The page **Services** shows the logins of the services of a student:
+
+![Page Services](docs/ui-services.png)
+
+The page **About** lists the services of the system with their versions:
+
+![Page About](docs/ui-about.png)
+
 ## Architecture
 
 | Part | Technology |

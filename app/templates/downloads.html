@@ -20,7 +20,7 @@
         {% for row in rows %}
         {% set item = row.item %}
         <tr>
-          <td><strong>{{ item.title }}</strong>{% if item.description %}<br><span class="muted small">{{ item.description }}</span>{% endif %}</td>
+          <td><strong>{{ item.title }}</strong>{% if item.description %}<br><span class="muted small">{{ item.description | markdown_inline }}</span>{% endif %}</td>
           <td>
             {% if row.exercise %}
               {{ row.exercise.name or row.exercise.code }} <span class="badge">{{ row.exercise.code }}</span>

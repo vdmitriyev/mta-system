@@ -2,6 +2,18 @@
 History
 =======
 
+2.7.0 (2026-11-22)
+-------------------
+
+* Notifications (issue #6) on the page **Account**, unread count on the gear icon. New users see only newer ones.
+* Page **Account**: heading "User" on the e-mail card.
+* Admin page **Notifications**: write, show, hide, edit, delete; read counts; panel **Notification rules**.
+* E-mails only by an admin: optional test, then to who did not get it yet, all, or chosen users. Editable subject. Page **E-mail history**.
+* Automatic notifications wait until an admin shows them. Setting `NOTIFICATIONS_AUTO`; **Visibility** can switch notifications off.
+* Markdown in notifications, e-mails and descriptions.
+* E-mail texts are Jinja2 templates in `app/templates/emails`.
+* Database: tables `notifications`, `notification_reads`, `notification_emails`, `email_batches`, `email_batch_items`.
+
 2.6.7 (2026-11-22)
 -------------------
 

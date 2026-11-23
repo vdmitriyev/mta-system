@@ -101,8 +101,11 @@ def _store_link(db: Session, user_id: int, title: str, link) -> SurveyAssignment
         .first()
     )
     if row is None:
+        from app.notifications import survey_given
+
         row = SurveyAssignment(user_id=user_id, survey_id=link.survey_id)
         db.add(row)
+        survey_given(db, link.survey_id, title)
     if title:
         row.survey_title = title
     _set_link(row, link)
