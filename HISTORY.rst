@@ -2,6 +2,11 @@
 History
 =======
 
+2.7.2 (2026-11-23)
+-------------------
+
+* Fix: server error on the admin page **Notifications** for databases that ran an earlier version of the notifications migration.
+
 2.7.1 (2026-11-23)
 -------------------
 
