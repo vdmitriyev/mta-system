@@ -1,0 +1,6 @@
+Dear student,
+
+{% block content %}{% endblock %}
+
+Best regards,
+Course Team

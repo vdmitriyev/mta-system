@@ -1,0 +1,14 @@
+{% extends "emails/base.txt" %}
+{% block content -%}
+this is the confirmation of your registration.
+
+Please, use the following link to get access to credentials and settings of services, which are hosted on the online platform:
+
+{{ link }}
+
+You can also access the online platform with your E-MAIL and this PIN: {{ pin }}
+
+The link above could be used to check, which services are available to you and how to use them.
+
+Good luck!
+{%- endblock %}
