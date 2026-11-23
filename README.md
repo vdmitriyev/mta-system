@@ -1,13 +1,16 @@
 ## About
 
-**mta-system** (**m**odular **t**eaching **a**ssistance **system**) gives students hands-on experience with software. A lecturer hosts it for a course. Each student gets an own account in services such as PostgreSQL, pgAdmin 4, Metabase and OpenRefine. Optional: SQL exercises ([sqlmate](https://github.com/vdmitriyev/sqlmate)) and anonymous surveys ([SurveyLite](https://github.com/vdmitriyev/surveylite)).
+**mta-system** (**m**odular **t**eaching **a**ssistance **system**) gives students hands-on experience with software. A lecturer hosts it for a course. Each student gets an own account in services such as PostgreSQL, pgAdmin 4, Metabase and OpenRefine, SQL exercises ([sqlmate](https://github.com/vdmitriyev/sqlmate)) and anonymous surveys ([SurveyLite](https://github.com/vdmitriyev/surveylite)).
 
-* **Students** register with their e-mail address and a course code. They see the logins of their services, start their containers, import sample datasets, submit their reports (PDF, TXT, MD, DOCX) until the deadline, and read the reviews and bonus points of their exercises.
+## Users
+
+* **Students** register with their e-mail address and a course code. They see the logins of their services, start their services, import sample datasets, submit their reports (PDF, TXT, MD, DOCX), and read the reviews and bonus points of their exercises.
 * **Admins** manage the exercises and their deadlines, download the submitted files, give single students a later deadline, and write reviews and bonus points. They manage the databases, logins and containers of the users, prepare accounts, delete users, read the login history, choose the visible parts of the pages, and watch the server.
 
-The pages have a light and a dark theme. The button in the header switches it.
 
-Documentation: [vdmitriyev.github.io/mta-system](https://vdmitriyev.github.io/mta-system/)
+### Documentation
+
+The documentation: https://vdmitriyev.github.io/mta-system/
 
 | Guide | Content |
 | --- | --- |
@@ -29,11 +32,11 @@ The page **About** lists the services of the system with their versions:
 
 | Part | Technology |
 | --- | --- |
-| Web app | [FastAPI](https://fastapi.tiangolo.com/) with Jinja2 templates and uvicorn |
+| Web app | FastAPI with Jinja2 templates and uvicorn |
 | Data of the app | SQLite, migrations with Alembic |
 | Long jobs | Background tasks of FastAPI, state in the table `background_tasks`. No Redis, no extra worker. |
 | Services of the students | One Docker container per user for Metabase, OpenRefine and WordPress. Shared PostgreSQL (set up with [dbsetupmate](https://pypi.org/project/dbsetupmate/)), pgAdmin 4 and MariaDB. |
-| Entry point in production | nginx: HTTPS and the logins of the containers and of pgAdmin 4 |
+| Production | nginx: HTTPS and the logins of the containers and of pgAdmin 4 |
 
 ```
 app/
@@ -55,7 +58,7 @@ samples/            samples of the env files and the exercises
 tests/              tests, tests/testenv/ is the Docker test copy
 ```
 
-Registration, dataset imports and new containers can take minutes. The app runs them as background tasks and answers at once. The page then shows the result. A task fails after 30 minutes or when its worker stops.
+Registration, dataset imports and new containers can take minutes. The app runs them as background tasks and answers at once.
 
 ## Supported versions of the services
 
