@@ -3,6 +3,7 @@
 * An admin gives a survey to users: each user gets a personal link (SurveyAssignment).
 * A service can need a completed survey (ServiceRequirement): until the user completed
   it, the services page shows the survey instead of the login of the service.
+* The uploads of the submissions can need a completed survey, too (key "submissions").
 
 surveylite only knows anonymous participants. The link between a user and a
 participant is the table SurveyliteService of this app.
@@ -228,6 +229,10 @@ def refresh_all(db: Session) -> int:
 
 # ---------- surveys that a service needs ----------
 
+SUBMISSIONS = "submissions"
+# parts of the app (not services) that can wait for a survey: key -> name
+FEATURES = {SUBMISSIONS: "Submissions (upload of files)"}
+
 
 def requirements(db: Session) -> dict[str, ServiceRequirement]:
     return {row.service: row for row in db.query(ServiceRequirement).all()}
@@ -286,3 +291,14 @@ def blocked_services(
                 status=row.status if row else "not_given",
             )
     return blocked
+
+
+def feature_blocked(db: Session, user_id: int, feature: str) -> Blocked | None:
+    """The survey that the user must complete before using a feature, else None.
+
+    Reads the status from SurveyLite only if the feature waits for a survey.
+    """
+
+    if db.get(ServiceRequirement, feature) is None:
+        return None
+    return blocked_services(db, user_id, refresh_user(db, user_id)).get(feature)

@@ -2,6 +2,14 @@
 History
 =======
 
+2.7.3 (2026-11-27)
+-------------------
+
+* SurveyLite: the upload of submissions can wait for a completed survey. The admin page **SurveyLite** has a new table **Uploads that need a survey**.
+* Page **Submissions** (users): until the survey is completed, it shows the survey link instead of the upload form. The users still see their files and deadlines. The app also refuses an upload sent directly.
+* The rule is stored in the table `service_requirements` with the key `submissions`: no database migration.
+* Test copy: new check `survey-gate-upload` in `tests/testenv/services_check.py`.
+
 2.7.2 (2026-11-23)
 -------------------
 

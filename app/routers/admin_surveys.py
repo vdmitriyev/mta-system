@@ -1,6 +1,7 @@
 """Admin pages of sqlmate and SurveyLite: accounts, surveys and the surveys that services need"""
 
 import logging
+from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends, Form
 
@@ -10,7 +11,7 @@ from app.config import get_settings
 from app.models import SurveyAssignment
 from app.routers.admin import get_course_user, user_rows
 from app.security import csrf_protect
-from app.service_settings import DEPRECATED_SERVICES, SERVICE_INFO, SERVICES
+from app.service_settings import DEPRECATED_SERVICES, SERVICES
 from app.services import sqlmate_api, surveylite_api
 from app.users import get_user_services
 from app.web import Page, flash, redirect, require_admin
@@ -105,14 +106,26 @@ def sqlmate_create(page: Page = Depends(), user_id: int = Form(...)):
 # ---------- SurveyLite ----------
 
 
-def _requirement_services() -> list:
+@dataclass(frozen=True)
+class RequirementTarget:
+    key: str
+    name: str
+
+
+def _requirement_services() -> list[RequirementTarget]:
     """Services that can wait for a survey"""
 
     return [
-        info
+        RequirementTarget(info.key, info.name)
         for info in SERVICES
         if info.key not in DEPRECATED_SERVICES and info.key != "surveylite"
     ]
+
+
+def _requirement_features() -> list[RequirementTarget]:
+    """Other parts of the app that can wait for a survey: the uploads"""
+
+    return [RequirementTarget(key, name) for key, name in surveys.FEATURES.items()]
 
 
 @router.get("/surveylite")
@@ -150,6 +163,7 @@ def surveylite_page(page: Page = Depends()):
         rows=rows,
         rules=surveys.requirements(page.db),
         rule_services=_requirement_services(),
+        rule_features=_requirement_features(),
         status_text=surveys.STATUS_TEXT,
     )
 
@@ -261,10 +275,14 @@ def surveylite_requirement(
 ):
     """A service waits for a completed survey (empty: no survey needed)"""
 
-    if service not in {info.key for info in _requirement_services()}:
+    names = {
+        target.key: target.name
+        for target in _requirement_services() + _requirement_features()
+    }
+    if service not in names:
         flash(page.request, f"There is no service “{service}”.", "danger")
         return redirect(SURVEYLITE_PAGE)
-    name = SERVICE_INFO[service].name
+    name = names[service]
     if not survey_id:
         surveys.set_requirement(page.db, service, None)
         log_action(page.db, page.user, "survey_requirement", details=f"{service}: none")

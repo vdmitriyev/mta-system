@@ -3,7 +3,7 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, Form, HTTPException, Request
 from fastapi.responses import FileResponse
 
-from app import submissions
+from app import submissions, surveys
 from app.config import get_settings
 from app.models import Exercises, Users
 from app.security import csrf_protect
@@ -57,6 +57,8 @@ def submissions_page(page: Page = Depends(), user: Users = Depends(require_user)
     return page.render(
         "submissions.html",
         items=items,
+        blocked=surveys.feature_blocked(page.db, user.itid, surveys.SUBMISSIONS),
+        survey_status_text=surveys.STATUS_TEXT,
         max_mb=get_settings().submission_max_file_mb,
         max_files=get_settings().submission_max_files,
         accept=",".join(submissions.ALLOWED_TYPES),
@@ -115,6 +117,14 @@ def upload(
     files: list = Depends(uploaded_files),
 ):
     exercise = submission_exercise(page, code)
+    missing = surveys.feature_blocked(page.db, user.itid, surveys.SUBMISSIONS)
+    if missing is not None:
+        flash(
+            page.request,
+            f"Complete the survey “{missing.title}” first. Then you can upload files.",
+            "danger",
+        )
+        return redirect("/submissions")
     try:
         saved, errors = submissions.save_uploads(page.db, user, exercise, files)
     except submissions.SubmissionError as error:

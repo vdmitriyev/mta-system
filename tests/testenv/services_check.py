@@ -448,6 +448,24 @@ else:
             f"sqlmate with the survey needed: {'waits' if blocked else 'OPEN'}; "
             f"without: {'open' if free else 'CLOSED'}",
         )
+
+        # the upload of submissions waits for the survey (exercise E2E of e2e.py)
+        upload_form = 'action="/submissions/E2E/upload"'
+        with session_scope() as db:
+            surveys.set_requirement(db, surveys.SUBMISSIONS, survey)
+        waiting = user_browser.get(f"{app_url}/submissions", timeout=30).text
+        upload_blocked = "Complete the survey" in waiting and upload_form not in waiting
+        with session_scope() as db:
+            surveys.set_requirement(db, surveys.SUBMISSIONS, None)
+        upload_free = (
+            upload_form in user_browser.get(f"{app_url}/submissions", timeout=30).text
+        )
+        report(
+            "survey-gate-upload",
+            upload_blocked and upload_free,
+            f"upload with the survey needed: {'waits' if upload_blocked else 'OPEN'}; "
+            f"without: {'open' if upload_free else 'CLOSED'}",
+        )
     except Exception as error:
         report("surveylite", False, f"{type(error).__name__}: {error}")
 

@@ -1,5 +1,22 @@
 {% extends "admin/base.html" %}
 {% block title %}SurveyLite{% endblock %}
+{% macro requirement_form(info) %}
+{% set rule = rules.get(info.key) %}
+<form method="post" action="/mtas-admin/services/surveylite/requirement" class="inline-form">
+  {{ ui.csrf(csrf_token) }}
+  <input type="hidden" name="service" value="{{ info.key }}">
+  <select name="survey_id" aria-label="Survey for {{ info.name }}"{% if not api.ok %} disabled{% endif %}>
+    <option value="">no survey needed</option>
+    {% for survey in surveys %}
+    <option value="{{ survey.id }}"{% if rule and rule.survey_id == survey.id %} selected{% endif %}>{{ survey.title }}</option>
+    {% endfor %}
+    {% if rule and rule.survey_id not in surveys | map(attribute="id") | list %}
+    <option value="{{ rule.survey_id }}" selected>{{ rule.survey_title or rule.survey_id }}</option>
+    {% endif %}
+  </select>
+  <button type="submit" class="btn sm"{% if not api.ok %} disabled{% endif %}>Save</button>
+</form>
+{% endmacro %}
 {% block admin %}
 {{ ui.page_head("SurveyLite surveys", "Each user has an anonymous participant in SurveyLite: only this app knows which participant belongs to which user. Give surveys to the users here, and choose the services that open only after a completed survey.") }}
 <div class="alert {{ 'success' if api.ok else 'danger' }} image-state" role="status">
@@ -63,25 +80,27 @@
         <thead><tr><th>Service</th><th>Opens after the survey</th></tr></thead>
         <tbody>
           {% for info in rule_services %}
-          {% set rule = rules.get(info.key) %}
           <tr>
             <td>{{ info.name }}</td>
-            <td>
-              <form method="post" action="/mtas-admin/services/surveylite/requirement" class="inline-form">
-                {{ ui.csrf(csrf_token) }}
-                <input type="hidden" name="service" value="{{ info.key }}">
-                <select name="survey_id" aria-label="Survey for {{ info.name }}"{% if not api.ok %} disabled{% endif %}>
-                  <option value="">no survey needed</option>
-                  {% for survey in surveys %}
-                  <option value="{{ survey.id }}"{% if rule and rule.survey_id == survey.id %} selected{% endif %}>{{ survey.title }}</option>
-                  {% endfor %}
-                  {% if rule and rule.survey_id not in surveys | map(attribute="id") | list %}
-                  <option value="{{ rule.survey_id }}" selected>{{ rule.survey_title or rule.survey_id }}</option>
-                  {% endif %}
-                </select>
-                <button type="submit" class="btn sm"{% if not api.ok %} disabled{% endif %}>Save</button>
-              </form>
-            </td>
+            <td>{{ requirement_form(info) }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card flush">
+    <div class="card-head"><h2>Uploads that need a survey</h2></div>
+    <div class="table-wrap">
+      <table class="table" id="upload-requirements-table">
+        <thead><tr><th>Upload</th><th>Possible after the survey</th><th>Before the survey</th></tr></thead>
+        <tbody>
+          {% for info in rule_features %}
+          <tr>
+            <td>{{ info.name }}</td>
+            <td>{{ requirement_form(info) }}</td>
+            <td class="muted small">Users see their files and deadlines, but cannot upload.</td>
           </tr>
           {% endfor %}
         </tbody>
