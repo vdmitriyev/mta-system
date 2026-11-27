@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends, Form
 
-from app import provisioning, surveys
+from app import provisioning, submissions, surveys
 from app.admin_log import log_action, versions
 from app.config import get_settings
 from app.models import SurveyAssignment
@@ -122,10 +122,16 @@ def _requirement_services() -> list[RequirementTarget]:
     ]
 
 
-def _requirement_features() -> list[RequirementTarget]:
-    """Other parts of the app that can wait for a survey: the uploads"""
+def _requirement_uploads(db) -> list[RequirementTarget]:
+    """Exercises with submissions: their upload can wait for a survey"""
 
-    return [RequirementTarget(key, name) for key, name in surveys.FEATURES.items()]
+    return [
+        RequirementTarget(
+            surveys.submission_key(exercise.itid),
+            f"{exercise.code}: {exercise.name}" if exercise.name else exercise.code,
+        )
+        for exercise in submissions.submission_exercises(db, only_visible=False)
+    ]
 
 
 @router.get("/surveylite")
@@ -163,7 +169,7 @@ def surveylite_page(page: Page = Depends()):
         rows=rows,
         rules=surveys.requirements(page.db),
         rule_services=_requirement_services(),
-        rule_features=_requirement_features(),
+        rule_uploads=_requirement_uploads(page.db),
         status_text=surveys.STATUS_TEXT,
     )
 
@@ -277,15 +283,17 @@ def surveylite_requirement(
 
     names = {
         target.key: target.name
-        for target in _requirement_services() + _requirement_features()
+        for target in _requirement_services() + _requirement_uploads(page.db)
     }
     if service not in names:
         flash(page.request, f"There is no service “{service}”.", "danger")
         return redirect(SURVEYLITE_PAGE)
     name = names[service]
+    if service.startswith(surveys.SUBMISSION_PREFIX):
+        name = f"The upload for {name}"
     if not survey_id:
         surveys.set_requirement(page.db, service, None)
-        log_action(page.db, page.user, "survey_requirement", details=f"{service}: none")
+        log_action(page.db, page.user, "survey_requirement", details=f"{name}: none")
         flash(page.request, f"{name} needs no survey now.", "success")
         return redirect(SURVEYLITE_PAGE)
 
@@ -299,7 +307,7 @@ def surveylite_requirement(
         return redirect(SURVEYLITE_PAGE)
     surveys.set_requirement(page.db, service, survey)
     log_action(
-        page.db, page.user, "survey_requirement", details=f"{service}: {survey.title}"
+        page.db, page.user, "survey_requirement", details=f"{name}: {survey.title}"
     )
     flash(
         page.request,

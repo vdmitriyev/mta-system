@@ -20,7 +20,7 @@ import urllib3
 from app import surveys
 from app.config import get_settings
 from app.database import init_engine, session_scope
-from app.models import Users
+from app.models import Exercises, Users
 from app.services import (
     basic_auth,
     docker_ctl,
@@ -452,11 +452,13 @@ else:
         # the upload of submissions waits for the survey (exercise E2E of e2e.py)
         upload_form = 'action="/submissions/E2E/upload"'
         with session_scope() as db:
-            surveys.set_requirement(db, surveys.SUBMISSIONS, survey)
+            exercise_id = db.query(Exercises).filter_by(code="E2E").one().itid
+            upload_key = surveys.submission_key(exercise_id)
+            surveys.set_requirement(db, upload_key, survey)
         waiting = user_browser.get(f"{app_url}/submissions", timeout=30).text
         upload_blocked = "Complete the survey" in waiting and upload_form not in waiting
         with session_scope() as db:
-            surveys.set_requirement(db, surveys.SUBMISSIONS, None)
+            surveys.set_requirement(db, upload_key, None)
         upload_free = (
             upload_form in user_browser.get(f"{app_url}/submissions", timeout=30).text
         )

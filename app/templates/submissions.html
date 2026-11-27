@@ -2,15 +2,6 @@
 {% block title %}Submissions{% endblock %}
 {% block content %}
 {{ ui.page_head("Submissions", "Upload your solutions as PDF, TXT, MD or DOCX files. Until the deadline you can upload more files or delete them.") }}
-{% if blocked and items %}
-<div class="alert warning" role="status">
-  {% if blocked.url %}
-  <p>Complete the survey <a href="{{ blocked.url }}" target="_blank" rel="noopener"><strong>{{ blocked.title }}</strong> {{ ui.icon("external") }}</a> first{% if blocked.status in survey_status_text %} (now: {{ survey_status_text[blocked.status] }}){% endif %}. Then you can upload files here.</p>
-  {% else %}
-  <p>You can upload files after the survey <strong>{{ blocked.title }}</strong>. The survey is not set up for you yet: ask your instructor.</p>
-  {% endif %}
-</div>
-{% endif %}
 {% if not items %}
   <div class="card empty">There are no exercises with submissions yet.</div>
 {% endif %}
@@ -70,8 +61,15 @@
     </div>
     {% endif %}
 
-    {% if item.open and blocked %}
-      <p class="muted">Upload after the survey <strong>{{ blocked.title }}</strong> (see above).</p>
+    {% if item.open and item.blocked %}
+      {% set blocked = item.blocked %}
+      <div class="alert warning" role="status">
+        {% if blocked.url %}
+        <p>Complete the survey <a href="{{ blocked.url }}" target="_blank" rel="noopener"><strong>{{ blocked.title }}</strong> {{ ui.icon("external") }}</a> first{% if blocked.status in survey_status_text %} (now: {{ survey_status_text[blocked.status] }}){% endif %}. Then you can upload files for this exercise.</p>
+        {% else %}
+        <p>You can upload files for this exercise after the survey <strong>{{ blocked.title }}</strong>. The survey is not set up for you yet: ask your instructor.</p>
+        {% endif %}
+      </div>
     {% elif item.open %}
       {% if item.files | length < max_files %}
       <form class="form" method="post" action="/submissions/{{ exercise.code }}/upload"

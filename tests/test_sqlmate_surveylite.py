@@ -6,6 +6,7 @@ import pytest
 
 from app import provisioning, surveys
 from app.models import (
+    Exercises,
     ExerciseSubmissions,
     SqlmateService,
     SurveyAssignment,
@@ -379,19 +380,38 @@ def test_admin_sets_and_clears_a_requirement(admin_client, db, surveylite):
     assert surveys.requirements(db) == {}
 
 
-def test_admin_sets_a_survey_for_the_submissions(admin_client, db, surveylite):
+def test_admin_sets_a_survey_for_the_upload_of_an_exercise(
+    admin_client, db, surveylite
+):
+    exercise = add_exercise(db, "EX01", "Data model", has_submission=True)
+    add_exercise(db, "EX02", "Without uploads", order=2)
     text = admin_client.get("/mtas-admin/services/surveylite").text
     services, uploads = text.split('id="upload-requirements-table"')
-    assert "Submissions (upload of files)" in uploads
-    assert "Submissions (upload of files)" not in services
+    assert "EX01: Data model" in uploads and "EX02" not in uploads
+    assert "EX01" not in services
     assert 'aria-label="Survey for sqlmate"' in services
     assert 'name="csrf_token" value="' in uploads.split("</form>")[0]
+
+    key = surveys.submission_key(exercise.itid)
     post(
         admin_client,
         "/mtas-admin/services/surveylite/requirement",
-        {"service": "submissions", "survey_id": "7"},
+        {"service": key, "survey_id": "7"},
     )
-    assert surveys.requirements(db)["submissions"].survey_title == "Entry survey"
+    assert surveys.requirements(db)[key].survey_title == "Entry survey"
+    text = admin_client.get("/mtas-admin/services/surveylite").text
+    assert "The upload for EX01: Data model opens" in text
+    assert '<option value="7" selected>Entry survey</option>' in text
+
+
+def test_no_survey_for_an_exercise_without_uploads(admin_client, db, surveylite):
+    exercise = add_exercise(db, "EX02", "Without uploads")
+    post(
+        admin_client,
+        "/mtas-admin/services/surveylite/requirement",
+        {"service": surveys.submission_key(exercise.itid), "survey_id": "7"},
+    )
+    assert surveys.requirements(db) == {}
 
 
 @pytest.mark.parametrize("service", ["surveylite", "nifi", "oracle"])
@@ -556,45 +576,69 @@ def test_sqlmate_client_sends_both_emails(use_settings, monkeypatch):
 PDF = b"%PDF-1.7\n1 0 obj\n<<>>\nendobj\n%%EOF\n"
 
 
-def upload_pdf(client):
+def upload_pdf(client, code="EX01"):
     return client.post(
-        "/submissions/EX01/upload",
+        f"/submissions/{code}/upload",
         data={"csrf_token": csrf_token(client, "/about")},
         files=[("files", ("report.pdf", PDF, "application/pdf"))],
         follow_redirects=False,
     )
 
 
-def test_upload_waits_for_the_survey(student_client, db, student, surveylite):
+def add_upload_exercises(db):
+    """EX01 waits for the survey, EX02 does not"""
+
+    deadline = datetime.now() + timedelta(days=7)
+    first = add_exercise(
+        db, "EX01", "Data model", has_submission=True, submission_deadline=deadline
+    )
     add_exercise(
         db,
-        "EX01",
-        "Data model",
+        "EX02",
+        "Queries",
+        order=2,
         has_submission=True,
-        submission_deadline=datetime.now() + timedelta(days=7),
+        submission_deadline=deadline,
     )
+    surveys.set_requirement(db, surveys.submission_key(first.itid), SURVEY)
+
+
+def uploaded(db, code):
+    return (
+        db.query(ExerciseSubmissions)
+        .join(Exercises, Exercises.itid == ExerciseSubmissions.exercise_id)
+        .filter(Exercises.code == code)
+        .count()
+    )
+
+
+def test_upload_of_one_exercise_waits_for_the_survey(
+    student_client, db, student, surveylite
+):
+    add_upload_exercises(db)
     provisioning.surveylite_participant(db, student.itid, force_create=True)
-    surveys.set_requirement(db, surveys.SUBMISSIONS, SURVEY)
     surveys.assign_survey(db, SURVEY, [student.itid])
 
     text = student_client.get("/submissions").text
     assert "Complete the survey" in text and f"{BASE}/s/p1-7" in text
     assert 'action="/submissions/EX01/upload"' not in text
-    upload_pdf(student_client)
-    assert db.query(ExerciseSubmissions).count() == 0
+    assert 'action="/submissions/EX02/upload"' in text
+    upload_pdf(student_client, "EX01")
+    upload_pdf(student_client, "EX02")
+    assert (uploaded(db, "EX01"), uploaded(db, "EX02")) == (0, 1)
     assert "Then you can upload files" in student_client.get("/submissions").text
 
     # the status comes from SurveyLite on the next visit
     surveylite.links[("p1", 7)] = "completed"
     text = student_client.get("/submissions").text
     assert 'action="/submissions/EX01/upload"' in text
-    upload_pdf(student_client)
-    assert db.query(ExerciseSubmissions).count() == 1
+    upload_pdf(student_client, "EX01")
+    assert uploaded(db, "EX01") == 1
 
 
 def test_upload_waits_for_a_survey_not_given(student_client, db, student):
-    add_exercise(db, "EX01", "Data model", has_submission=True)
-    surveys.set_requirement(db, surveys.SUBMISSIONS, SURVEY)
+    add_upload_exercises(db)
     text = student_client.get("/submissions").text
     assert "The survey is not set up for you yet" in text
     assert 'action="/submissions/EX01/upload"' not in text
+    assert 'action="/submissions/EX02/upload"' in text

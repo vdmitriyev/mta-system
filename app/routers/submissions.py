@@ -41,7 +41,11 @@ def require_visible(page: Page = Depends()) -> None:
 @router.get("", dependencies=[Depends(require_visible)])
 def submissions_page(page: Page = Depends(), user: Users = Depends(require_user)):
     items = []
-    for exercise in submissions.submission_exercises(page.db):
+    exercises = submissions.submission_exercises(page.db)
+    blocked = surveys.blocked_submissions(
+        page.db, user.itid, [exercise.itid for exercise in exercises]
+    )
+    for exercise in exercises:
         deadline = submissions.effective_deadline(page.db, exercise, user.itid)
         items.append(
             {
@@ -49,6 +53,7 @@ def submissions_page(page: Page = Depends(), user: Users = Depends(require_user)
                 "deadline": deadline,
                 "extended": deadline != exercise.submission_deadline,
                 "open": submissions.is_open(deadline),
+                "blocked": blocked.get(exercise.itid),
                 "files": submissions.active_submissions(
                     page.db, user.itid, exercise.itid
                 ),
@@ -57,7 +62,6 @@ def submissions_page(page: Page = Depends(), user: Users = Depends(require_user)
     return page.render(
         "submissions.html",
         items=items,
-        blocked=surveys.feature_blocked(page.db, user.itid, surveys.SUBMISSIONS),
         survey_status_text=surveys.STATUS_TEXT,
         max_mb=get_settings().submission_max_file_mb,
         max_files=get_settings().submission_max_files,
@@ -117,7 +121,9 @@ def upload(
     files: list = Depends(uploaded_files),
 ):
     exercise = submission_exercise(page, code)
-    missing = surveys.feature_blocked(page.db, user.itid, surveys.SUBMISSIONS)
+    missing = surveys.blocked_submissions(page.db, user.itid, [exercise.itid]).get(
+        exercise.itid
+    )
     if missing is not None:
         flash(
             page.request,

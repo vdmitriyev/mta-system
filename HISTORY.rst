@@ -2,10 +2,18 @@
 History
 =======
 
+2.7.4 (2026-11-27)
+-------------------
+
+* SurveyLite: the survey for uploads is now set for each exercise, not for all uploads. The table **Uploads that need a survey** has one row for each exercise with submissions (also hidden ones).
+* Page **Submissions** (users): only the exercise that waits for a survey shows the survey link instead of the upload form. The other exercises stay open.
+* The rules are stored in the table `service_requirements` with the key `submission:<id of the exercise>`. A rule with the key `submissions` (2.7.3) has no effect any more: set the survey again for each exercise.
+* Admin log: the action is now called "Survey needed for a service or an upload".
+
 2.7.3 (2026-11-27)
 -------------------
 
-* SurveyLite: the upload of submissions can wait for a completed survey. The admin page **SurveyLite** has a new table **Uploads that need a survey**.
+* SurveyLite: the upload of submissions can wait for a completed survey. The admin page **SurveyLite** has a new table **Uploads that need a survey**; the services have their own table **Services that need a survey**.
 * Page **Submissions** (users): until the survey is completed, it shows the survey link instead of the upload form. The users still see their files and deadlines. The app also refuses an upload sent directly.
 * The rule is stored in the table `service_requirements` with the key `submissions`: no database migration.
 * Test copy: new check `survey-gate-upload` in `tests/testenv/services_check.py`.

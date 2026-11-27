@@ -94,18 +94,18 @@
     <div class="card-head"><h2>Uploads that need a survey</h2></div>
     <div class="table-wrap">
       <table class="table" id="upload-requirements-table">
-        <thead><tr><th>Upload</th><th>Possible after the survey</th><th>Before the survey</th></tr></thead>
+        <thead><tr><th>Exercise</th><th title="Before the survey, the users see their files and the deadline, but cannot upload">Upload possible after the survey</th></tr></thead>
         <tbody>
-          {% for info in rule_features %}
+          {% for info in rule_uploads %}
           <tr>
             <td>{{ info.name }}</td>
             <td>{{ requirement_form(info) }}</td>
-            <td class="muted small">Users see their files and deadlines, but cannot upload.</td>
           </tr>
           {% endfor %}
         </tbody>
       </table>
     </div>
+    {% if not rule_uploads %}<div class="empty">No exercises with submissions yet.</div>{% endif %}
   </section>
 </div>
 

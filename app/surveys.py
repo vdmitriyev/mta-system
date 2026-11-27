@@ -3,7 +3,8 @@
 * An admin gives a survey to users: each user gets a personal link (SurveyAssignment).
 * A service can need a completed survey (ServiceRequirement): until the user completed
   it, the services page shows the survey instead of the login of the service.
-* The uploads of the submissions can need a completed survey, too (key "submissions").
+* The upload of files for an exercise can need a completed survey, too
+  (key "submission:<id of the exercise>").
 
 surveylite only knows anonymous participants. The link between a user and a
 participant is the table SurveyliteService of this app.
@@ -229,9 +230,13 @@ def refresh_all(db: Session) -> int:
 
 # ---------- surveys that a service needs ----------
 
-SUBMISSIONS = "submissions"
-# parts of the app (not services) that can wait for a survey: key -> name
-FEATURES = {SUBMISSIONS: "Submissions (upload of files)"}
+SUBMISSION_PREFIX = "submission:"
+
+
+def submission_key(exercise_id: int) -> str:
+    """Key of the rule for the uploads of an exercise"""
+
+    return f"{SUBMISSION_PREFIX}{exercise_id}"
 
 
 def requirements(db: Session) -> dict[str, ServiceRequirement]:
@@ -293,12 +298,23 @@ def blocked_services(
     return blocked
 
 
-def feature_blocked(db: Session, user_id: int, feature: str) -> Blocked | None:
-    """The survey that the user must complete before using a feature, else None.
+def blocked_submissions(
+    db: Session, user_id: int, exercise_ids: list[int]
+) -> dict[int, Blocked]:
+    """Exercises whose upload waits for a survey: exercise id -> the missing survey.
 
-    Reads the status from SurveyLite only if the feature waits for a survey.
+    Reads the status from SurveyLite only if one of the exercises waits for a survey.
     """
 
-    if db.get(ServiceRequirement, feature) is None:
-        return None
-    return blocked_services(db, user_id, refresh_user(db, user_id)).get(feature)
+    keys = {submission_key(exercise_id): exercise_id for exercise_id in exercise_ids}
+    if (
+        not keys
+        or not db.query(ServiceRequirement)
+        .filter(ServiceRequirement.service.in_(keys))
+        .count()
+    ):
+        return {}
+    blocked = blocked_services(db, user_id, refresh_user(db, user_id))
+    return {
+        exercise_id: blocked[key] for key, exercise_id in keys.items() if key in blocked
+    }
