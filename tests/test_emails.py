@@ -122,6 +122,13 @@ def test_email_is_signed_by_the_course_team():
     assert "VLBA" not in text
 
 
+def test_signature_comes_from_the_settings(use_settings):
+    use_settings(MAIL_SIGNATURE="Your Data Science Team")
+    text = email_content(link="https://x/login", pin="0042")
+    assert text.rstrip().endswith("Best regards,\nYour Data Science Team")
+    assert "Course Team" not in text
+
+
 def test_build_email_keeps_only_the_address_of_the_sender():
     message = build_email("to@x.org", "S", "B", "Old Name <course@x.org>")
     assert message["From"] == "modular teaching assistance system <course@x.org>"

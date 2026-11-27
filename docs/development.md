@@ -43,6 +43,7 @@ Then change the values in `envs/webapp-dev-local.env`:
 | `DOWNLOADS_DIR` | Folder of the files on the admin page **Downloads**. Default: `data/downloads`. |
 | `BACKUP_KEEP` | Backups of each kind that `db-backup` keeps; it deletes the older ones. `0`: keeps all. Default: `14`. |
 | `MAIL_*` | SMTP server for the registration e-mail. The e-mails come from "modular teaching assistance system" (`MAIL_DEFAULT_SENDER`). Their subject starts with `[MTA-SYSTEM]`. |
+| `MAIL_SIGNATURE` | Last line of the e-mails for registration and notifications, after "Best regards,". Default: `Course Team`. |
 | `TARGET_SERVER` | `development` or `production`. |
 | `ENABLE_API_DOCS` | Switches the API docs on or off. See [API docs](#api-and-api-docs). |
 

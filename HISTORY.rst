@@ -9,6 +9,7 @@ History
 * Page **Submissions** (users): only the exercise that waits for a survey shows the survey link instead of the upload form. The other exercises stay open.
 * The rules are stored in the table `service_requirements` with the key `submission:<id of the exercise>`. A rule with the key `submissions` (2.7.3) has no effect any more: set the survey again for each exercise.
 * Admin log: the action is now called "Survey needed for a service or an upload".
+* E-mails: new setting `MAIL_SIGNATURE`, the last line of the registration and notification e-mails. Default: `Course Team`.
 
 2.7.3 (2026-11-27)
 -------------------

@@ -6,7 +6,7 @@ from pathlib import Path
 
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
-from app.config import Settings
+from app.config import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -25,6 +25,7 @@ _texts = Environment(
 def render_text(name: str, **values) -> str:
     """The text of app/templates/emails/<name>.txt"""
 
+    values.setdefault("signature", get_settings().mail_signature)
     return _texts.get_template(f"emails/{name}.txt").render(**values)
 
 

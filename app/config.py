@@ -159,6 +159,8 @@ class Settings(BaseSettings):
     mail_password: SecretStr | None = None
     mail_default_sender: str | None = None
     mail_timeout_sec: PositiveInt = 10
+    # last line of the e-mails (registration, notifications)
+    mail_signature: str = "Course Team"
 
     # ---- PostgreSQL service ----
     postgresql_db_host: str = "localhost"
